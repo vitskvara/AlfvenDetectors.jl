@@ -9,18 +9,18 @@ Fields:
 	f = frequency
 	fnoscale = frequency according to the scaling law ~ I_p/sqrt(n_e)
 	tfnoscale = time for fnoscale
-	coils = names of coil pairs
-	msc = time evolution of magnitude squared coherence for all pairs of coils
+	msc = a dictionary containing time evolution of magnitude squared coherence for all pairs of coils
 	filepath = adress of the original file
+	shot = number of shot
 """
 mutable struct BaseAlfvenData
 	t::Vector
 	f::Vector
 	fnoscale::Vector
 	tfnoscale::Vector
-	coils::Vector
-	msc::Array{Matrix, 1}
+	msc::Dict{Any, Matrix}
 	filepath::String
+	shot::String
 end
 
 """
@@ -33,8 +33,8 @@ BaseAlfvenData() = BaseAlfvenData(
 		Vector{Float}(),
 		Vector{Float}(),
 		Vector{Float}(),
-		Vector{Int}(),
-		Array{Matrix{Float},1}(),
+		Dict{Int, Matrix{Float}}(),
+		"",
 		""
 	)
 
@@ -46,6 +46,7 @@ Constructor from a .h5 file.
 function BaseAlfvenData(filepath::String)
 	alfvendata = BaseAlfvenData()
 	alfvendata.filepath = filepath
+	alfvendata.shot = split(basename(filepath), ".")[1]
 	data = h5open(filepath, "r") do file
 		# read the basic signals
 		readbasic!(alfvendata, file)
@@ -63,6 +64,7 @@ Constructor from a .h5 file, coillist specifies a set of coils that are to be ex
 function BaseAlfvenData(filepath::String, coillist::Vector)
 	alfvendata = BaseAlfvenData()
 	alfvendata.filepath = filepath
+	alfvendata.shot = split(basename(filepath), ".")[1]
 	data = h5open(filepath, "r") do file
 		# read the basic signals
 		readbasic!(alfvendata, file)
@@ -78,11 +80,10 @@ end
 Read the basic signals - time, frequency etc.
 """
 function readbasic!(alfvendata::BaseAlfvenData, file::HDF5File)
-		alfvendata.t = Float.(read(file, "t"))
-		alfvendata.f = Float.(read(file, "f"))
-		alfvendata.fnoscale = Float.(read(file, "fnoscale"))
-		alfvendata.tfnoscale = Float.(read(file, "tfnoscale"))
-		alfvendata.coils = read(file, "coils")
+	alfvendata.t = Float.(read(file, "t"))
+	alfvendata.f = Float.(read(file, "f"))
+	alfvendata.fnoscale = Float.(read(file, "fnoscale"))
+	alfvendata.tfnoscale = Float.(read(file, "tfnoscale"))
 end
 
 """
@@ -93,12 +94,12 @@ only certain coils will be loaded.
 """
 function readmsc!(alfvendata::BaseAlfvenData, file::HDF5File; coillist=nothing)
 	# if some coil data is missing, save the name in this list and filter them at the end
-	missingcoils = []
-	_coillist = ((coillist == nothing) ? alfvendata.coils : coillist)
+	_coillist = ((coillist == nothing) ? read(file, "coils") : coillist)
+	#_coillist = String.(_coillist)
 	for coil in _coillist
 		try 
 			@suppress_err begin
-				push!(alfvendata.msc, Float.(read(file, "cxy$coil")))
+				alfvendata.msc[coil] = Float.(read(file, "cxy$coil"))
 			end
 		catch e
 			if isa(e, ErrorException)
@@ -106,9 +107,7 @@ function readmsc!(alfvendata::BaseAlfvenData, file::HDF5File; coillist=nothing)
 			else
 				throw(e)
 			end
-			push!(missingcoils, coil)
 		end
 	end
-	filter!(x->!(x in missingcoils), _coillist)
-	alfvendata.coils = _coillist
 end
+
