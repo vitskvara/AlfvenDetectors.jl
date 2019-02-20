@@ -110,4 +110,3 @@ function readmsc!(alfvendata::BaseAlfvenData, file::HDF5File; coillist=nothing)
 		end
 	end
 end
-
