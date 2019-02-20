@@ -1,7 +1,6 @@
 module AlfvenDetectors
 
 using Flux
-using CuArrays
 using HDF5
 using Suppressor
 using ValueHistories

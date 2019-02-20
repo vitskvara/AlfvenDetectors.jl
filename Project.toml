@@ -5,7 +5,6 @@ version = "0.1.0"
 
 [deps]
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
-CuArrays = "3a865a2d-5b23-5a0f-bc46-62713ec82fae"
 Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
 HDF5 = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
 Suppressor = "fd094767-a336-5f1f-9728-57cf17d0bbfb"
