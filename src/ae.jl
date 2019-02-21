@@ -97,6 +97,7 @@ function fit!(ae::AE, X, batchsize::Int, nepochs::Int; cbit::Int = 200,
 
 	# sampler
 	sampler = EpochSampler(X,nepochs,batchsize)
+	epochsize = sampler.epochsize
 
 	# it might be smaller than the original one if there is not enough data
 	batchsize = sampler.batchsize 
@@ -108,7 +109,10 @@ function fit!(ae::AE, X, batchsize::Int, nepochs::Int; cbit::Int = 200,
 		x = next!(sampler)
 		reset!(sampler)
 		_l = getlosses(ae, x)
+		_e = 1
+		_i = 1
 	end
+	
 
 	# training
 	for (i,x) in enumerate(sampler)
@@ -121,13 +125,13 @@ function fit!(ae::AE, X, batchsize::Int, nepochs::Int; cbit::Int = 200,
 		if verb 
 			if (i%cbit == 0 || i == 1)
 				_l = getlosses(ae, x)
-				_e = sampler.iter+1
-				_i = i%sampler.epochsize
+				_e = ceil(Int, i/epochsize)
+				_i = i%epochsize
 			end
 			ProgressMeter.next!(p; showvalues = [
 				(:epoch,_e),
 				(:iteration,_i),
-				(:loss,_l)
+				(:loss,_l[1])
 				])
 		end
 

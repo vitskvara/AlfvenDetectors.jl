@@ -5,6 +5,8 @@ using HDF5
 using Suppressor
 using ValueHistories
 using Adapt
+using StatsBase # for samplers
+using ProgressMeter
 
 const Float = Float32
 

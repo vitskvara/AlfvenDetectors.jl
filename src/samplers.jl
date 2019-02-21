@@ -107,11 +107,11 @@ mutable struct EpochSampler
 end
 
 """
-	EpochSampler(X::Matrix, nepochs::Int, batchsize::Int)
+	EpochSampler(X, nepochs::Int, batchsize::Int)
 
 Default constructor.
 """
-function EpochSampler(X::Matrix, nepochs::Int, batchsize::Int)
+function EpochSampler(X, nepochs::Int, batchsize::Int)
 	M,N = size(X) 
 	batchsize = checkbatchsize(N,batchsize,false)
 	return EpochSampler(X,M,N,nepochs,Int(ceil(N/batchsize)),batchsize,0,
