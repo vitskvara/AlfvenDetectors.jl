@@ -34,7 +34,7 @@ _x = model(x)
 	@test ls[1] == l
 	@test ls[1] == ls[2]
 	# test training
-	AlfvenDetectors.fit!(model, x, 5, 1000, cbit=100, history = hist)
+	AlfvenDetectors.fit!(model, x, 5, 1000, cbit=100, history = hist, verb = false)
 	is, ls = get(hist, :loss)
 	@test ls[1] > ls[end] 
 	@test ls[end] < 1e-6
