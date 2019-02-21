@@ -141,9 +141,17 @@ function next!(s::EpochSampler)
 	end
 end
 
+"""
+	collect(s::EpochSampler)
+
+Colect all samples in an array.
+"""
+function collect(s::EpochSampler)
+	return [next!(s) for i in 1:(s.nepochs*s.epochsize)]
+end
 
 """
-	enumerate(s::UniformSampler)
+	enumerate(s::EpochSampler)
 
 Returns an iterable over indices and batches.
 """

@@ -1,6 +1,11 @@
 using AlfvenDetectors
 using Flux
+using ValueHistories
 using CuArrays
+
+xdim = 50
+ldim = 1
+N = 10
 
 @testset "AE-GPU" begin
 	println("           autoencoder")

@@ -1,6 +1,7 @@
 using AlfvenDetectors
 using Test
 using Random
+using Pkg
 
 Random.seed!(12345)
 

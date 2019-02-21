@@ -75,6 +75,62 @@ getlosses(ae::AE, X) = (
 	)
 
 """
+	track!(m, history, X)
+
+Save current progress.
+"""
+function track!(m::AE, history::MVHistory, X)
+	push!(history, :loss, Flux.Tracker.data(loss(m,X)))
+end
+
+
+mutable struct basic_callback
+	history
+	iter_counter::Int
+end
+
+function (cb::basic_callback)(m::AE, d, l, opt)
+	if cb.history != nothing
+		track!(m, cb.history, d)
+	end
+end
+
+"""
+	fit!(m::AE, X, batchsize::Int, nepochs::Int; 
+	cbit::Int=200, history = nothing, verb = true, eta = 0.001)
+
+Fit an autoencoder.
+"""
+function fit!(m::AE, X, batchsize::Int, nepochs::Int; 
+	cbit::Int=200, history = nothing, verb = true, eta = 0.001)
+	# optimizer
+	opt = ADAM(eta)
+
+	# sampler
+	sampler = EpochSampler(X,nepochs,batchsize)
+	epochsize = sampler.epochsize
+	# it might be smaller than the original one if there is not enough data
+	batchsize = sampler.batchsize 
+
+	# loss
+	# specified as an anonymous function in the call
+	#loss(x) = loss(m, x[2]) # since first element of x is the index from enumerate
+
+	# callback
+	cb = basic_callback(history,1)
+
+	train!(
+		m,
+		collect(sampler), 
+		x->loss(m, x), 
+		opt, 
+		cb
+		)
+end
+
+
+# to be deprecated
+"""
 	fit!(ae, X, batchsize, [ cbit, nepochs, verb, rdelta, history, eta])
 
 Trains the AE.
@@ -90,7 +146,7 @@ Trains the AE.
 	history [nothing] = MVHistory() to be filled with data of individual iterations
 	eta [0.001] = learning rate
 """
-function fit!(ae::AE, X, batchsize::Int, nepochs::Int; cbit::Int = 200,
+function _fit!(ae::AE, X, batchsize::Int, nepochs::Int; cbit::Int = 200,
 	verb = true, rdelta = Inf, history = nothing, eta = 0.001)
 	# optimizer
 	opt = ADAM(params(ae), eta)
@@ -154,11 +210,3 @@ function fit!(ae::AE, X, batchsize::Int, nepochs::Int; cbit::Int = 200,
 	end	
 end
 
-"""
-	track!(ae, history, X)
-
-Save current progress.
-"""
-function track!(ae::AE, history::MVHistory, X)
-	push!(history, :loss, Flux.Tracker.data(loss(ae,X)))
-end

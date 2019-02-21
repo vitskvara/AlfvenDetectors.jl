@@ -1,9 +1,8 @@
 using AlfvenDetectors
 using Flux
-using Pkg
 using ValueHistories
 
-xdim = 3
+xdim = 50
 ldim = 1
 N = 10
 

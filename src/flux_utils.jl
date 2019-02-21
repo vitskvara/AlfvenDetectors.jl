@@ -49,3 +49,32 @@ aelayerbuilder(lsize::Vector, activation, layer) = adapt(Float,
         Array{Any}(fill(layer, size(lsize,1)-1)), 
         Array{Any}([fill(activation, size(lsize,1)-2); identity]))
     )
+
+
+"""
+    train!(model, data, loss, optimiser, callback)
+
+Basics taken from the Flux train! function. Callback is any function
+of the remaining arguments that gets called every iteration - 
+use it to store or print training progress, stop training etc. 
+"""
+function train!(model, data, loss, optimiser, callback)
+    for _data in data
+        try
+            l = loss(_data)
+            Flux.Tracker.back!(l)
+            for p in params(model)
+                Δ = Flux.Optimise.apply!(optimiser, p.data, p.grad)
+                p.data .-= Δ
+                Δ .= 0
+            end
+            # now call the callback function
+            # maybe callback must be an object so it can store some values
+            # between individual calls
+            callback(model, _data, loss, optimiser)
+        catch e
+            # setup a special kind of exception for known cases with a break
+            rethrow(e)
+        end
+    end
+end
