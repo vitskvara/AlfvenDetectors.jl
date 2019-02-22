@@ -111,12 +111,7 @@ Initial constructor.
 """
 function basic_callback(hist,verb::Bool,eta::Real,show_it::Int; 
 	train_length::Int=0, epoch_size::Int=1) 
-	if verb
-		p = Progress(train_length, 0.1)
-	else
-		p = nothing
-	end
-	
+	p = Progress(train_length, 0.3)
 	basic_callback(hist,eta,0,p,Array{Any,1}(),verb,epoch_size,show_it)
 end
 
@@ -152,6 +147,14 @@ function (cb::basic_callback)(m::AE, d, l, opt)
 			])
 	end
 end
+
+"""
+	fast_callback(m::AE, d, l, opt)
+
+A callback for fast training with no overhead.
+"""
+fast_callback(m::AE, d, l, opt) = nothing
+
 
 """
 	fit!(m::AE, X, batchsize::Int, nepochs::Int; 

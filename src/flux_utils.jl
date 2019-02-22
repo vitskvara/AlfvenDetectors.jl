@@ -69,8 +69,7 @@ function train!(model, data, loss, optimiser, callback)
                 Δ .= 0
             end
             # now call the callback function
-            # maybe callback must be an object so it can store some values
-            # between individual calls
+            # can be an object so it can store some values between individual calls
             callback(model, _data, loss, optimiser)
         catch e
             # setup a special kind of exception for known cases with a break
