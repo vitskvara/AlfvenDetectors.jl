@@ -135,6 +135,8 @@ function next!(s::EpochSampler)
 			s.buffer = sample(1:s.N,s.N,replace = false)
 			s.iter += 1
 		end
+		# using views is very memory efficient, however it slows down training and is unusable for GPU
+		# return @views s.data[:,inds]
 		return s.data[:,inds]
 	else
 		return nothing
