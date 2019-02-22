@@ -149,7 +149,13 @@ end
 Colect all samples in an array.
 """
 function collect(s::EpochSampler)
-	return [next!(s) for i in 1:(s.nepochs*s.epochsize)]
+	res = []
+	x = next!(s)
+	while x != nothing
+		push!(res,x)
+		x = next!(s)
+	end
+	return res
 end
 
 """
@@ -158,7 +164,14 @@ end
 Returns an iterable over indices and batches.
 """
 function enumerate(s::EpochSampler)
-	return [(i,next!(s)) for i in 1:(s.nepochs*s.epochsize)]
+	res = []
+	x = next!(s)
+	i = 1
+	while x != nothing
+		push!(res,(i, x))
+		x = next!(s)
+	end
+	return res
 end
 
 """

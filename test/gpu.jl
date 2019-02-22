@@ -17,7 +17,7 @@ N = 10
 	@test typeof(x) == CuArray{AlfvenDetectors.Float,2}
 	@test typeof(_x) <: TrackedArray{AlfvenDetectors.Float,2}    
 	hist = MVHistory()
-	AlfvenDetectors.fit!(model, x, 5, 1000, cbit=100, history = hist)
+	AlfvenDetectors.fit!(model, x, 5, 1000, cbit=100, history = hist, verb=false)
 	is, ls = get(hist, :loss)
 	@test ls[1] > ls[end] 
 	@test ls[end] < 1e-6

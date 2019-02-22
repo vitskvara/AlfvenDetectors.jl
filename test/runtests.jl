@@ -7,8 +7,10 @@ Random.seed!(12345)
 
 @testset "AlfvenDetectors" begin
 
-@info "Testing models"
+@info "Testing utilities"
+include("samplers.jl")
 
+@info "Testing models"
 include("ae.jl")
 
 if "CuArrays" in keys(Pkg.installed())
