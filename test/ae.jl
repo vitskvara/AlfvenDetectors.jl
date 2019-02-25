@@ -1,6 +1,7 @@
 using AlfvenDetectors
 using Flux
 using ValueHistories
+using Test
 
 xdim = 50
 ldim = 1

@@ -1,3 +1,36 @@
+abstract type Sampler end
+
+"""
+	collect(s::Sampler)
+
+Colect all samples in an array.
+"""
+function collect(s::Sampler)
+	res = []
+	x = next!(s)
+	while x != nothing
+		push!(res,x)
+		x = next!(s)
+	end
+	return res
+end
+
+"""
+	enumerate(s::Sampler)
+
+Returns an iterable over indices and batches.
+"""
+function enumerate(s::Sampler)
+	res = []
+	x = next!(s)
+	i = 1
+	while x != nothing
+		push!(res,(i, x))
+		x = next!(s)
+	end
+	return res
+end
+
 """
 	UniformSampler
 
@@ -13,7 +46,7 @@ Fields:
 	iter = iteration counter
 	replace = sample with replacement?
 """
-mutable struct UniformSampler
+mutable struct UniformSampler <: Sampler
 	data
 	M
 	N
@@ -71,15 +104,6 @@ function reset!(s::UniformSampler)
 end
 
 """
-	enumerate(s::UniformSampler)
-
-Returns an iterable over indices and batches.
-"""
-function enumerate(s::UniformSampler)
-	return [(i,next!(s)) for i in 1:s.niter]
-end
-
-"""
 	EpochSampler
 
 Sample in batches that cover the entire dataset for a given number of epochs.
@@ -95,7 +119,7 @@ Fields:
 	iter = iteration counter
 	buffer = list of indices yet unused in the current epoch
 """
-mutable struct EpochSampler
+mutable struct EpochSampler <: Sampler
 	data
 	M
 	N
@@ -141,37 +165,6 @@ function next!(s::EpochSampler)
 	else
 		return nothing
 	end
-end
-
-"""
-	collect(s::EpochSampler)
-
-Colect all samples in an array.
-"""
-function collect(s::EpochSampler)
-	res = []
-	x = next!(s)
-	while x != nothing
-		push!(res,x)
-		x = next!(s)
-	end
-	return res
-end
-
-"""
-	enumerate(s::EpochSampler)
-
-Returns an iterable over indices and batches.
-"""
-function enumerate(s::EpochSampler)
-	res = []
-	x = next!(s)
-	i = 1
-	while x != nothing
-		push!(res,(i, x))
-		x = next!(s)
-	end
-	return res
 end
 
 """

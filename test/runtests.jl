@@ -9,6 +9,7 @@ Random.seed!(12345)
 
 @info "Testing utilities"
 include("samplers.jl")
+include("flux_utils.jl")
 
 @info "Testing models"
 include("ae.jl")

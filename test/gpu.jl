@@ -2,6 +2,7 @@ using AlfvenDetectors
 using Flux
 using ValueHistories
 using CuArrays
+using Test
 
 xdim = 50
 ldim = 1
