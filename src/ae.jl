@@ -155,7 +155,6 @@ A callback for fast training with no overhead.
 """
 fast_callback(m::AE, d, l, opt) = nothing
 
-
 """
 	fit!(m::AE, X, batchsize::Int, nepochs::Int; 
 	cbit::Int=200, history = nothing, verb = true, eta = 0.001)
