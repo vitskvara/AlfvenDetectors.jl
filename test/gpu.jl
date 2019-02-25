@@ -13,6 +13,8 @@ N = 10
 	x = AlfvenDetectors.Float.(hcat(ones(xdim, Int(N/2)), zeros(xdim, Int(N/2)))) |> gpu
 	model = AlfvenDetectors.AE([xdim,2,ldim], [ldim,2,xdim]) |> gpu
 	_x = model(x)
+	# for training check
+	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
 
 	@test typeof(x) == CuArray{AlfvenDetectors.Float,2}
 	@test typeof(_x) <: TrackedArray{AlfvenDetectors.Float,2}    
@@ -21,4 +23,9 @@ N = 10
 	is, ls = get(hist, :loss)
 	@test ls[1] > ls[end] 
 	@test ls[end] < 1e-6
+	# were the layers realy trained?
+	for (fp, p) in zip(frozen_params, collect(params(model)))
+		@test fp!=p
+	end
+
 end

@@ -19,7 +19,7 @@ function get_msc_array(datapath, shot, coil, timelim = [1.0, 1.25])
     return _data.msc[coil][:,tinds], _data.t[tinds], _data.f 
 end
 
-msc, t, f = get_msc_array(datapath, 11096, 20)
+msc, t, f = get_msc_array(datapath, 11096, 18)
 
 pcolormesh(t,f,msc)
 
@@ -47,7 +47,7 @@ large_model = AlfvenDetectors.AE([M, 200, zdim], [zdim, 200, M])
 small_train_history = MVHistory()
 large_train_history = MVHistory()
 batchsize = 64
-nepochs = 500
+nepochs = 1000
 cbit = 1
 # progress bars are broken in notebooks
 if occursin(".jl", @__FILE__) 
@@ -101,22 +101,23 @@ ylabel("f")
 # convert to CuArrays
 zdim = 2
 cudata = data |> gpu
-cumodel = AlfvenDetectors.AE([M, 20, zdim], [zdim, 20, M]) |> gpu
+cumodel = AlfvenDetectors.AE([M, 200, zdim], [zdim, 200, M]) |> gpu
 cu_train_history = MVHistory()
-nepochs = 500
+nepochs = 200
 
-@info "Training a small GPU model"
+@info "Training a large GPU model with less epochs in more iterations"
 # clear cache
-GC.gc()
-@time AlfvenDetectors.fit!(cumodel, cudata, batchsize, nepochs;
-    cbit = cbit, history = cu_train_history, verb = verb)
-# clear cache
-GC.gc()
+for i in 1:5
+    @time AlfvenDetectors.fit!(cumodel, cudata, batchsize, nepochs;
+        cbit = cbit, history = cu_train_history, verb = verb)
+    # clear cache
+    GC.gc()
+end
 
-@info "CPU model(data)"
-@time small_model(data);
+@info "large CPU model(data) timing"
+@time large_model(data);
 
-@info "GPU model(data)"
+@info "GPU model(data) timing"
 @time cumodel(cudata);
 
 figure()

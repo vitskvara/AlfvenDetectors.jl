@@ -9,10 +9,11 @@ N = 10
 x = AlfvenDetectors.Float.(hcat(ones(xdim, Int(N/2)), zeros(xdim, Int(N/2))))
 model = AlfvenDetectors.AE([xdim,2,ldim], [ldim,2,xdim])
 _x = model(x)
+# for training check
+frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
 
 @testset "AE" begin
 	println("           autoencoder")
-
 	# test correct construction
 	@test size(model.encoder.layers,1) == 2
 	@test size(model.decoder.layers,1) == 2
@@ -38,5 +39,9 @@ _x = model(x)
 	is, ls = get(hist, :loss)
 	@test ls[1] > ls[end] 
 	@test ls[end] < 1e-6
+	# were the layers realy trained?
+	for (fp, p) in zip(frozen_params, collect(params(model)))
+		@test fp!=p
+	end
 end
 
