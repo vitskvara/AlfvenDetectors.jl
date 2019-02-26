@@ -14,5 +14,6 @@ include("data.jl")
 include("flux_utils.jl")
 include("samplers.jl")
 include("ae.jl")
+include("vae.jl")
 
 end # module

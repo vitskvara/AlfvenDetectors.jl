@@ -3,15 +3,23 @@ using Flux
 using ValueHistories
 using CuArrays
 using Test
+using Random
 
 xdim = 50
 ldim = 1
 N = 10
 
-@testset "AE-GPU" begin
-	println("           autoencoder")
+@testset "flux utils" begin
+	# iscuarray
+	x = randn(4,10)
+	@test !AlfvenDetectors.iscuarray(x)
+	x = x |> gpu
+	@test AlfvenDetectors.iscuarray(x)
+end
 
+@testset "AE-GPU" begin
 	x = AlfvenDetectors.Float.(hcat(ones(xdim, Int(N/2)), zeros(xdim, Int(N/2)))) |> gpu
+	Random.seed!(12345)
 	model = AlfvenDetectors.AE([xdim,2,ldim], [ldim,2,xdim]) |> gpu
 	_x = model(x)
 	# for training check
@@ -29,4 +37,18 @@ N = 10
 		@test fp!=p
 	end
 
+end
+
+@testset "VAE-GPU" begin
+	x = AlfvenDetectors.Float.(hcat(ones(xdim, Int(N/2)), zeros(xdim, Int(N/2)))) |> gpu
+	Random.seed!(12345)
+    model = AlfvenDetectors.VAE([xdim,2,2*ldim], [ldim,2,xdim]) |> gpu
+	_x = model(x)
+	# for training check
+	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
+
+	@test typeof(x) == CuArray{AlfvenDetectors.Float,2}
+	@test typeof(_x) <: TrackedArray{AlfvenDetectors.Float,2}    
+	hist = MVHistory()
+	
 end

@@ -8,6 +8,7 @@ N = 10
 model = Flux.Chain(Flux.Dense(xdim, ldim), Flux.Dense(ldim, xdim))
 
 @testset "flux utils" begin 
+	# adapt
 	m32 = AlfvenDetectors.adapt(Float32, model)
 	@test typeof(m32.layers[1].W.data[1]) == Float32
 	m64 = AlfvenDetectors.adapt(Float64, model)
@@ -15,9 +16,16 @@ model = Flux.Chain(Flux.Dense(xdim, ldim), Flux.Dense(ldim, xdim))
 	m32 = AlfvenDetectors.adapt(Float32, model)
 	@test typeof(m32.layers[1].W.data[1]) == Float32
 
+	# freeze
 	mf = AlfvenDetectors.freeze(model)
 	@test length(collect(params(mf))) == 0
 
+	#iscuarray
+	@test !AlfvenDetectors.iscuarray(randn(4,10))
+	_x = model(randn(xdim,10))
+	@test !AlfvenDetectors.iscuarray(_x)
+
+	# layerbuilder
 	m = AlfvenDetectors.layerbuilder([5,4,3,2], fill(Flux.Dense, 3), [Flux.relu, Flux.relu, Flux.relu])
 	@test length(m.layers) == 3
 	x = randn(5,10)
@@ -44,6 +52,7 @@ model = Flux.Chain(Flux.Dense(xdim, ldim), Flux.Dense(ldim, xdim))
 	@test typeof(m.layers[1].σ) == typeof(relu)
 	@test typeof(m.layers[3].σ) == typeof(identity)
 
+	#aelayerbuilder
 	m = AlfvenDetectors.aelayerbuilder([5,4,4,2], relu, Dense)	
 	@test length(m.layers) == 3
 	x = randn(5,10)
@@ -53,6 +62,7 @@ model = Flux.Chain(Flux.Dense(xdim, ldim), Flux.Dense(ldim, xdim))
 	@test typeof(m.layers[1].σ) == typeof(relu)
 	@test typeof(m.layers[3].σ) == typeof(identity)
 
+	# train!
 	X = AlfvenDetectors.Float.(hcat(ones(xdim, Int(N/2)), zeros(xdim, Int(N/2))))
 	opt = ADAM(0.01)
 	loss(x) = Flux.mse(model(x), x)

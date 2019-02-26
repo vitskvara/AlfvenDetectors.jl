@@ -3,7 +3,7 @@ abstract type Sampler end
 """
 	collect(s::Sampler)
 
-Colect all samples in an array.
+Colect all samples.
 """
 function collect(s::Sampler)
 	res = []
@@ -34,7 +34,8 @@ end
 """
 	UniformSampler
 
-A uniformly distributed sampler from a given data (Matrix).
+A uniformly distributed sampler from a given data (Matrix). 
+Returns niter batches of size batchsize, sampled unifromly from X.
 
 Fields:
 
@@ -59,7 +60,7 @@ end
 """
 	checkbatchsize(N,batchsize,replace)
 
-Chaecks if batchsize is not larger than number of samples if replace = false.
+Checks if batchsize is not larger than number of samples if replace = false.
 """
 function checkbatchsize(N,batchsize,replace)
 	if batchsize > N && !replace

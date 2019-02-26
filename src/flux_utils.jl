@@ -12,6 +12,16 @@ Creates a non-trainable copy of a Flux object.
 """
 freeze(m) = Flux.mapleaves(Flux.Tracker.data,m)
 
+"""
+    iscuarray(X)
+
+Is X a CuArray?
+"""
+iscuarray(X) = (:CuArrays in names(Main, imported = true)) && 
+    !(typeof(X) <: Array || typeof(X) <: TrackedArray)
+# this should be done properly but I dont know how
+# now it detects whether X is not a (Tracked)Array
+
 # from FluxExtensions
 """
     function layerbuilder(d::Int,k::Int,o::Int,n::Int,ftype::String,lastlayer::String = "",ltype::String = "Dense")
