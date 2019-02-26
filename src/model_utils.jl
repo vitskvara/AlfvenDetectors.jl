@@ -1,5 +1,5 @@
-const l2pi = Float.(log(2*pi))
-#const l2pi = Float.(0.0)
+#const l2pi = Float.(log(2*pi))
+const l2pi = Float.(0.0)
 
 """
     KL(μ, σ2)

@@ -107,3 +107,36 @@ end
 A callback for fast training with no overhead.
 """
 fast_callback(m::FluxModel, d, l, opt) = nothing
+
+
+"""
+    basic_callback
+
+Basic experimental callback doing lots of extra stuff, probably 
+unnecesarily slow. Shows and stores current loss, maybe provides 
+a stopping condition or changes learning rate. Is called in every 
+loop in train! and serves to store and change information in 
+between iterations.
+"""
+mutable struct basic_callback
+    history
+    eta::Real
+    iter_counter::Int
+    progress
+    progress_vals
+    verb::Bool
+    epoch_size::Int
+    show_it::Int
+end
+
+"""
+    basic_callback(hist,verb::Bool,eta::Real,show_it::Int; 
+        train_length::Int=0, epoch_size::Int=1)
+
+Initial constructor.
+"""
+function basic_callback(hist,verb::Bool,eta::Real,show_it::Int; 
+    train_length::Int=0, epoch_size::Int=1) 
+    p = Progress(train_length, 0.3)
+    basic_callback(hist,eta,0,p,Array{Any,1}(),verb,epoch_size,show_it)
+end

@@ -84,44 +84,12 @@ function track!(m::AE, history::MVHistory, X)
 end
 
 """
-	basic_ae_callback
-
-Basic experimental callback doing lots of extra stuff, probably 
-unnecesarily slow. Shows and stores current loss, maybe provides 
-a stopping condition or changes learning rate. Is called in every 
-loop in train! and serves to store and change information in 
-between iterations.
-"""
-mutable struct basic_ae_callback
-	history
-	eta::Real
-	iter_counter::Int
-	progress
-	progress_vals
-	verb::Bool
-	epoch_size::Int
-	show_it::Int
-end
-
-"""
-	basic_ae_callback(hist,verb::Bool,eta::Real,show_it::Int; 
-		train_length::Int=0, epoch_size::Int=1)
-
-Initial constructor.
-"""
-function basic_ae_callback(hist,verb::Bool,eta::Real,show_it::Int; 
-	train_length::Int=0, epoch_size::Int=1) 
-	p = Progress(train_length, 0.3)
-	basic_ae_callback(hist,eta,0,p,Array{Any,1}(),verb,epoch_size,show_it)
-end
-
-"""
-	(cb::basic_ae_callback)(m::AE, d, l, opt)
+	(cb::basic_callback)(m::AE, d, l, opt)
 
 Callback for the train! function.
 TODO: stopping condition, change learning rate.
 """
-function (cb::basic_ae_callback)(m::AE, d, l, opt)
+function (cb::basic_callback)(m::AE, d, l, opt)
 	# update iteration count
 	cb.iter_counter += 1
 	# save training progress to a MVHistory
@@ -173,7 +141,7 @@ function fit!(m::AE, X, batchsize::Int, nepochs::Int;
 	
 	# callback
 	if runtype == "experimental"
-		cb = basic_ae_callback(history,verb,eta,cbit; 
+		cb = basic_callback(history,verb,eta,cbit; 
 			train_length = nepochs*epochsize,
 			epoch_size = epochsize)
 	elseif runtype == "fast"

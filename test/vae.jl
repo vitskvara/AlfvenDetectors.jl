@@ -40,7 +40,6 @@ N = 10
 	ls = AlfvenDetectors.getlosses(model, x, 10, 0.01)
 	@test sum(map(x->abs(x[1]-x[2]), zip(ls, (kl-llm, -llm, kl))))/3 < 2e-1
 	# its never the same because of the middle stochastic layer
-
 	# tracking
 	hist = MVHistory()
 	AlfvenDetectors.track!(model, hist, x, 10, 0.01)
@@ -48,9 +47,14 @@ N = 10
 	is, ls = get(hist, :loss)
 	@test abs(ls[1] - l) < 1e-1
 	@test abs(ls[1] - ls[2]) < 1e-1
-
 	# training
-	
+	AlfvenDetectors.fit!(model, x, 5, 100, β =0.1, cbit=5, history = hist, verb = false)
+	is, ls = get(hist, :loss)
+	@test ls[1] > ls[end] 
+	# were the layers realy trained?
+	for (fp, p) in zip(frozen_params, collect(params(model)))
+		@test fp!=p
+	end
 
     # this estimates the output variance
     model = AlfvenDetectors.VAE([xdim,2,2*ldim], [ldim,2,xdim*2], variant = :sigma)
@@ -61,5 +65,4 @@ N = 10
 	# test basic functionality
 	@test size(model.encoder(x)) == (2*ldim, N)
 	@test size(_x) == (2*xdim,N)
-
 end

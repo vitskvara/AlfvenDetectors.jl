@@ -108,7 +108,7 @@ Print vae loss function values.
 function evalloss(vae::VAE, X, M, β) 
 	l, lk, kl = getlosses(vae, X, M, β)
 	print("total loss: ", l,
-	"\n- loglikelihood: ", lk,
+	"\n-loglikelihood: ", lk,
 	"\nKL: ", kl, "\n\n")
 end
 
@@ -122,6 +122,57 @@ getlosses(vae::VAE, X, M, β) = (
 	Flux.Tracker.data(-loglikelihood(vae,X,M)),
 	Flux.Tracker.data(KL(vae, X))
 	)
+
+"""
+	track!(vae, history, X, M, β)
+
+Save current progress.
+"""
+function track!(vae::VAE, history::MVHistory, X, M, β)
+	l, lk, kl = getlosses(vae, X, M, β)
+	push!(history, :loss, l)
+	push!(history, :loglikelihood, lk)
+	push!(history, :KL, kl)
+end
+
+########### callback #################
+
+"""
+	(cb::basic_callback)(m::VAE, d, l, opt)
+
+Callback for the train! function.
+TODO: stopping condition, change learning rate.
+"""
+function (cb::basic_callback)(m::VAE, d, l, opt, M::Int, β::Real)
+	# update iteration count
+	cb.iter_counter += 1
+	# save training progress to a MVHistory
+	if cb.history != nothing
+		track!(m, cb.history, d, M, β)
+	end
+	# verbal output
+	if cb.verb 
+		# if first iteration or a progress print iteration
+		# recalculate the shown values
+		if (cb.iter_counter%cb.show_it == 0 || cb.iter_counter == 1)
+			ls = getlosses(m, d, M, β)
+			cb.progress_vals = Array{Any,1}()
+			push!(cb.progress_vals, ceil(Int, cb.iter_counter/cb.epoch_size))
+			push!(cb.progress_vals, cb.iter_counter%cb.epoch_size)
+			push!(cb.progress_vals, ls[1])
+			push!(cb.progress_vals, ls[2])
+			push!(cb.progress_vals, ls[3])
+		end
+		# now give them to the progress bar object
+		ProgressMeter.next!(cb.progress; showvalues = [
+			(:epoch,cb.progress_vals[1]),
+			(:iteration,cb.progress_vals[2]),
+			(:loss,cb.progress_vals[3]),
+			(Symbol("-loglikelihood"),cb.progress_vals[4]),
+			(:KL,cb.progress_vals[5])
+			])
+	end
+end
 
 """
 	fit!(vae, X, batchsize, [M, iterations, cbit, nepochs, 
@@ -145,69 +196,39 @@ vae - a VAE object
 function fit!(vae::VAE, X, batchsize::Int, nepochs::Int; 
 	M=1, β::Real= Float(1.0), cbit::Int=200, history = nothing, 
 	verb::Bool = true, eta = 0.001, runtype = "experimental")
-	# settings
-	opt = ADAM(params(vae), eta)
-
 	# sampler
-	# sampler
-	if nepochs == nothing
-		sampler = UniformSampler(X,iterations,batchsize)
-	else
-		sampler = EpochSampler(X,nepochs,batchsize)
-		cbit = sampler.epochsize
-		iterations = nepochs*cbit
-	end
+	sampler = EpochSampler(X,nepochs,batchsize)
+	epochsize = sampler.epochsize
 	# it might be smaller than the original one if there is not enough data
 	batchsize = sampler.batchsize 
 
-	# using ProgressMeter 
-	if verb
-		p = Progress(iterations, 0.3)
-		x = next!(sampler)
-		reset!(sampler)
-		_l, _lk, _kl = getlosses(vae, x, M, β)
+	# loss
+	# use default loss
+
+	# optimizer
+	opt = ADAM(eta)
+
+	# callback
+	if runtype == "experimental"
+		cb = basic_callback(history,verb,eta,cbit; 
+			train_length = nepochs*epochsize,
+			epoch_size = epochsize)
+	elseif runtype == "fast"
+		cb = fast_callback 
+	else
+		@warn "Unknown runtype, should be one of [experimental, fast]"
+		cb = basic_callback(history,verb,eta,cbit; 
+			train_length = nepochs*epochsize,
+			epoch_size = epochsize)
 	end
+
 
 	# train
-	for (i,x) in enumerate(sampler)
-		# gradient computation and update
-		l = loss(vae, x, M, β)
-		Flux.Tracker.back!(l)
-		opt()
-
-		# progress
-		if verb 
-			if (i%cbit == 0 || i == 1)
-				_l, _lk, _kl = getlosses(vae, x, M, β)
-			end
-			ProgressMeter.next!(p; showvalues = [(:loss,_l),(:likelihood, _lk),(:KL, _kl)])
-		end
-
-		# save actual iteration data
-		if history != nothing
-			track!(vae, history, x, M, β)
-		end
-
-		# if stopping condition is present
-		if rdelta < Inf
-			re = Flux.Tracker.data(-likelihood(vae, x))[1]
-			if re < rdelta
-				println("Training ended prematurely after $i iterations,\n",
-					"likelihood $re < $rdelta")
-				break
-			end
-		end
-	end
-end
-
-"""
-	track!(vae, history, X, M, β)
-
-Save current progress.
-"""
-function track!(vae::VAE, history::MVHistory, X, M, β)
-	l, lk, kl = getlosses(vae, X, M, β)
-	push!(history, :loss, l)
-	push!(history, :KLD, kl)
-	push!(history, :likelihood, lk)
+	train!(
+		vae,
+		collect(sampler),
+		x->loss(vae,x,M,β),
+		opt,
+		(m::VAE,d,l,o)->cb(m,d,l,o,M,β)
+		)
 end
