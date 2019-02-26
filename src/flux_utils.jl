@@ -17,8 +17,14 @@ freeze(m) = Flux.mapleaves(Flux.Tracker.data,m)
 
 Is X a CuArray?
 """
-iscuarray(X) = (:CuArrays in names(Main, imported = true)) && 
-    !(typeof(X) <: Array || typeof(X) <: TrackedArray)
+function iscuarray(X) 
+    if typeof(X) <: TrackedArray
+        return (:CuArrays in names(Main, imported = true)) && !(typeof(X.data) <: Array)
+    else
+        return (:CuArrays in names(Main, imported = true)) && !(typeof(X) <: Array)
+    end
+end
+
 # this should be done properly but I dont know how
 # now it detects whether X is not a (Tracked)Array
 
@@ -61,6 +67,12 @@ aelayerbuilder(lsize::Vector, activation, layer) = adapt(Float,
         Array{Any}([fill(activation, size(lsize,1)-2); identity]))
     )
 
+"""
+    FluxModel
+
+Abstract type to share some methods between models.
+"""
+abstract type FluxModel end
 
 """
     train!(model, data, loss, optimiser, callback)
@@ -88,3 +100,10 @@ function train!(model, data, loss, optimiser, callback)
         end
     end
 end
+
+"""
+    fast_callback(m::FluxModel, d, l, opt)
+
+A callback for fast training with no overhead.
+"""
+fast_callback(m::FluxModel, d, l, opt) = nothing

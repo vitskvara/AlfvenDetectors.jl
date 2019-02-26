@@ -9,6 +9,7 @@ using Pkg
 	@info "Testing utilities"
 	include("samplers.jl")
 	include("flux_utils.jl")
+	include("model_utils.jl")
 end
 
 @testset "Models" begin

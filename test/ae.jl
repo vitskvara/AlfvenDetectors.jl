@@ -8,15 +8,16 @@ xdim = 50
 ldim = 1
 N = 10
 
-x = AlfvenDetectors.Float.(hcat(ones(xdim, Int(N/2)), zeros(xdim, Int(N/2))))
-Random.seed!(12345)
-model = AlfvenDetectors.AE([xdim,2,ldim], [ldim,2,xdim])
-_x = model(x)
-# for training check
-frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
-
 @testset "AE" begin
 	println("           autoencoder")
+
+	x = AlfvenDetectors.Float.(hcat(ones(xdim, Int(N/2)), zeros(xdim, Int(N/2))))
+	Random.seed!(12345)
+	model = AlfvenDetectors.AE([xdim,2,ldim], [ldim,2,xdim])
+	_x = model(x)
+	# for training check
+	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
+
 	# test correct construction
 	@test size(model.encoder.layers,1) == 2
 	@test size(model.decoder.layers,1) == 2
@@ -46,5 +47,7 @@ frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
 	for (fp, p) in zip(frozen_params, collect(params(model)))
 		@test fp!=p
 	end
+	# test fast training
+	AlfvenDetectors.fit!(model, x, 5, 1000, cbit=100, history = hist, verb = false, runtype = "fast")
 end
 

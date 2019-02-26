@@ -15,6 +15,9 @@ N = 10
 	@test !AlfvenDetectors.iscuarray(x)
 	x = x |> gpu
 	@test AlfvenDetectors.iscuarray(x)
+	model = Flux.Chain(Flux.Dense(4, ldim), Flux.Dense(ldim, 4)) |> gpu
+	_x = model(x)
+	@test AlfvenDetectors.iscuarray(_x)
 end
 
 @testset "AE-GPU" begin
