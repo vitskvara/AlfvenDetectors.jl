@@ -42,7 +42,8 @@ end
 """
     aelayerbuilder(lsize, activation, layer)
 
-Construct encoder/decoder using a layer builder.
+Construct encoder/decoder using a layer builder. Output of last layer
+is always identity.
 """
 aelayerbuilder(lsize::Vector, activation, layer) = adapt(Float, 
     layerbuilder(lsize, 
