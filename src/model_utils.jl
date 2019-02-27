@@ -1,5 +1,5 @@
-#const l2pi = Float.(log(2*pi))
-const l2pi = Float.(0.0)
+const l2pi = Float.(log(2*pi)) # the model converges the same with zero or correct value
+#const l2pi = Float.(0.0)
 
 """
     KL(μ, σ2)
@@ -19,6 +19,16 @@ loglikelihood(X::Real, μ::Real) = - ((μ - X)^2 + l2pi)/2
 loglikelihood(X::Real, μ::Real, σ2::Real) = - ((μ - X)^2/σ2 + log(σ2) + l2pi)/2
 loglikelihood(X, μ) = - StatsBase.mean(sum((μ - X).^2 .+ l2pi,dims = 1))/2
 loglikelihood(X, μ, σ2) = - StatsBase.mean(sum((μ - X).^2 ./σ2 .+ log.(σ2) .+ l2pi,dims = 1))/2
+
+"""
+    loglikelihoodopt(X, μ, [σ2])
+
+Loglikelihood of a normal sample X given mean and variance without the constant term.
+"""
+loglikelihoodopt(X::Real, μ::Real) = - ((μ - X)^2)/2
+loglikelihoodopt(X::Real, μ::Real, σ2::Real) = - ((μ - X)^2/σ2 + log(σ2))/2
+loglikelihoodopt(X, μ) = - StatsBase.mean(sum((μ - X).^2,dims = 1))/2
+loglikelihoodopt(X, μ, σ2) = - StatsBase.mean(sum((μ - X).^2 ./σ2 .+ log.(σ2),dims = 1))/2
 # maybe define a different behaviour for vectors and matrices?
 
 """

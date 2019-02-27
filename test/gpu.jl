@@ -39,7 +39,6 @@ end
 	for (fp, p) in zip(frozen_params, collect(params(model)))
 		@test fp!=p
 	end
-
 end
 
 @testset "VAE-GPU" begin
@@ -53,5 +52,11 @@ end
 	@test typeof(x) == CuArray{AlfvenDetectors.Float,2}
 	@test typeof(_x) <: TrackedArray{AlfvenDetectors.Float,2}    
 	hist = MVHistory()
-	
+	AlfvenDetectors.fit!(model, x, 5, 100, β =0.1, cbit=5, history = hist, verb = false)
+	is, ls = get(hist, :loss)
+	@test ls[1] > ls[end] 
+	# were the layers realy trained?
+	for (fp, p) in zip(frozen_params, collect(params(model)))
+		@test fp!=p
+	end
 end

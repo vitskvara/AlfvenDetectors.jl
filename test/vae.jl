@@ -55,6 +55,12 @@ N = 10
 	for (fp, p) in zip(frozen_params, collect(params(model)))
 		@test fp!=p
 	end
+	# sample
+	gx = AlfvenDetectors.sample(model)
+	@test typeof(gx) <: Flux.TrackedArray{AlfvenDetectors.Float,1}
+	gx = AlfvenDetectors.sample(model,5)
+	@test typeof(gx) <: Flux.TrackedArray{AlfvenDetectors.Float,2}
+	@test size(gx) == (xdim,5)
 
     # this estimates the output variance
     model = AlfvenDetectors.VAE([xdim,2,2*ldim], [ldim,2,xdim*2], variant = :sigma)
@@ -65,4 +71,9 @@ N = 10
 	# test basic functionality
 	@test size(model.encoder(x)) == (2*ldim, N)
 	@test size(_x) == (2*xdim,N)
+	# loss functions
+	prels = AlfvenDetectors.getlosses(model, x, 10, 0.01)
+	AlfvenDetectors.fit!(model, x, 5, 100, β =0.1, runtype = "fast")
+	postls = AlfvenDetectors.getlosses(model, x, 10, 0.01)
+	@test all(x->x[1]>x[2], zip(prels, postls))
 end

@@ -24,11 +24,12 @@ Flux.@treelike VAE #encoder, decoder
 Initialize a variational autoencoder with given encoder size and decoder size.
 
 esize - vector of ints specifying the width anf number of layers of the encoder
-\ndsize - size of decoder
-\nactivation [Flux.relu] - arbitrary activation function
-\nlayer [Flux.Dense] - type of layer
-\nvariant [:unit] - :unit - output has unit variance
-\n 		          - :sigma - the variance of the output is estimated
+dsize - size of decoder
+activation [Flux.relu] - arbitrary activation function
+layer [Flux.Dense] - type of layer
+variant [:unit] 
+	- :unit - output has unit variance
+    - :sigma - the variance of the output is estimated
 """
 function VAE(esize::Array{Int64,1}, dsize::Array{Int64,1}; activation = Flux.relu,
 		layer = Flux.Dense, variant = :unit)
@@ -73,63 +74,63 @@ Loglikelihood of an autoencoded sample X.
 function loglikelihood(vae::VAE, X)
 	if vae.variant == :unit
 		μ = vae(X)
-		return loglikelihood(X,μ)
+		return loglikelihoodopt(X,μ)
 	else	
 		vx = vae(X)
 		μ, σ2 = mu(vx), sigma2(vx)
-		return loglikelihood(X,μ, σ2)
+		return loglikelihoodopt(X,μ, σ2)
 	end
 end
 
 """
-	loglikelihood(vae, X, M)
+	loglikelihood(vae, X, L)
 
-Loglikelihood of an autoencoded sample X sampled M times.
+Loglikelihood of an autoencoded sample X sampled L times.
 """
-loglikelihood(vae::VAE, X, M) = StatsBase.mean([loglikelihood(vae, X) for m in 1:M])
+loglikelihood(vae::VAE, X, L) = StatsBase.mean([loglikelihood(vae, X) for m in 1:L])
 
 ### anomaly score jako pxvita?
 # muz, sigmaz = encoder(x)
 # lognormal(x, decoder(muz), 1.0)
 
 """
-	loss(vae, X, M, β)
+	loss(vae, X, L, β)
 
 Loss function of the variational autoencoder. β is scaling parameter of
 the KLD, 1 = full KL, 0 = no KL.
 """
-loss(vae::VAE, X, M, β) = -loglikelihood(vae,X,M) + Float(β)*KL(vae, X)
+loss(vae::VAE, X, L, β) = -loglikelihood(vae,X,L) + Float(β)*KL(vae, X)
 
 """
-	evalloss(vae, X, M, β)
+	evalloss(vae, X, L, β)
 
 Print vae loss function values.
 """
-function evalloss(vae::VAE, X, M, β) 
-	l, lk, kl = getlosses(vae, X, M, β)
+function evalloss(vae::VAE, X, L, β) 
+	l, lk, kl = getlosses(vae, X, L, β)
 	print("total loss: ", l,
 	"\n-loglikelihood: ", lk,
 	"\nKL: ", kl, "\n\n")
 end
 
 """
-	getlosses(vae, X, M, β)
+	getlosses(vae, X, L, β)
 
 Return the numeric values of current losses.
 """
-getlosses(vae::VAE, X, M, β) = (
-	Flux.Tracker.data(loss(vae, X, M, β)),
-	Flux.Tracker.data(-loglikelihood(vae,X,M)),
+getlosses(vae::VAE, X, L, β) = (
+	Flux.Tracker.data(loss(vae, X, L, β)),
+	Flux.Tracker.data(-loglikelihood(vae,X,L)),
 	Flux.Tracker.data(KL(vae, X))
 	)
 
 """
-	track!(vae, history, X, M, β)
+	track!(vae, history, X, L, β)
 
 Save current progress.
 """
-function track!(vae::VAE, history::MVHistory, X, M, β)
-	l, lk, kl = getlosses(vae, X, M, β)
+function track!(vae::VAE, history::MVHistory, X, L, β)
+	l, lk, kl = getlosses(vae, X, L, β)
 	push!(history, :loss, l)
 	push!(history, :loglikelihood, lk)
 	push!(history, :KL, kl)
@@ -138,24 +139,24 @@ end
 ########### callback #################
 
 """
-	(cb::basic_callback)(m::VAE, d, l, opt)
+	(cb::basic_callback)(m::VAE, d, l, opt, L::Int, β::Real)
 
 Callback for the train! function.
 TODO: stopping condition, change learning rate.
 """
-function (cb::basic_callback)(m::VAE, d, l, opt, M::Int, β::Real)
+function (cb::basic_callback)(m::VAE, d, l, opt, L::Int, β::Real)
 	# update iteration count
 	cb.iter_counter += 1
 	# save training progress to a MVHistory
 	if cb.history != nothing
-		track!(m, cb.history, d, M, β)
+		track!(m, cb.history, d, L, β)
 	end
 	# verbal output
 	if cb.verb 
 		# if first iteration or a progress print iteration
 		# recalculate the shown values
 		if (cb.iter_counter%cb.show_it == 0 || cb.iter_counter == 1)
-			ls = getlosses(m, d, M, β)
+			ls = getlosses(m, d, L, β)
 			cb.progress_vals = Array{Any,1}()
 			push!(cb.progress_vals, ceil(Int, cb.iter_counter/cb.epoch_size))
 			push!(cb.progress_vals, cb.iter_counter%cb.epoch_size)
@@ -175,26 +176,26 @@ function (cb::basic_callback)(m::VAE, d, l, opt, M::Int, β::Real)
 end
 
 """
-	fit!(vae, X, batchsize, [M, iterations, cbit, nepochs, 
-	verb, β, rdelta, history, eta])
+	fit!(vae::VAE, X, batchsize::Int, nepochs::Int; 
+		L=1, β::Real= Float(1.0), cbit::Int=200, history = nothing, 
+		verb::Bool = true, eta = 0.001, runtype = "experimental")
 
 Trains the VAE neural net.
 
 vae - a VAE object
-\nX - data array with instances as columns
-\nbatchsize - batchsize
-\nM [1] - number of samples for likelihood
-\niterations [1000] - number of iterations
-\ncbit [200] - after this # of iterations, output is printed
-\nnepochs [nothing] - if this is supplied, epoch training will be used instead of fixed iterations
-\nverb [true] - if output should be produced
-\nβ [1] - scaling for the KLD loss
-\nrdelta [Inf] - stopping condition for likelihood
-\nhistory [nothing] - a dictionary for training progress control
-\neta [eta] - learning rate
+X - data array with instances as columns
+batchsize - batchsize
+nepochs - number of epochs
+L [1] - number of samples for likelihood
+β [1.0] - scaling for the KLD loss
+cbit [200] - after this # of iterations, progress is updated
+history [nothing] - a dictionary for training progress control
+verb [true] - if output should be produced
+eta [eta] - learning rate
+runtype ["experimental"] - if fast is selected, no output and no history is written
 """
 function fit!(vae::VAE, X, batchsize::Int, nepochs::Int; 
-	M=1, β::Real= Float(1.0), cbit::Int=200, history = nothing, 
+	L=1, β::Real= Float(1.0), cbit::Int=200, history = nothing, 
 	verb::Bool = true, eta = 0.001, runtype = "experimental")
 	# sampler
 	sampler = EpochSampler(X,nepochs,batchsize)
@@ -213,22 +214,29 @@ function fit!(vae::VAE, X, batchsize::Int, nepochs::Int;
 		cb = basic_callback(history,verb,eta,cbit; 
 			train_length = nepochs*epochsize,
 			epoch_size = epochsize)
+		_cb(m::VAE,d,l,o) =  cb(m,d,l,o,L,β)
 	elseif runtype == "fast"
-		cb = fast_callback 
+		_cb = fast_callback 
 	else
-		@warn "Unknown runtype, should be one of [experimental, fast]"
-		cb = basic_callback(history,verb,eta,cbit; 
-			train_length = nepochs*epochsize,
-			epoch_size = epochsize)
+		@warn "Unknown runtype, should be one of [experimental, fast], doing nothing"
+		return
 	end
-
 
 	# train
 	train!(
 		vae,
 		collect(sampler),
-		x->loss(vae,x,M,β),
+		x->loss(vae,x,L,β),
 		opt,
-		(m::VAE,d,l,o)->cb(m,d,l,o,M,β)
+		_cb
 		)
 end
+
+##### auxiliarry functions #####
+"""
+	sample(vae::VAE, [M::Int])
+
+Get samples generated by the VAE.
+"""
+StatsBase.sample(vae::VAE) = vae.decoder(randn(Float, size(vae.decoder.layers[1].W,2)))
+StatsBase.sample(vae::VAE, M::Int) = vae.decoder(randn(Float, size(vae.decoder.layers[1].W,2),M))
