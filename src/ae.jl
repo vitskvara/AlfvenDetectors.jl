@@ -126,6 +126,7 @@ Fit an autoencoder.
 function fit!(m::AE, X, batchsize::Int, nepochs::Int; 
 	cbit::Int=200, history = nothing, verb = true, eta = 0.001,
 	runtype = "experimental")
+	@assert runtype in ["experimental", "fast"]
 	# sampler
 	sampler = EpochSampler(X,nepochs,batchsize)
 	epochsize = sampler.epochsize
@@ -146,10 +147,6 @@ function fit!(m::AE, X, batchsize::Int, nepochs::Int;
 			epoch_size = epochsize)
 	elseif runtype == "fast"
 		cb = fast_callback 
-	else
-		cb = basic_callback(history,verb,eta,cbit; 
-			train_length = nepochs*epochsize,
-			epoch_size = epochsize)
 	end
 
 	train!(

@@ -65,7 +65,7 @@ N = 10
 	###########################################################
     ### VAE with estimated diagonal of covariance on output ###
     ###########################################################
-    model = AlfvenDetectors.VAE([xdim,2,2*ldim], [ldim,2,xdim*2], variant = :sigma)
+    model = AlfvenDetectors.VAE([xdim,2,2*ldim], [ldim,2,xdim*2], variant = :diag)
 	_x = model(x)
 	# test correct construction
 	@test size(model.encoder.layers,1) == 2
