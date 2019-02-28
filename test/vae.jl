@@ -62,7 +62,9 @@ N = 10
 	@test typeof(gx) <: Flux.TrackedArray{AlfvenDetectors.Float,2}
 	@test size(gx) == (xdim,5)
 
-    # this estimates the output variance
+	###########################################################
+    ### VAE with estimated diagonal of covariance on output ###
+    ###########################################################
     model = AlfvenDetectors.VAE([xdim,2,2*ldim], [ldim,2,xdim*2], variant = :sigma)
 	_x = model(x)
 	# test correct construction
@@ -76,4 +78,10 @@ N = 10
 	AlfvenDetectors.fit!(model, x, 5, 100, β =0.1, runtype = "fast")
 	postls = AlfvenDetectors.getlosses(model, x, 10, 0.01)
 	@test all(x->x[1]>x[2], zip(prels, postls))
+	gx = AlfvenDetectors.sample(model)
+	@test typeof(gx) <: Flux.TrackedArray{AlfvenDetectors.Float,1}
+	gx = AlfvenDetectors.sample(model,5)
+	@test typeof(gx) <: Flux.TrackedArray{AlfvenDetectors.Float,2}
+	@test size(gx) == (xdim,5)
+
 end

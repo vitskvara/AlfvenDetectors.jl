@@ -23,7 +23,8 @@ loglikelihood(X, μ, σ2) = - StatsBase.mean(sum((μ - X).^2 ./σ2 .+ log.(σ2) 
 """
     loglikelihoodopt(X, μ, [σ2])
 
-Loglikelihood of a normal sample X given mean and variance without the constant term.
+Loglikelihood of a normal sample X given mean and variance without the constant term. For
+optimalization the results is the same and this is faster.
 """
 loglikelihoodopt(X::Real, μ::Real) = - ((μ - X)^2)/2
 loglikelihoodopt(X::Real, μ::Real, σ2::Real) = - ((μ - X)^2/σ2 + log(σ2))/2
@@ -52,7 +53,7 @@ Sample normal distribution with mean and sigma2 extracted from X.
 """
 function samplenormal(X)
     μ, σ2 = mu(X), sigma2(X)
-	ϵ = Float.(randn(size(μ)))
+	ϵ = randn(Float, size(μ))
     # if cuarrays are loaded and X is on GPU, convert eps to GPU as well
     if iscuarray(μ)
     	ϵ = ϵ |> gpu
