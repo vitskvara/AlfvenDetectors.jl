@@ -9,6 +9,8 @@ xdim = 5
 ldim = 1
 N = 10
 
+sim(x,y) = abs(x-y) < 1e-6
+
 @testset "flux utils" begin
 	# iscuarray
 	x = randn(4,10)
@@ -18,6 +20,14 @@ N = 10
 	model = Flux.Chain(Flux.Dense(4, ldim), Flux.Dense(ldim, 4)) |> gpu
 	_x = model(x)
 	@test AlfvenDetectors.iscuarray(_x)
+end
+
+@testset "model utils" begin
+	x = fill(0.0,5,5) |> gpu
+	sd = fill(1.0,5) |> gpu
+	# the version where sigma is a vector (scalar variance)
+	@test sim(AlfvenDetectors.loglikelihood(x,x,sd), 0.0 - AlfvenDetectors.l2pi/2*5)
+	@test sim(AlfvenDetectors.loglikelihood(x,x,sd), 0.0 - AlfvenDetectors.l2pi/2*5)
 end
 
 @testset "AE-GPU" begin

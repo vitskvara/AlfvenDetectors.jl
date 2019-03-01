@@ -1,8 +1,10 @@
 using AlfvenDetectors
 using Test
 using Random
+using StatsBase
 
-sim(x,y) = abs(x-y) < 1e-6
+sim(x,y,δ=1e-6) = abs(x-y) < δ
+Random.seed!(12345)
 
 @testset "model utils" begin
     # KL
@@ -27,7 +29,11 @@ sim(x,y) = abs(x-y) < 1e-6
     @test sim(AlfvenDetectors.loglikelihood(fill(3,5,5),fill(3,5,5)), 0.0 - AlfvenDetectors.l2pi/2*5)
     @test sim(AlfvenDetectors.loglikelihood(fill(0.0,5,5),fill(0.0,5,5),fill(1.0,5,5)), 0.0 - AlfvenDetectors.l2pi/2*5)
 	@test sim(AlfvenDetectors.loglikelihood(fill(5,5,5),fill(5,5,5),fill(1,5,5)), 0.0 - AlfvenDetectors.l2pi/2*5)
-
+	
+	# the version where sigma is a vector (scalar variance)
+	@test sim(AlfvenDetectors.loglikelihood(fill(0.0,5,5),fill(0.0,5,5),fill(1.0,5)), 0.0 - AlfvenDetectors.l2pi/2*5)
+	@test sim(AlfvenDetectors.loglikelihood(fill(5,5,5),fill(5,5,5),fill(1,5)), 0.0 - AlfvenDetectors.l2pi/2*5)
+	
 	# loglikelihoodopt
 	@test AlfvenDetectors.loglikelihoodopt(0.0,0.0) == 0.0
     @test AlfvenDetectors.loglikelihoodopt(5,5) == 0.0
@@ -46,13 +52,40 @@ sim(x,y) = abs(x-y) < 1e-6
     @test sim(AlfvenDetectors.loglikelihoodopt(fill(0.0,5,5),fill(0.0,5,5),fill(1.0,5,5)), 0.0)
 	@test sim(AlfvenDetectors.loglikelihoodopt(fill(5,5,5),fill(5,5,5),fill(1,5,5)), 0.0)
 
+	# the version where sigma is a vector (scalar variance)
+    @test sim(AlfvenDetectors.loglikelihoodopt(fill(0.0,5,5),fill(0.0,5,5),fill(1.0,5)), 0.0)
+	@test sim(AlfvenDetectors.loglikelihoodopt(fill(5,5,5),fill(5,5,5),fill(1,5)), 0.0)
+
 	# mu&sigma
 	X = randn(4,10)
 	@test size(AlfvenDetectors.mu(X)) == (2,10)
 	@test size(AlfvenDetectors.sigma2(X)) == (2,10)
 	@test all(x->x>0, AlfvenDetectors.sigma2(X)) 
 
+	# mu&sigma scalar
+	@test size(AlfvenDetectors.mu_scalarvar(X)) == (3,10)
+	@test size(AlfvenDetectors.sigma2_scalarvar(X)) == (10,)
+	@test all(x->x>0, AlfvenDetectors.sigma2_scalarvar(X)) 
+	
 	# sample normal
+	M = fill(2,1000)
+	sd = fill(0.1,1000)
+	X = AlfvenDetectors.samplenormal(M,sd)
+	@test size(X) == (1000,)
+	@test sim(StatsBase.mean(X), 2, 1e-2)
+	
+	M = fill(2,10,1000)
+	sd = fill(0.1,1000)
+	X = AlfvenDetectors.samplenormal(M,sd)
+	@test size(X) == (10,1000)
+	@test sim(StatsBase.mean(X), 2, 1e-1)
+	
+	X = randn(4,10)
 	y = AlfvenDetectors.samplenormal(X)
 	@test size(y) == (2,10)
+
+	# sample normal scalarvar
+	X = randn(4,10)
+	y = AlfvenDetectors.samplenormal_scalarvar(X)
+	@test size(y) == (3,10)
 end

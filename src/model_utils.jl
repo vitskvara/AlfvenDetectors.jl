@@ -1,5 +1,5 @@
-const l2pi = Float.(log(2*pi)) # the model converges the same with zero or correct value
-#const l2pi = Float.(0.0)
+const l2pi = Float(log(2*pi)) # the model converges the same with zero or correct value
+const δ = Float(1e-6)
 
 """
     KL(μ, σ2)
@@ -18,12 +18,14 @@ Loglikelihood of a normal sample X given mean and variance.
 loglikelihood(X::Real, μ::Real) = - ((μ - X)^2 + l2pi)/2
 loglikelihood(X::Real, μ::Real, σ2::Real) = - ((μ - X)^2/σ2 + log(σ2) + l2pi)/2
 loglikelihood(X, μ) = - StatsBase.mean(sum((μ - X).^2 .+ l2pi,dims = 1))/2
-function loglikelihood(X, μ, σ2)
-    # for some reason, on GPU, this computation must be broken into separate lines of code
-    # fortunately it does not bring too much additional overhead
-    # see also https://github.com/FluxML/Flux.jl/issues/385
-    y = (μ - X).^2 ./σ2
-    - StatsBase.mean(sum(y .+ log.(σ2) .+ l2pi,dims = 1))/2
+loglikelihood(X, μ, σ2) = - StatsBase.mean(sum((μ - X).^2 ./σ2 + log.(σ2) .+ l2pi,dims = 1))/2
+# in order to work on gpu and for faster backpropagation, dont use .+ here for arrays
+# see also https://github.com/FluxML/Flux.jl/issues/385
+function loglikelihood(X::AbstractMatrix, μ::AbstractMatrix, σ2::AbstractVector) 
+    # again, this has to be split otherwise it is very slow
+    y = (μ - X).^2
+    y = (one(Float) ./σ2)' .* y 
+    - StatsBase.mean(sum( y .+ reshape(log.(σ2), 1, length(σ2)) .+ l2pi,dims = 1))/2
 end
 
 """
@@ -35,15 +37,15 @@ optimalization the results is the same and this is faster.
 loglikelihoodopt(X::Real, μ::Real) = - ((μ - X)^2)/2
 loglikelihoodopt(X::Real, μ::Real, σ2::Real) = - ((μ - X)^2/σ2 + log(σ2))/2
 loglikelihoodopt(X, μ) = - StatsBase.mean(sum((μ - X).^2,dims = 1))/2
-function loglikelihoodopt(X, μ, σ2) 
-    # for some reason, on GPU, this computation must be broken into separate lines of code
-    # fortunately it does not bring too much additional overhead
-    # see also https://github.com/FluxML/Flux.jl/issues/385
-    # actually backpropagation through this seems to be much faster
-    y = (μ - X).^2 ./σ2
-    - StatsBase.mean(sum( y .+ log.(σ2),dims = 1))/2
+loglikelihoodopt(X, μ, σ2) = - StatsBase.mean(sum( (μ - X).^2 ./σ2 + log.(σ2),dims = 1))/2
+# in order to work on gpu and for faster backpropagation, dont use .+ here
+# see also https://github.com/FluxML/Flux.jl/issues/385
+function loglikelihoodopt(X::AbstractMatrix, μ::AbstractMatrix, σ2::AbstractVector) 
+    # again, this has to be split otherwise it is very slow
+    y = (μ - X).^2
+    y = (one(Float) ./σ2)' .* y 
+    - StatsBase.mean(sum( y .+ reshape(log.(σ2), 1, length(σ2)),dims = 1))/2
 end
-# maybe define a different behaviour for vectors and matrices?
 
 """
     mu(X)
@@ -53,11 +55,47 @@ Extract mean as the first horizontal half of X.
 mu(X) = X[1:Int(size(X,1)/2),:]
 
 """
+    mu_scalarvar(X)
+
+Extract mean as all but the last rows of X.
+"""
+mu_scalarvar(X) = X[1:end-1,:]
+
+"""
     sigma2(X)
 
 Extract sigma^2 as the second horizontal half of X. 
 """
-sigma2(X) = softplus.(X[Int(size(X,1)/2+1):end,:]) .+ Float(1e-6)
+sigma2(X) = softplus.(X[Int(size(X,1)/2+1):end,:]) .+ δ
+
+"""
+    sigma2_scalarvar(X)
+
+Extract sigma^2 as the last row of X. 
+"""
+sigma2_scalarvar(X) = softplus.(X[end,:]) .+ δ
+
+"""
+   samplenormal(μ, σ2)
+
+Sample  a normal distribution with given mean and standard deviation.
+"""
+function samplenormal(μ, σ2)
+    ϵ = randn(Float, size(μ))
+    # if cuarrays are loaded and X is on GPU, convert eps to GPU as well
+    if iscuarray(μ)
+        ϵ = ϵ |> gpu
+    end
+    return μ +  ϵ .* sqrt.(σ2)
+end
+function samplenormal(μ::AbstractMatrix, σ2::AbstractVector)
+    ϵ = randn(Float, size(μ))
+    # if cuarrays are loaded and X is on GPU, convert eps to GPU as well
+    if iscuarray(μ)
+        ϵ = ϵ |> gpu
+    end
+    return μ +  sqrt.(σ2)' .* ϵ  
+end
 
 """
     samplenormal(X)
@@ -66,10 +104,15 @@ Sample normal distribution with mean and sigma2 extracted from X.
 """
 function samplenormal(X)
     μ, σ2 = mu(X), sigma2(X)
-	ϵ = randn(Float, size(μ))
-    # if cuarrays are loaded and X is on GPU, convert eps to GPU as well
-    if iscuarray(μ)
-    	ϵ = ϵ |> gpu
-    end
-    return μ .+  ϵ .* sqrt.(σ2)
+    return samplenormal(μ, σ2)
+end
+
+"""
+   samplenormal_scalarvar(X)
+
+Sample normal distribution from X where variance is the last row. 
+"""
+function samplenormal_scalarvar(X)
+    μ, σ2 = mu_scalarvar(X), sigma2_scalarvar(X)
+    return samplenormal(μ, σ2)
 end
