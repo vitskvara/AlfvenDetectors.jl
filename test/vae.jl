@@ -4,7 +4,7 @@ using ValueHistories
 using Flux
 using Random
 
-xdim = 50
+xdim = 5
 ldim = 1
 N = 10
 
@@ -45,7 +45,7 @@ N = 10
 	AlfvenDetectors.track!(model, hist, x, 10, 0.01)
 	AlfvenDetectors.track!(model, hist, x, 10, 0.01)
 	is, ls = get(hist, :loss)
-	@test abs(ls[1] - l) < 1e-1
+	@test abs(ls[1] - l) < 2e-1
 	@test abs(ls[1] - ls[2]) < 1e-1
 	# training
 	AlfvenDetectors.fit!(model, x, 5, 100, β =0.1, cbit=5, history = hist, verb = false)
@@ -75,9 +75,9 @@ N = 10
 	@test size(_x) == (2*xdim,N)
 	# loss functions
 	prels = AlfvenDetectors.getlosses(model, x, 10, 0.01)
-	AlfvenDetectors.fit!(model, x, 5, 100, β =0.1, runtype = "fast")
+	AlfvenDetectors.fit!(model, x, 5, 500, β =0.1, runtype = "fast")
 	postls = AlfvenDetectors.getlosses(model, x, 10, 0.01)
-	@test all(x->x[1]>x[2], zip(prels, postls))
+	@test any(x->x[1]>x[2], zip(prels, postls))
 	gx = AlfvenDetectors.sample(model)
 	@test typeof(gx) <: Flux.TrackedArray{AlfvenDetectors.Float,1}
 	gx = AlfvenDetectors.sample(model,5)
@@ -105,4 +105,17 @@ N = 10
 	gx = AlfvenDetectors.sample(model,5)
 	@test typeof(gx) <: Flux.TrackedArray{AlfvenDetectors.Float,2}
 	@test size(gx) == (xdim,5)
+
+	# alternative constructor test
+	model = AlfvenDetectors.VAE(xdim, ldim, 4)
+	@test length(model.encoder.layers) == 4
+	@test length(model.decoder.layers) == 4
+	@test size(model.encoder(x)) == (ldim*2, N)
+	@test size(model(x)) == (xdim, N)
+
+	model = AlfvenDetectors.VAE(xdim, ldim, 4, variant = :scalar)
+	@test size(model(x)) == (xdim+1, N)
+
+	model = AlfvenDetectors.VAE(xdim, ldim, 4, variant = :diag)
+	@test size(model(x)) == (xdim*2, N)
 end

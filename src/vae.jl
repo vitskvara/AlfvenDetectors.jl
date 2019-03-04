@@ -54,6 +54,39 @@ function VAE(esize::Array{Int64,1}, dsize::Array{Int64,1}; activation = Flux.rel
 	return vae
 end
 
+"""
+	VAE(xdim, zdim, nlayers; [activation, layer, variant])
+
+Initialize a variational autoencoder given input and latent dimension 
+and numberof layers. The width of layers is linearly interpolated 
+between xdim and zdim.
+
+	xdim = input size
+	zdim = code size
+	nlayers = number of layers
+	activation [Flux.relu] = arbitrary activation function
+	layer [Flux.Dense] = layer type
+	variant [:unit] 
+		:unit - output has unit variance
+		:scalar - a scalar variance of the output is estimated
+		:diag - the diagonal of covariance of the output is estimated
+"""
+function VAE(xdim::Int, zdim::Int, nlayers::Int; activation = Flux.relu,
+		layer = Flux.Dense, variant = :unit)
+	@assert nlayers >= 2
+
+	esize = ceil.(Int, range(xdim, zdim, length=nlayers+1))
+	dsize = reverse(esize)
+	esize[end] = esize[end]*2
+	if variant == :scalar
+		dsize[end] = dsize[end] + 1
+	elseif variant == :diag
+		dsize[end] = dsize[end]*2
+	end
+
+	VAE(esize,dsize; activation=activation, layer=layer, variant=variant)
+end
+
 ################
 ### training ###
 ################

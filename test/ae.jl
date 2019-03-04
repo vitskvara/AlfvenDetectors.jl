@@ -4,7 +4,7 @@ using ValueHistories
 using Test
 using Random
 
-xdim = 50
+xdim = 5
 ldim = 1
 N = 10
 
@@ -42,12 +42,18 @@ N = 10
 	AlfvenDetectors.fit!(model, x, 5, 1000, cbit=100, history = hist, verb = false)
 	is, ls = get(hist, :loss)
 	@test ls[1] > ls[end] 
-	@test ls[end] < 1e-6
+	@test ls[end] < 2e-5
 	# were the layers realy trained?
 	for (fp, p) in zip(frozen_params, collect(params(model)))
 		@test fp!=p
 	end
 	# test fast training
 	AlfvenDetectors.fit!(model, x, 5, 1000, cbit=100, history = hist, verb = false, runtype = "fast")
-end
 
+	# alternative constructor test
+	model = AlfvenDetectors.AE(xdim, ldim, 4)
+	@test length(model.encoder.layers) == 4
+	@test length(model.decoder.layers) == 4
+	@test size(model.encoder(x)) == (ldim, N)
+	@test size(model(x)) == (xdim, N)
+end
