@@ -141,13 +141,13 @@ end
 
 """
 	fit!(m::AE, X, batchsize::Int, nepochs::Int; 
-	cbit::Int=200, history = nothing, verb = true, eta = 0.001,
+	cbit::Int=200, history = nothing, verb = true, η = 0.001,
 	runtype = "experimental")
 
 Fit an autoencoder.
 """
 function fit!(m::AE, X, batchsize::Int, nepochs::Int; 
-	cbit::Int=200, history = nothing, verb = true, eta = 0.001,
+	cbit::Int=200, history = nothing, verb = true, η = 0.001,
 	runtype = "experimental")
 	@assert runtype in ["experimental", "fast"]
 	# sampler
@@ -161,11 +161,11 @@ function fit!(m::AE, X, batchsize::Int, nepochs::Int;
 	#loss(x) = loss(m, x[2]) # since first element of x is the index from enumerate
 
 	# optimizer
-	opt = ADAM(eta)
+	opt = ADAM(η)
 	
 	# callback
 	if runtype == "experimental"
-		cb = basic_callback(history,verb,eta,cbit; 
+		cb = basic_callback(history,verb,η,cbit; 
 			train_length = nepochs*epochsize,
 			epoch_size = epochsize)
 	elseif runtype == "fast"

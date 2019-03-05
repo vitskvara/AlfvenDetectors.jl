@@ -116,3 +116,15 @@ function samplenormal_scalarvar(X)
     μ, σ2 = mu_scalarvar(X), sigma2_scalarvar(X)
     return samplenormal(μ, σ2)
 end
+
+"""
+   scalar2tuple(x)
+
+If x is scalar, return a tuple containing (x,deepcopy(x)). 
+"""
+function scalar2tuple(x)
+    if length(x) == 1
+        return (x,deepcopy(x))
+    end
+    return x
+end

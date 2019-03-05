@@ -139,7 +139,6 @@ Loss function of the variational autoencoder. β is scaling parameter of
 the KLD, 1 = full KL, 0 = no KL.
 """
 loss(vae::VAE, X, L, β) = -loglikelihood(vae,X,L) + Float(β)*KL(vae, X)
-# the loglikelihood part causes some trouble for diag gpu training
 
 """
 	evalloss(vae, X, L, β)
@@ -218,7 +217,7 @@ end
 """
 	fit!(vae::VAE, X, batchsize::Int, nepochs::Int; 
 		L=1, β::Real= Float(1.0), cbit::Int=200, history = nothing, 
-		verb::Bool = true, eta = 0.001, runtype = "experimental")
+		verb::Bool = true, η = 0.001, runtype = "experimental")
 
 Trains the VAE neural net.
 
@@ -231,12 +230,12 @@ L [1] - number of samples for likelihood
 cbit [200] - after this # of iterations, progress is updated
 history [nothing] - a dictionary for training progress control
 verb [true] - if output should be produced
-eta [eta] - learning rate
+η [0.001] - learning rate
 runtype ["experimental"] - if fast is selected, no output and no history is written
 """
 function fit!(vae::VAE, X, batchsize::Int, nepochs::Int; 
 	L=1, β::Real= Float(1.0), cbit::Int=200, history = nothing, 
-	verb::Bool = true, eta = 0.001, runtype = "experimental")
+	verb::Bool = true, η = 0.001, runtype = "experimental")
 	@assert runtype in ["experimental", "fast"]
 	# sampler
 	sampler = EpochSampler(X,nepochs,batchsize)
@@ -248,11 +247,11 @@ function fit!(vae::VAE, X, batchsize::Int, nepochs::Int;
 	# use default loss
 
 	# optimizer
-	opt = ADAM(eta)
+	opt = ADAM(η)
 
 	# callback
 	if runtype == "experimental"
-		cb = basic_callback(history,verb,eta,cbit; 
+		cb = basic_callback(history,verb,η,cbit; 
 			train_length = nepochs*epochsize,
 			epoch_size = epochsize)
 		_cb(m::VAE,d,l,o) =  cb(m,d,l,o,L,β)

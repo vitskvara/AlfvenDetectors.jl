@@ -16,6 +16,7 @@ end
 	@info "Testing models"
 	include("ae.jl")
 	include("vae.jl")
+	include("tsvae.jl")
 end
 
 if "CuArrays" in keys(Pkg.installed())

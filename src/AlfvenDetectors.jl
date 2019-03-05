@@ -16,5 +16,6 @@ include("model_utils.jl")
 include("samplers.jl")
 include("ae.jl")
 include("vae.jl")
+include("tsvae.jl")
 
 end # module
