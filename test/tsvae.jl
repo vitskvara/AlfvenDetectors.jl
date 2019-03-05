@@ -3,6 +3,7 @@ using Test
 using ValueHistories
 using Flux
 using Random
+using StatsBase
 
 xdim = 5
 ldim = 1
@@ -55,4 +56,14 @@ N = 100
 	_,l2h = get(history[2],:loss)
 	@test length(l1h) == 10000
 	@test length(l2h) == 10000
+
+	# sample
+	xg = AlfvenDetectors.sample(model)
+	@test size(xg) == (xdim,1)
+	xg = AlfvenDetectors.sample(model,10)
+	@test size(xg) == (xdim,10)
+	
+	# is the latent code of model 2 really N(0,1)?
+	z = model.m2.sampler(model.m2.encoder(model.m1.sampler(model.m1.encoder(x)))).data
+	@test abs(StatsBase.mean(vec(z)) - 0.0) < 2e-1
 end
