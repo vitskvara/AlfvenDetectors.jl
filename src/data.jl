@@ -14,11 +14,15 @@ Fields:
 	shot = number of shot
 """
 mutable struct BaseAlfvenData
-	t::Vector
-	f::Vector
+	msc::Dict{Any, Matrix}
+	tmsc::Vector
+	fmsc::Vector
+	psd::Matrix
+	tpsd::Vector
+	fpsd::Vector
 	fnoscale::Vector
 	tfnoscale::Vector
-	msc::Dict{Any, Matrix}
+	ip::Vector
 	filepath::String
 	shot::String
 end
@@ -29,11 +33,15 @@ end
 Default empty constructor.
 """
 BaseAlfvenData() = BaseAlfvenData(
-		Vector{Float}(),
-		Vector{Float}(),
-		Vector{Float}(),
-		Vector{Float}(),
 		Dict{Int, Matrix{Float}}(),
+		Vector{Float}(),
+		Vector{Float}(),
+		Array{Float,2}(undef,0,0),
+		Vector{Float}(),
+		Vector{Float}(),
+		Vector{Float}(),
+		Vector{Float}(),
+		Vector{Float}(),
 		"",
 		""
 	)
@@ -80,10 +88,14 @@ end
 Read the basic signals - time, frequency etc.
 """
 function readbasic!(alfvendata::BaseAlfvenData, file::HDF5File)
-	alfvendata.t = Float.(read(file, "t"))
-	alfvendata.f = Float.(read(file, "f"))
+	alfvendata.tmsc = Float.(read(file, "t_cohere"))
+	alfvendata.fmsc = Float.(read(file, "f_cohere"))
 	alfvendata.fnoscale = Float.(read(file, "fnoscale"))
-	alfvendata.tfnoscale = Float.(read(file, "tfnoscale"))
+	alfvendata.tfnoscale = Float.(read(file, "t_fnoscale"))
+	alfvendata.psd = Float.(read(file, "Uprobe_coil_A1pol_psd"))
+	alfvendata.tpsd = Float.(read(file, "t_Uprobe"))
+	alfvendata.fpsd = Float.(read(file, "f_Uprobe"))
+	alfvendata.ip = Float.(read(file, "I_plasma"))
 end
 
 """
@@ -94,12 +106,12 @@ only certain coils will be loaded.
 """
 function readmsc!(alfvendata::BaseAlfvenData, file::HDF5File; coillist=nothing)
 	# if some coil data is missing, save the name in this list and filter them at the end
-	_coillist = ((coillist == nothing) ? read(file, "coils") : coillist)
+	_coillist = ((coillist == nothing) ? getcoillist(names(file)) : coillist)
 	#_coillist = String.(_coillist)
 	for coil in _coillist
 		try 
 			@suppress_err begin
-				alfvendata.msc[coil] = Float.(read(file, "cxy$coil"))
+				alfvendata.msc[coil] = Float.(read(file, "Mirnov_coil_A&C_theta_$(coil)_cpsdphase"))
 			end
 		catch e
 			if isa(e, ErrorException)
@@ -109,4 +121,15 @@ function readmsc!(alfvendata::BaseAlfvenData, file::HDF5File; coillist=nothing)
 			end
 		end
 	end
+end
+
+"""
+	getcoillist(keynames)
+
+Extract all availabel Mirnov coils from a list of strings (keys of a hdf5 file).
+"""
+function getcoillist(keynames)
+	ks = filter(x->occursin("Mirnov",x), keynames)
+	ks = Meta.parse.(unique(vcat(split.(ks, "_")...)))
+	ks = filter(x->typeof(x) <: Int, ks)
 end

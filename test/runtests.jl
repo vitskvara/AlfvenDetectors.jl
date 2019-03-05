@@ -7,6 +7,7 @@ using Pkg
 
 @testset "utilities" begin
 	@info "Testing utilities"
+	include("data.jl")
 	include("samplers.jl")
 	include("flux_utils.jl")
 	include("model_utils.jl")

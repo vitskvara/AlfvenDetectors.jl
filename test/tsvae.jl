@@ -66,4 +66,8 @@ N = 100
 	# is the latent code of model 2 really N(0,1)?
 	z = model.m2.sampler(model.m2.encoder(model.m1.sampler(model.m1.encoder(x)))).data
 	@test abs(StatsBase.mean(vec(z)) - 0.0) < 2e-1
+
+	# test fast training
+	model = AlfvenDetectors.TSVAE(xdim, ldim, (3,2))
+
 end
