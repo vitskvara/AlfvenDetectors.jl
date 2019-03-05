@@ -89,5 +89,24 @@ end
 	for (fp, p) in zip(frozen_params, collect(params(model)))
 		@test fp!=p
 	end
+end
 
+@testset "TSVAE-GPU" begin
+	x = AlfvenDetectors.Float.(hcat(ones(xdim, Int(N/2)), zeros(xdim, Int(N/2)))) |> gpu
+	Random.seed!(12345)
+    model = AlfvenDetectors.TSVAE(xdim, ldim, 2) |> gpu
+	_x = model(x)
+	# for training check
+	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
+
+	@test typeof(x) == CuArray{AlfvenDetectors.Float,2}
+	@test typeof(_x) <: TrackedArray{AlfvenDetectors.Float,2}    
+	history = (MVHistory(),MVHistory())
+    AlfvenDetectors.fit!(model, x, 5, 500; history = history, verb = false)
+    _,ls = get(history[1],:loss)
+	@test ls[1] > ls[end] 
+	# were the layers realy trained?
+	for (fp, p) in zip(frozen_params, collect(params(model)))
+		@test fp!=p
+	end
 end
