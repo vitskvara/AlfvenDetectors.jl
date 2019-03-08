@@ -137,7 +137,7 @@ function readsignal(filepath::String, signal::String)
 		end
 	catch e
 		if isa(e, ErrorException)
-			@warn("$(filepath): $signal data from coil $coil not found")
+			@warn("$(filepath): $signal data not found")
 			return nothing
 		else
 			throw(e)
