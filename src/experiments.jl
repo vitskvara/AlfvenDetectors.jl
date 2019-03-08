@@ -62,7 +62,8 @@ function get_ft_mscamps(filename, coils)
 		try
 			push!(mscs, get_ft_mscamp(filename, coil))
 		catch e
-			rethrow(e)
+			@warn "problem loading data from $filename"
+			#rethrow(e)
 		end
 	end
 	return hcat(mscs...)
