@@ -277,6 +277,11 @@ function maxsectionbe(mask::AbstractArray{Bool})
     return maxinds[1], maxinds[end]
 end
 
+"""
+	flattopbe(x,th=0.7,ϵ=1e-4;wl=0)
+
+Get indices of flattop start and end.
+"""
 function flattopbe(x,th=0.7,ϵ=1e-4;wl=0)
     _x = makepositive(x)
     mask = diffmaxflattop(_x,th,ϵ;wl=wl)

@@ -27,4 +27,9 @@ if "CuArrays" in keys(Pkg.installed())
 	end
 end
 
+@testset "Experiments" begin
+	@info "Testing experiments"
+	include("experiments.jl")
+end
+
 end
