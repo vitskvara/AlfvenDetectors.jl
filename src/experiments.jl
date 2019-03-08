@@ -15,7 +15,7 @@ function get_ft_section(signal::AbstractArray, ip::AbstractVector; minlength=0)
 	ipftstart, ipftstop = flattopbe(ip,0.6,8e-4;wl=20)
 	ls = size(signal,2)
 	lip = length(ip)
-	ftstart = floor(Int, ipftstart/lip*ls)
+	ftstart = ceil(Int, ipftstart/lip*ls)
 	ftstop = floor(Int, ipftstop/lip*ls)
 	if ftstop - ftstart > minlength
 		return signal[:,ftstart:ftstop]
