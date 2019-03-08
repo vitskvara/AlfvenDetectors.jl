@@ -128,10 +128,21 @@ end
 	readsignal(filepath::String, signal::String)
 """
 function readsignal(filepath::String, signal::String)
-	x = h5open(filepath, "r") do file
-		read(file, signal)
+	try 
+		@suppress_err begin
+			x = h5open(filepath, "r") do file
+				read(file, signal)
+			end				
+			return Float.(x)
+		end
+	catch e
+		if isa(e, ErrorException)
+			@warn("$(filepath): $signal data from coil $coil not found")
+			return nothing
+		else
+			throw(e)
+		end
 	end
-	return Float.(x)
 end
 
 """

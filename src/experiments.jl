@@ -48,7 +48,11 @@ Returns the msc amplitude
 function get_ft_mscamp(filename, coil)
 	msc = readmscamp(filename,coil)
 	ip = readip(filename)
-	return get_ft_section(msc,ip;minlength = 100)
+	if ip == nothing || msc == nothing
+		return nothing
+	else
+		return get_ft_section(msc,ip;minlength = 100)
+	end
 end
 
 """
@@ -59,11 +63,9 @@ Colelct all the data from msc amplitudes
 function get_ft_mscamps(filename, coils)
 	mscs = []
 	for coil in coils
-		try
-			push!(mscs, get_ft_mscamp(filename, coil))
-		catch e
-			@warn "problem loading data from $filename"
-			#rethrow(e)
+		x = get_ft_mscamp(filename, coil)
+		if x != nothing
+			push!(mscs, x)
 		end
 	end
 	return hcat(mscs...)
@@ -74,7 +76,7 @@ end
 
 Collect all the data.
 """
-collect_mscamps(shots,coils) = hcat(map(x->get_ft_mscamps(x,coils), shots)...)
+collect_mscamps(shots,coils) = hcat(filter(x->x!=[], map(x->get_ft_mscamps(x,coils), shots))...)
 
 """
 	fitsave(modelname, batchsize, outer_nepochs, inner_nepochs,
