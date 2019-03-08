@@ -155,7 +155,7 @@ function next!(s::EpochSampler)
 			inds = s.buffer[1:s.batchsize]
 			s.buffer = s.buffer[s.batchsize+1:end]
 		else
-			inds = s.buffer
+			inds = copy(s.buffer)
 			# reshuffle the indices again
 			s.buffer = sample(1:s.N,s.N,replace = false)
 			s.iter += 1

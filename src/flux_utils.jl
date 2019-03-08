@@ -108,7 +108,6 @@ A callback for fast training with no overhead.
 """
 fast_callback(m::FluxModel, d, l, opt) = nothing
 
-
 """
     basic_callback
 

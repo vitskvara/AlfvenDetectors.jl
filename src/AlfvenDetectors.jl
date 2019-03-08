@@ -11,9 +11,9 @@ using ProgressMeter
 const Float = Float32
 
 include("data.jl")
+include("samplers.jl")
 include("flux_utils.jl")
 include("model_utils.jl")
-include("samplers.jl")
 include("ae.jl")
 include("vae.jl")
 include("tsvae.jl")
