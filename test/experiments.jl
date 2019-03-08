@@ -8,7 +8,7 @@ verb = false
 hostname = gethostname()
 if hostname == "vit-ThinkPad-E470"
 	datapath = "/home/vit/vyzkum/alfven/cdb_data/data_sample"
-elseif hostname == "tarbik"
+elseif hostname == "tarbik.utia.cas.cz"
 	datapath = "/home/skvara/work/alfven/cdb_data/data_sample"
 end
 

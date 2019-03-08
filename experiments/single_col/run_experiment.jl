@@ -17,7 +17,7 @@ hostname = gethostname()
 if hostname == "vit-ThinkPad-E470"
 	datapath = "/home/vit/vyzkum/alfven/cdb_data/data_sample"
 	savepath = "/home/vit/vyzkum/alfven/experiments/single_col/basic"
-elseif hostname == "tarbik"
+elseif hostname == "tarbik.utia.cas.cz"
 	datapath = "/home/skvara/work/alfven/cdb_data/data_sample"
 	savepath = "/home/skvara/work/alfven/experiments/single_col/basic"
 end
