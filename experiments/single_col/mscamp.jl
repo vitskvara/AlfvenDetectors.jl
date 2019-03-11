@@ -19,6 +19,9 @@ s = ArgParseSettings()
     	required = true
     	arg_type = Int
     	help = "number of layers"
+    "--measurement"
+    	default = "mscamp"
+    	help = "one of [mscamp, mscphase or uprobe]"
     "--gpu"
 	    help = "use gpu?"
     	action = :store_true
@@ -45,7 +48,13 @@ coils = parsed_args["coils"]
 batchsize = parsed_args["batchsize"]
 outer_nepochs = parsed_args["nepochs"]
 inner_nepochs = 1
-
+if parsed_args["measurement"] == "mscamp"
+	readfun = AlfvenDetectors.readmscamp
+elseif parsed_args["measurement"] == "mscphase"
+	readfun = AlfvenDetectors.readmscphase
+elseif parsed_args["measurement"] == "uprobe"
+	readfun = AlfvenDetectors.readupsd
+end
 ### set the rest of the stuff
 
 if usegpu
@@ -59,12 +68,19 @@ if hostname == "vit-ThinkPad-E470"
 elseif hostname == "tarbik.utia.cas.cz"
 	datapath = "/home/skvara/work/alfven/cdb_data/data_sample"
 	savepath = "/home/skvara/work/alfven/experiments/single_col/mscamp"
+elseif hostname == "soroban-node-03"
+	datapath = "/compass/Shared/Exchange/Havranek/Link to Alfven"
+	savepath = "/compass/home/skvara/alfven/experiments/single_col/mscamp"
 end
 mkpath(savepath)
 
 shots = readdir(datapath)
 shots = joinpath.(datapath, shots)
-rawdata = AlfvenDetectors.collect_mscamps(shots, coils)
+if parsed_args["measurement"] == "uprobe"
+	rawdata = AlfvenDetectors.collect_signals(shots, readfun)
+else
+	rawdata = AlfvenDetectors.collect_signals(shots, readfun, coils)
+end
 data = rawdata |> gpu
 
 ### setup args
@@ -86,5 +102,5 @@ fit_kwargs = Dict(
 	)
 
 ### run and save the model
-model, history, t = AlfvenDetectors.fitsave_mscamps(data, modelname, batchsize, outer_nepochs, inner_nepochs,
+model, history, t = AlfvenDetectors.fitsave_unsupervised(data, modelname, batchsize, outer_nepochs, inner_nepochs,
 	 model_args, model_kwargs, fit_kwargs, savepath)

@@ -111,14 +111,20 @@ function readmsc!(alfvendata::BaseAlfvenData, filepath::String; coillist=nothing
 	for coil in _coillist
 		try 
 			@suppress_err begin
-				alfvendata.mscphase[coil] = readsignal(filepath, "Mirnov_coil_A&C_theta_$(coil)_cpsdphase")
-				alfvendata.mscamp[coil] = readsignal(filepath,  "Mirnov_coil_A&C_theta_$(coil)_coherems")
+				phase = readsignal(filepath, "Mirnov_coil_A&C_theta_$(coil)_cpsdphase")
+				amplitude = readsignal(filepath,  "Mirnov_coil_A&C_theta_$(coil)_coherems")
+				if phase != nothing
+					alfvendata.mscphase[coil] = phase
+				end
+				if amplitude != nothing
+					alfvendata.mscamp[coil] =  amplitude
+				end
 			end
 		catch e
 			if isa(e, ErrorException)
 				@warn("$(alfvendata.filepath): msc data from coil $coil not found")
 			else
-				throw(e)
+				rethrow(e)
 			end
 		end
 	end
@@ -140,7 +146,7 @@ function readsignal(filepath::String, signal::String)
 			@warn("$(filepath): $signal data not found")
 			return nothing
 		else
-			throw(e)
+			rethrow(e)
 		end
 	end
 end

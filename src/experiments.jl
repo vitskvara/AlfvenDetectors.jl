@@ -36,34 +36,49 @@ function get_ft_section(signal::AbstractVector, ip::AbstractVector; minlength=0)
 	end
 end
 
-##############################################
-### UNSUPERVISED MSC AMPLITUDES EXPERIMENT ###
-##############################################
+################################
+### UNSUPERVISED EXPERIMENTs ###
+################################
 
 """
-	get_ft_mscamp(filename, coil)
+	get_ft_signal(filename, readfun, coil)
 
-Returns the msc amplitude 
+Returns flattop portion of signal extracted by readfun and coil.
 """
-function get_ft_mscamp(filename, coil)
-	msc = readmscamp(filename,coil)
+function get_ft_signal(filename, readfun, coil)
+	signal = readfun(filename,coil)
 	ip = readip(filename)
-	if ip == nothing || msc == nothing
+	if ip == nothing || signal == nothing
 		return nothing
 	else
-		return get_ft_section(msc,ip;minlength = 100)
+		return get_ft_section(signal,ip;minlength = 100)
 	end
 end
 
 """
-	get_ft_mscamps(filename, coils)
+	get_ft_signal(filename, readfun)
 
-Colelct all the data from msc amplitudes
+Returns flattop portion of signal extracted by readfun.
 """
-function get_ft_mscamps(filename, coils)
+function get_ft_signal(filename, readfun)
+	signal = readfun(filename)
+	ip = readip(filename)
+	if ip == nothing || signal == nothing
+		return nothing
+	else
+		return get_ft_section(signal,ip;minlength = 100)
+	end
+end
+
+"""
+	get_ft_signals(filename, readfun, coils)
+
+Colelct signals from all coils.
+"""
+function get_ft_signals(filename, readfun, coils)
 	mscs = []
 	for coil in coils
-		x = get_ft_mscamp(filename, coil)
+		x = get_ft_signal(filename, readfun, coil)
 		if x != nothing
 			push!(mscs, x)
 		end
@@ -72,19 +87,26 @@ function get_ft_mscamps(filename, coils)
 end
 
 """
-	collect_mscamps(shots,coils) = hcat(map(x->get_ft_mscamps(x,coils), shots)...)	
+	collect_signals(shots,readfun,coils)
 
-Collect all the data.
+Collect signals from multiple files.
 """
-collect_mscamps(shots,coils) = hcat(filter(x->x!=[], map(x->get_ft_mscamps(x,coils), shots))...)
+collect_signals(shots,readfun,coils) = hcat(filter(x->x!=[], map(x->get_ft_signals(x,readfun,coils), shots))...)
 
 """
-	fitsave(modelname, batchsize, outer_nepochs, inner_nepochs,
+	collect_signals(shots,readfun)
+
+Collect signals from multiple files.
+"""
+collect_signals(shots,readfun) = hcat(filter(x->x!=[], map(x->get_ft_signal(x,readfun), shots))...)
+
+"""
+	fitsave_unsupervised(modelname, batchsize, outer_nepochs, inner_nepochs,
 	 model_args, model_kwargs, fit_kwargs, savepath)
 
 Create, fit and save a model.
 """
-function fitsave_mscamps(data, modelname, batchsize, outer_nepochs, inner_nepochs,
+function fitsave_unsupervised(data, modelname, batchsize, outer_nepochs, inner_nepochs,
 	 model_args, model_kwargs, fit_kwargs, savepath; filename = "", verb = true)
 	# create the model
 	model = AlfvenDetectors.construct_model(modelname, [x[2] for x in model_args]...; model_kwargs...) |> gpu

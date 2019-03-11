@@ -27,7 +27,7 @@ if isdir(datapath)
 
 	shots = readdir(datapath)[1:2]
 	shots = joinpath.(datapath, shots)
-	rawdata = AlfvenDetectors.collect_mscamps(shots, coils) 
+	rawdata = AlfvenDetectors.collect_signals(shots, AlfvenDetectors.readmscamp, coils) 
 	data = rawdata |> gpu
 	xdim = size(data,1)
 	batchsize = 64
@@ -45,7 +45,7 @@ if isdir(datapath)
 		fit_kwargs = Dict(
 			)
 
-		model, history, t = AlfvenDetectors.fitsave_mscamps(data, modelname, batchsize, 
+		model, history, t = AlfvenDetectors.fitsave_unsupervised(data, modelname, batchsize, 
 			outer_nepochs, inner_nepochs,
 			model_args, model_kwargs, fit_kwargs, 
 			savepath; filename = "ae_test", verb = verb)
@@ -66,7 +66,7 @@ if isdir(datapath)
 			:L => 1
 			)
 
-		model, history, t = AlfvenDetectors.fitsave_mscamps(data, modelname, batchsize, 
+		model, history, t = AlfvenDetectors.fitsave_unsupervised(data, modelname, batchsize, 
 			outer_nepochs, inner_nepochs,
 			model_args, model_kwargs, fit_kwargs, 
 			savepath; filename = "vae_test", verb = verb)
@@ -86,7 +86,7 @@ if isdir(datapath)
 			:L => 1
 			)
 
-		model, history, t = AlfvenDetectors.fitsave_mscamps(data, modelname, batchsize, 
+		model, history, t = AlfvenDetectors.fitsave_unsupervised(data, modelname, batchsize, 
 			outer_nepochs, inner_nepochs,
 			model_args, model_kwargs, fit_kwargs, 
 			savepath; filename = "tsvae_test", verb = verb)
