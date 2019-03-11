@@ -122,6 +122,7 @@ function fitsave_mscamps(data, modelname, batchsize, outer_nepochs, inner_nepoch
 	# save the model structure, history and time of training
 	# to load this, you need to load Flux, AlfvenDetectors and ValueHistories
 	bson(filename, model = cpumodel, history = history, time = t[2])
+	println("model and timing saved to $filename")
 	
 	return cpumodel, history, t[2]
 end
