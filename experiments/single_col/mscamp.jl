@@ -64,7 +64,7 @@ mkpath(savepath)
 
 shots = readdir(datapath)
 shots = joinpath.(datapath, shots)
-rawdata = AlfvenDetectors.collect_mscamps(shots, coils)[:,1:100]
+rawdata = AlfvenDetectors.collect_mscamps(shots, coils)
 data = rawdata |> gpu
 
 ### setup args
