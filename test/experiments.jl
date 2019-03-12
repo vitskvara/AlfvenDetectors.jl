@@ -35,7 +35,7 @@ if isdir(datapath)
 	shots = readdir(datapath)[1:2]
 	shots = joinpath.(datapath, shots)
 	# msc amplitude + AE
-	rawdata = AlfvenDetectors.collect_signals(shots, AlfvenDetectors.readmscamp, coils) 
+	rawdata = AlfvenDetectors.collect_signals(shots, AlfvenDetectors.readmscampphase, coils) 
 	data = rawdata |> gpu
 	xdim = size(data,1)
 	batchsize = 64

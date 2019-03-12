@@ -57,6 +57,8 @@ if measurement_type == "mscamp"
 	readfun = AlfvenDetectors.readmscamp
 elseif measurement_type == "mscphase"
 	readfun = AlfvenDetectors.readnormmscphase
+elseif measurement_type == "mscampphase"
+	readfun = AlfvenDetectors.readmscampphase
 elseif measurement_type == "uprobe"
 	readfun = AlfvenDetectors.readnormlogupsd
 end

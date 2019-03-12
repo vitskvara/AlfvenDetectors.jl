@@ -44,6 +44,7 @@ fpath = joinpath(dirname(@__FILE__),"data/testdata.h5")
 	@test size(AlfvenDetectors.readmscamp(fpath, 12),2) == 3
 	@test size(AlfvenDetectors.readmscphase(fpath, 12),2) == 3
 	@test size(AlfvenDetectors.readnormmscphase(fpath, 12),2) == 3
+	@test size(AlfvenDetectors.readmscampphase(fpath, 12),2) == 3
 	@test length(AlfvenDetectors.readip(fpath)) == 3
 	@test size(AlfvenDetectors.readupsd(fpath),2) == 3
 	@test size(AlfvenDetectors.readlogupsd(fpath),2) == 3

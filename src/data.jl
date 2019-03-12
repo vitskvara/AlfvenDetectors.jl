@@ -174,6 +174,11 @@ readmscphase(filepath::String, coil; warns=true) = readsignal(filepath, "Mirnov_
 readnormmscphase(filepath::String, coil; warns=true) = normalize(readmscphase(filepath, coil; warns=warns))
 
 """
+	readmsc(filepath::String, coil; warns=true)
+"""
+readmscampphase(filepath::String, coil; warns=true) = vcat(readmscamp(filepath, coil; warns=warns), readnormmscphase(filepath, coil; warns=warns))
+
+"""
 	readip(filepath::String; warns=true)
 """
 readip(filepath::String; warns=true) = readsignal(filepath, "I_plasma"; warns=warns)
