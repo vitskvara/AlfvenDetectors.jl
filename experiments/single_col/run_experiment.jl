@@ -48,12 +48,13 @@ coils = parsed_args["coils"]
 batchsize = parsed_args["batchsize"]
 outer_nepochs = parsed_args["nepochs"]
 inner_nepochs = 1
-if parsed_args["measurement"] == "mscamp"
+measurement_type = parsed_args["measurement"]
+if measurement_type == "mscamp"
 	readfun = AlfvenDetectors.readmscamp
-elseif parsed_args["measurement"] == "mscphase"
-	readfun = AlfvenDetectors.readmscphase
-elseif parsed_args["measurement"] == "uprobe"
-	readfun = AlfvenDetectors.readupsd
+elseif measurement_type == "mscphase"
+	readfun = AlfvenDetectors.readnormmscphase
+elseif measurement_type == "uprobe"
+	readfun = AlfvenDetectors.readnormlogupsd
 end
 ### set the rest of the stuff
 
@@ -64,19 +65,19 @@ end
 hostname = gethostname()
 if hostname == "vit-ThinkPad-E470"
 	datapath = "/home/vit/vyzkum/alfven/cdb_data/data_sample"
-	savepath = "/home/vit/vyzkum/alfven/experiments/single_col/mscamp"
+	savepath = "/home/vit/vyzkum/alfven/experiments/single_col/$measurement_type"
 elseif hostname == "tarbik.utia.cas.cz"
 	datapath = "/home/skvara/work/alfven/cdb_data/data_sample"
-	savepath = "/home/skvara/work/alfven/experiments/single_col/mscamp"
+	savepath = "/home/skvara/work/alfven/experiments/single_col/$measurement_type"
 elseif hostname == "soroban-node-03"
 	datapath = "/compass/Shared/Exchange/Havranek/Link to Alfven"
-	savepath = "/compass/home/skvara/alfven/experiments/single_col/mscamp"
+	savepath = "/compass/home/skvara/alfven/experiments/single_col/$measurement_type"
 end
 mkpath(savepath)
 
 shots = readdir(datapath)
 shots = joinpath.(datapath, shots)
-if parsed_args["measurement"] == "uprobe"
+if measurement_type == "uprobe"
 	rawdata = AlfvenDetectors.collect_signals(shots, readfun)
 else
 	rawdata = AlfvenDetectors.collect_signals(shots, readfun, coils)

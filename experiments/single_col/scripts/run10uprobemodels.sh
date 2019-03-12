@@ -3,5 +3,5 @@
 for i in {1..10}
 do
 	echo "RUNNING MODEL" $i
-	julia ../mscamp.jl $1 $2 $3 --measurement=uprobe
+	julia ../run_experiment.jl $1 $2 $3 --measurement=uprobe
 done

@@ -37,6 +37,18 @@ fpath = joinpath(dirname(@__FILE__),"data/testdata.h5")
 		@test size(data.mscamp[coil],2) == 3
 	end
 
+	# signal read functions
+	x = randn(10,5)
+	nx = AlfvenDetectors.normalize(x)
+	@test 0.0 <= minimum(nx) <= maximum(nx) <= 1.0
+	@test size(AlfvenDetectors.readmscamp(fpath, 12),2) == 3
+	@test size(AlfvenDetectors.readmscphase(fpath, 12),2) == 3
+	@test size(AlfvenDetectors.readnormmscphase(fpath, 12),2) == 3
+	@test length(AlfvenDetectors.readip(fpath)) == 3
+	@test size(AlfvenDetectors.readupsd(fpath),2) == 3
+	@test size(AlfvenDetectors.readlogupsd(fpath),2) == 3
+	@test size(AlfvenDetectors.readnormlogupsd(fpath),2) == 3
+
 	##########################
 	### flat-top detection ###
 	##########################

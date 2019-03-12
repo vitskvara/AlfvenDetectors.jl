@@ -152,6 +152,13 @@ function readsignal(filepath::String, signal::String)
 end
 
 """
+	normalize(x)
+
+Normalize values of x so that that lie in the interval [0,1].
+"""
+normalize(x) = (x .- minimum(x))/(maximum(x) - minimum(x))
+
+"""
 	readmscamp(filepath::String, coil)
 """
 readmscamp(filepath::String, coil) = readsignal(filepath, "Mirnov_coil_A&C_theta_$(coil)_coherems")
@@ -162,6 +169,11 @@ readmscamp(filepath::String, coil) = readsignal(filepath, "Mirnov_coil_A&C_theta
 readmscphase(filepath::String, coil) = readsignal(filepath, "Mirnov_coil_A&C_theta_$(coil)_cpsdphase")
 
 """
+	readnormmscphase(filepath::String, coil)
+"""
+readnormmscphase(filepath::String, coil) = normalize(readmscphase(filepath, coil))
+
+"""
 	readip(filepath::String)
 """
 readip(filepath::String) = readsignal(filepath, "I_plasma")
@@ -170,6 +182,16 @@ readip(filepath::String) = readsignal(filepath, "I_plasma")
 	readupsd(filepath::String)
 """
 readupsd(filepath::String) = readsignal(filepath, "Uprobe_coil_A1pol_psd")
+
+"""
+	readlogupsd(filepath::String)
+"""
+readlogupsd(filepath::String) = Float(20.0)*log10.(readupsd(filepath) .+ 1e-10)
+
+"""
+	readnormlogupsd(filepath::String)
+"""
+readnormlogupsd(filepath::String) = normalize(readlogupsd(filepath))
 
 """
 	getcoillist(keynames)
