@@ -6,36 +6,6 @@ Returns a model object given by modelname and arguments.
 construct_model(modelname, modelargs...; modelkwargs...) =
 	eval(Meta.parse("$modelname"))(modelargs...; modelkwargs...)
 
-"""
-	get_ft_section(signal, ip; minlength=0)
-
-Get the flattop part of the signal. 
-"""
-function get_ft_section(signal::AbstractArray, ip::AbstractVector; minlength=0)
-	ipftstart, ipftstop = flattopbe(ip,0.6,8e-4;wl=20)
-	ls = size(signal,2)
-	lip = length(ip)
-	ftstart = ceil(Int, ipftstart/lip*ls)
-	ftstop = floor(Int, ipftstop/lip*ls)
-	if ftstop - ftstart > minlength
-		return signal[:,ftstart:ftstop]
-	else
-		return signal[:,2:1] # an empty array of the correct vertical dimension
-	end
-end
-function get_ft_section(signal::AbstractVector, ip::AbstractVector; minlength=0)
-	ipftstart, ipftstop = flattopbe(ip,0.6,8e-4;wl=20)
-	ls = length(signal)
-	lip = length(ip)
-	ftstart = ceil(Int, ipftstart/lip*ls)
-	ftstop = floor(Int, ipftstop/lip*ls)
-	if ftstop - ftstart > minlength
-		return signal[ftstart:ftstop]
-	else
-		return signal[2:1] # an empty array of the correct vertical dimension
-	end
-end
-
 ################################
 ### UNSUPERVISED EXPERIMENTs ###
 ################################
