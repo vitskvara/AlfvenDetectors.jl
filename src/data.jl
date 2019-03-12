@@ -156,7 +156,13 @@ end
 
 Normalize values of x so that that lie in the interval [0,1].
 """
-normalize(x) = (x .- minimum(x))/(maximum(x) - minimum(x))
+function normalize(x) 
+	if x == nothing
+		return x
+	else
+		return (x .- minimum(x))/(maximum(x) - minimum(x))
+	end
+end
 
 """
 	readmscamp(filepath::String, coil)
