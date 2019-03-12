@@ -11,13 +11,13 @@ construct_model(modelname, modelargs...; modelkwargs...) =
 ################################
 
 """
-	get_ft_signal(filename, readfun, coil)
+	get_ft_signal(filename, readfun, coil; warns=true)
 
 Returns flattop portion of signal extracted by readfun and coil.
 """
-function get_ft_signal(filename, readfun, coil)
-	signal = readfun(filename,coil)
-	ip = readip(filename)
+function get_ft_signal(filename, readfun, coil; warns=true)
+	signal = readfun(filename,coil; warns=warns)
+	ip = readip(filename; warns=warns)
 	if any(isnan,ip) || any(isnan,signal)
 		return NaN
 	else
@@ -26,13 +26,13 @@ function get_ft_signal(filename, readfun, coil)
 end
 
 """
-	get_ft_signal(filename, readfun)
+	get_ft_signal(filename, readfun; warns=true)
 
 Returns flattop portion of signal extracted by readfun.
 """
-function get_ft_signal(filename, readfun)
-	signal = readfun(filename)
-	ip = readip(filename)
+function get_ft_signal(filename, readfun; warns=true)
+	signal = readfun(filename; warns=warns)
+	ip = readip(filename; warns=warns)
 	if any(isnan,ip) || any(isnan,signal)
 		return NaN
 	else
@@ -41,34 +41,34 @@ function get_ft_signal(filename, readfun)
 end
 
 """
-	get_ft_signals(filename, readfun, coils)
+	get_ft_signals(filename, readfun, coils; warns=true)
 
 Colelct signals from all coils.
 """
-function get_ft_signals(filename, readfun, coils)
-	mscs = []
+function get_ft_signals(filename, readfun, coils; warns=true)
+	signals = []
 	for coil in coils
-		x = get_ft_signal(filename, readfun, coil)
+		x = get_ft_signal(filename, readfun, coil; warns=warns)
 		if !any(isnan,x)
-			push!(mscs, x)
+			push!(signals, x)
 		end
 	end
-	return hcat(mscs...)
+	return hcat(signals...)
 end
 
 """
-	collect_signals(shots,readfun,coils)
+	collect_signals(shots,readfun,coils; warns=true)
 
 Collect signals from multiple files.
 """
-collect_signals(shots,readfun,coils) = hcat(filter(x->x!=[], map(x->get_ft_signals(x,readfun,coils), shots))...)
+collect_signals(shots,readfun,coils; warns=true) = hcat(filter(x->x!=[], map(x->get_ft_signals(x,readfun,coils; warns=warns), shots))...)
 
 """
-	collect_signals(shots,readfun)
+	collect_signals(shots,readfun; warns=true)
 
 Collect signals from multiple files.
 """
-collect_signals(shots,readfun) = hcat(filter(x->x!=[], map(x->get_ft_signal(x,readfun), shots))...)
+collect_signals(shots,readfun; warns=true) = hcat(filter(x->!any(isnan,x), map(x->get_ft_signal(x,readfun; warns=warns), shots))...)
 
 """
 	fitsave_unsupervised(modelname, batchsize, outer_nepochs, inner_nepochs,

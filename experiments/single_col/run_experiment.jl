@@ -38,6 +38,9 @@ s = ArgParseSettings()
 		default = 10
 		arg_type = Int
 		help = "number of outer epochs"
+	"--no-warnings"
+		action = :store_true
+		help = "dont print warnings"
 end
 parsed_args = parse_args(ARGS, s)
 modelname = parsed_args["modelname"]
@@ -48,6 +51,7 @@ coils = parsed_args["coils"]
 batchsize = parsed_args["batchsize"]
 outer_nepochs = parsed_args["nepochs"]
 inner_nepochs = 1
+warnings = !parsed_args["no-warnings"]
 measurement_type = parsed_args["measurement"]
 if measurement_type == "mscamp"
 	readfun = AlfvenDetectors.readmscamp
@@ -78,9 +82,9 @@ mkpath(savepath)
 shots = readdir(datapath)
 shots = joinpath.(datapath, shots)
 if measurement_type == "uprobe"
-	rawdata = AlfvenDetectors.collect_signals(shots, readfun)
+	rawdata = AlfvenDetectors.collect_signals(shots, readfun; warns=warnings)
 else
-	rawdata = AlfvenDetectors.collect_signals(shots, readfun, coils)
+	rawdata = AlfvenDetectors.collect_signals(shots, readfun, coils; warns=warnings)
 end
 data = rawdata |> gpu
 

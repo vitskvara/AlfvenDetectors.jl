@@ -2,6 +2,7 @@ using AlfvenDetectors
 using Test
 using Flux
 using ValueHistories
+using Pkg
 
 verb = false
 
@@ -12,6 +13,10 @@ elseif hostname == "tarbik.utia.cas.cz"
 	datapath = "/home/skvara/work/alfven/cdb_data/data_sample"
 else 
 	datapath = "xyz"
+end
+
+if "CuArrays" in keys(Pkg.installed())
+	using CuArrays
 end
 
 # only run the test if the needed data is present
@@ -29,6 +34,7 @@ if isdir(datapath)
 
 	shots = readdir(datapath)[1:2]
 	shots = joinpath.(datapath, shots)
+	# msc amplitude + AE
 	rawdata = AlfvenDetectors.collect_signals(shots, AlfvenDetectors.readmscamp, coils) 
 	data = rawdata |> gpu
 	xdim = size(data,1)
@@ -53,6 +59,12 @@ if isdir(datapath)
 			savepath; filename = "ae_test", verb = verb)
 		@test isfile(joinpath(savepath,"ae_test.bson"))
 	end
+
+	# msc phase + VAE
+	GC.gc()
+	rawdata = AlfvenDetectors.collect_signals(shots, AlfvenDetectors.readnormmscphase, coils) 
+	data = rawdata |> gpu
+	xdim = size(data,1)
 	@testset "single column unsupervised - VAE" begin
 		modelname = "VAE"
 		model_args = [
@@ -74,6 +86,12 @@ if isdir(datapath)
 			savepath; filename = "vae_test", verb = verb)
 		@test isfile(joinpath(savepath,"vae_test.bson"))
 	end
+
+	# msc phase + VAE
+	GC.gc()
+	rawdata = AlfvenDetectors.collect_signals(shots, AlfvenDetectors.readnormlogupsd) 
+	data = rawdata |> gpu
+	xdim = size(data,1)
 	@testset "single column unsupervised - TSVAE" begin
 		modelname = "TSVAE"
 		model_args = [

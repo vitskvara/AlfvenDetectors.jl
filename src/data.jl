@@ -51,68 +51,68 @@ BaseAlfvenData() = BaseAlfvenData(
 	)
 
 """
-	BaseAlfvenData(filepath::String)
+	BaseAlfvenData(filepath::String; warns=true)
 
 Constructor from a .h5 file.
 """
-function BaseAlfvenData(filepath::String)
+function BaseAlfvenData(filepath::String; warns=true)
 	alfvendata = BaseAlfvenData()
 	alfvendata.filepath = filepath
 	alfvendata.shot = split(basename(filepath), ".")[1]
 	# read the basic signals
-	readbasic!(alfvendata, filepath)
+	readbasic!(alfvendata, filepath; warns=warns)
 	# read the msc data with only some coils
-	readmsc!(alfvendata, filepath)
+	readmsc!(alfvendata, filepath; warns=warns)
 	return alfvendata
 end
 
 """
-	BaseAlfvenData(filepath::String, coillist::Vector)
+	BaseAlfvenData(filepath::String, coillist::Vector; warns=true)
 
 Constructor from a .h5 file, coillist specifies a set of coils that are to be extracted.
 """
-function BaseAlfvenData(filepath::String, coillist::Vector)
+function BaseAlfvenData(filepath::String, coillist::Vector; warns=true)
 	alfvendata = BaseAlfvenData()
 	alfvendata.filepath = filepath
 	alfvendata.shot = split(basename(filepath), ".")[1]
 	# read data
-	readbasic!(alfvendata, filepath)
+	readbasic!(alfvendata, filepath; warns=warns)
 	# read the msc data with only some coils
-	readmsc!(alfvendata, filepath; coillist = coillist)
+	readmsc!(alfvendata, filepath; coillist = coillist, warns=warns)
 	return alfvendata
 end
 
 """
-	readbasic!(alfvendata::BaseAlfvenData, filepath::String)
+	readbasic!(alfvendata::BaseAlfvenData, filepath::String; warns=true)
 
 Read the basic signals - time, frequency etc.
 """
-function readbasic!(alfvendata::BaseAlfvenData, filepath::String)
-	alfvendata.tmsc = readsignal(filepath, "t_cohere")
-	alfvendata.fmsc = readsignal(filepath, "f_cohere")
-	alfvendata.fnoscale = readsignal(filepath, "fnoscale")
-	alfvendata.tfnoscale = readsignal(filepath, "t_fnoscale")
-	alfvendata.upsd = readsignal(filepath, "Uprobe_coil_A1pol_psd")
-	alfvendata.tpsd = readsignal(filepath, "t_Uprobe")
-	alfvendata.fpsd = readsignal(filepath, "f_Uprobe")
-	alfvendata.ip = readsignal(filepath, "I_plasma")
+function readbasic!(alfvendata::BaseAlfvenData, filepath::String; warns=true)
+	alfvendata.tmsc = readsignal(filepath, "t_cohere"; warns=warns)
+	alfvendata.fmsc = readsignal(filepath, "f_cohere"; warns=warns)
+	alfvendata.fnoscale = readsignal(filepath, "fnoscale"; warns=warns)
+	alfvendata.tfnoscale = readsignal(filepath, "t_fnoscale"; warns=warns)
+	alfvendata.upsd = readsignal(filepath, "Uprobe_coil_A1pol_psd"; warns=warns)
+	alfvendata.tpsd = readsignal(filepath, "t_Uprobe"; warns=warns)
+	alfvendata.fpsd = readsignal(filepath, "f_Uprobe"; warns=warns)
+	alfvendata.ip = readsignal(filepath, "I_plasma"; warns=warns)
 end
 
 """
-	readmsc!(alfvendata::BaseAlfvenData, filepath::String; coillist=nothing)
+	readmsc!(alfvendata::BaseAlfvenData, filepath::String; coillist=nothing, warns=true)
 
 Read the magnitude squared coherence from a .h5 file. If coillist is specified,
 only certain coils will be loaded.
 """
-function readmsc!(alfvendata::BaseAlfvenData, filepath::String; coillist=nothing)
+function readmsc!(alfvendata::BaseAlfvenData, filepath::String; coillist=nothing, warns=true)
 	# if some coil data is missing, save the name in this list and filter them at the end
 	_coillist = ((coillist == nothing) ? getcoillist(names(h5open(filepath,"r"))) : coillist)
 	#_coillist = String.(_coillist)
 	for coil in _coillist
 		try 
 			@suppress_err begin
-				phase = readsignal(filepath, "Mirnov_coil_A&C_theta_$(coil)_cpsdphase")
-				amplitude = readsignal(filepath,  "Mirnov_coil_A&C_theta_$(coil)_coherems")
+				phase = readsignal(filepath, "Mirnov_coil_A&C_theta_$(coil)_cpsdphase"; warns=warns)
+				amplitude = readsignal(filepath,  "Mirnov_coil_A&C_theta_$(coil)_coherems"; warns=warns)
 				if !any(isnan,phase)
 					alfvendata.mscphase[coil] = phase
 				end
@@ -122,7 +122,7 @@ function readmsc!(alfvendata::BaseAlfvenData, filepath::String; coillist=nothing
 			end
 		catch e
 			if isa(e, ErrorException)
-				@warn("$(alfvendata.filepath): msc data from coil $coil not found")
+				warns ? @warn("$(alfvendata.filepath): msc data from coil $coil not found") : nothing
 			else
 				rethrow(e)
 			end
@@ -131,9 +131,9 @@ function readmsc!(alfvendata::BaseAlfvenData, filepath::String; coillist=nothing
 end
 
 """
-	readsignal(filepath::String, signal::String)
+	readsignal(filepath::String, signal::String; warns=true)
 """
-function readsignal(filepath::String, signal::String)
+function readsignal(filepath::String, signal::String; warns=true)
 	try 
 		@suppress_err begin
 			x = h5open(filepath, "r") do file
@@ -143,7 +143,7 @@ function readsignal(filepath::String, signal::String)
 		end
 	catch e
 		if isa(e, ErrorException)
-			@warn("$(filepath): $signal data not found")
+			warns ? @warn("$(filepath): $signal data not found") : nothing
 			return NaN
 		else
 			rethrow(e)
@@ -159,39 +159,39 @@ Normalize values of x so that that lie in the interval [0,1].
 normalize(x) = (x .- minimum(x))/(maximum(x) - minimum(x))
 
 """
-	readmscamp(filepath::String, coil)
+	readmscamp(filepath::String, coil; warns=true)
 """
-readmscamp(filepath::String, coil) = readsignal(filepath, "Mirnov_coil_A&C_theta_$(coil)_coherems")
+readmscamp(filepath::String, coil; warns=true) = readsignal(filepath, "Mirnov_coil_A&C_theta_$(coil)_coherems"; warns=warns)
 
 """
-	readmscphase(filepath::String, coil)
+	readmscphase(filepath::String, coil; warns=true)
 """
-readmscphase(filepath::String, coil) = readsignal(filepath, "Mirnov_coil_A&C_theta_$(coil)_cpsdphase")
+readmscphase(filepath::String, coil; warns=true) = readsignal(filepath, "Mirnov_coil_A&C_theta_$(coil)_cpsdphase"; warns=warns)
 
 """
-	readnormmscphase(filepath::String, coil)
+	readnormmscphase(filepath::String, coil; warns=true)
 """
-readnormmscphase(filepath::String, coil) = normalize(readmscphase(filepath, coil))
+readnormmscphase(filepath::String, coil; warns=true) = normalize(readmscphase(filepath, coil; warns=warns))
 
 """
-	readip(filepath::String)
+	readip(filepath::String; warns=true)
 """
-readip(filepath::String) = readsignal(filepath, "I_plasma")
+readip(filepath::String; warns=true) = readsignal(filepath, "I_plasma"; warns=warns)
 
 """
-	readupsd(filepath::String)
+	readupsd(filepath::String; warns=true)
 """
-readupsd(filepath::String) = readsignal(filepath, "Uprobe_coil_A1pol_psd")
+readupsd(filepath::String; warns=true) = readsignal(filepath, "Uprobe_coil_A1pol_psd"; warns=warns)
 
 """
-	readlogupsd(filepath::String)
+	readlogupsd(filepath::String; warns=true)
 """
-readlogupsd(filepath::String) = Float(20.0)*log10.(readupsd(filepath) .+ 1e-10)
+readlogupsd(filepath::String; warns=true) = Float(20.0)*log10.(readupsd(filepath; warns=warns) .+ 1e-10)
 
 """
-	readnormlogupsd(filepath::String)
+	readnormlogupsd(filepath::String; warns=true)
 """
-readnormlogupsd(filepath::String) = normalize(readlogupsd(filepath))
+readnormlogupsd(filepath::String; warns=true) = normalize(readlogupsd(filepath; warns=warns))
 
 """
 	getcoillist(keynames)
