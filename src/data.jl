@@ -113,10 +113,10 @@ function readmsc!(alfvendata::BaseAlfvenData, filepath::String; coillist=nothing
 			@suppress_err begin
 				phase = readsignal(filepath, "Mirnov_coil_A&C_theta_$(coil)_cpsdphase")
 				amplitude = readsignal(filepath,  "Mirnov_coil_A&C_theta_$(coil)_coherems")
-				if phase != nothing
+				if !any(isnan,phase)
 					alfvendata.mscphase[coil] = phase
 				end
-				if amplitude != nothing
+				if !any(isnan,amplitude)
 					alfvendata.mscamp[coil] =  amplitude
 				end
 			end
@@ -144,7 +144,7 @@ function readsignal(filepath::String, signal::String)
 	catch e
 		if isa(e, ErrorException)
 			@warn("$(filepath): $signal data not found")
-			return nothing
+			return NaN
 		else
 			rethrow(e)
 		end
@@ -156,13 +156,7 @@ end
 
 Normalize values of x so that that lie in the interval [0,1].
 """
-function normalize(x) 
-	if x == nothing
-		return x
-	else
-		return (x .- minimum(x))/(maximum(x) - minimum(x))
-	end
-end
+normalize(x) = (x .- minimum(x))/(maximum(x) - minimum(x))
 
 """
 	readmscamp(filepath::String, coil)

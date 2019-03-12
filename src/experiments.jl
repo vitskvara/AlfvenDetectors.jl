@@ -18,8 +18,8 @@ Returns flattop portion of signal extracted by readfun and coil.
 function get_ft_signal(filename, readfun, coil)
 	signal = readfun(filename,coil)
 	ip = readip(filename)
-	if ip == nothing || signal == nothing
-		return nothing
+	if any(isnan,ip) || any(isnan,signal)
+		return NaN
 	else
 		return get_ft_section(signal,ip;minlength = 100)
 	end
@@ -33,8 +33,8 @@ Returns flattop portion of signal extracted by readfun.
 function get_ft_signal(filename, readfun)
 	signal = readfun(filename)
 	ip = readip(filename)
-	if ip == nothing || signal == nothing
-		return nothing
+	if any(isnan,ip) || any(isnan,signal)
+		return NaN
 	else
 		return get_ft_section(signal,ip;minlength = 100)
 	end
@@ -49,7 +49,7 @@ function get_ft_signals(filename, readfun, coils)
 	mscs = []
 	for coil in coils
 		x = get_ft_signal(filename, readfun, coil)
-		if x != nothing
+		if !any(isnan,x)
 			push!(mscs, x)
 		end
 	end
