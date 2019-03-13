@@ -85,14 +85,6 @@ function fitsave_unsupervised(data, modelname, batchsize, outer_nepochs, inner_n
 	else
 		history = MVHistory()
 	end
-	
-	# fit the model
-	t = @timed for epoch in 1:outer_nepochs
-		verb ? println("outer epoch counter: $epoch/$outer_nepochs") : nothing
-		AlfvenDetectors.fit!(model, data, batchsize, inner_nepochs; cbit = 1, verb = verb, history = history, fit_kwargs...)
-		GC.gc()
-	end
-	cpumodel = model |> cpu
 
 	# now create the filename
 	if filename == ""
@@ -111,10 +103,23 @@ function fitsave_unsupervised(data, modelname, batchsize, outer_nepochs, inner_n
 		filename *= "_$(now())"
 	end
 	filename = joinpath(savepath, "$(filename).bson")
-	# save the model structure, history and time of training
-	# to load this, you need to load Flux, AlfvenDetectors and ValueHistories
-	bson(filename, model = cpumodel, history = history, time = t[2])
-	println("model and timing saved to $filename")
 	
-	return cpumodel, history, t[2]
+	# fit the model
+	t = 0.0
+	for epoch in 1:outer_nepochs
+		verb ? println("outer epoch counter: $epoch/$outer_nepochs") : nothing
+		timestats = @timed AlfvenDetectors.fit!(model, data, batchsize, inner_nepochs; cbit = 1, verb = verb, history = history, fit_kwargs...)
+		t += timestats[2]
+
+		# save the model structure, history and time of training after each epoch
+		# to load this, you need to load Flux, AlfvenDetectors and ValueHistories
+		cpumodel = model |> cpu
+		bson(filename, model = cpumodel, history = history, time = t)
+		GC.gc()
+	end
+	cpumodel = model |> cpu
+	
+	println("model and timing saved to $filename")
+
+	return cpumodel, history, t
 end
