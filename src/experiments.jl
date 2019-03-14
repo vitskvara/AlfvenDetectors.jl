@@ -106,7 +106,7 @@ function fitsave_unsupervised(data, modelname, batchsize, outer_nepochs, inner_n
 	
 	# fit the model
 	t = 0.0
-	for epoch in 1:outer_nepochs
+	tall = @timed for epoch in 1:outer_nepochs
 		verb ? println("outer epoch counter: $epoch/$outer_nepochs") : nothing
 		timestats = @timed AlfvenDetectors.fit!(model, data, batchsize, inner_nepochs; cbit = 1, verb = verb, history = history, fit_kwargs...)
 		t += timestats[2]
@@ -114,7 +114,7 @@ function fitsave_unsupervised(data, modelname, batchsize, outer_nepochs, inner_n
 		# save the model structure, history and time of training after each epoch
 		# to load this, you need to load Flux, AlfvenDetectors and ValueHistories
 		cpumodel = model |> cpu
-		bson(filename, model = cpumodel, history = history, time = t)
+		bson(filename, model = cpumodel, history = history, time = t, timeall = tall[2])
 		GC.gc()
 	end
 	cpumodel = model |> cpu
