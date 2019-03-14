@@ -114,10 +114,11 @@ function fitsave_unsupervised(data, modelname, batchsize, outer_nepochs, inner_n
 		# save the model structure, history and time of training after each epoch
 		# to load this, you need to load Flux, AlfvenDetectors and ValueHistories
 		cpumodel = model |> cpu
-		bson(filename, model = cpumodel, history = history, time = t, timeall = tall[2])
+		bson(filename, model = cpumodel, history = history, time = t)
 		GC.gc()
 	end
 	cpumodel = model |> cpu
+	bson(filename, model = cpumodel, history = history, time = t, timeall=tall[2])
 	
 	println("model and timing saved to $filename")
 
