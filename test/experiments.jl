@@ -24,7 +24,7 @@ if isdir(datapath)
 	savepath = joinpath(dirname(@__FILE__), "tmp")
 	mkpath(savepath)
 
-	usegpu = true
+	usegpu = false
 	ldim = 2
 	nlayers = 2
 	coils = [12,13,14]	

@@ -8,6 +8,9 @@ xdim = 5
 ldim = 1
 N = 10
 
+paramchange(frozen_params, params) = 
+	map(x-> x[1] != x[2], zip(frozen_params, params))
+
 @testset "AE" begin
 	println("           autoencoder")
 
@@ -44,9 +47,7 @@ N = 10
 	@test ls[1] > ls[end] 
 	@test ls[end] < 2e-5
 	# were the layers realy trained?
-	for (fp, p) in zip(frozen_params, collect(params(model)))
-		@test fp!=p
-	end
+	@test all(paramchange(frozen_params, collect(params(model))))	
 	# test fast training
 	AlfvenDetectors.fit!(model, x, 5, 1000, cbit=100, history = hist, verb = false, runtype = "fast")
 

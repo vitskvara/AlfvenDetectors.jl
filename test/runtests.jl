@@ -20,16 +20,16 @@ end
 	include("tsvae.jl")
 end
 
+@testset "Experiments" begin
+	@info "Testing experiments"
+	include("experiments.jl")
+end
+
 if "CuArrays" in keys(Pkg.installed())
 	@testset "GPU support" begin
 		@info "Testing GPU support"
 		include("gpu.jl")
 	end
-end
-
-@testset "Experiments" begin
-	@info "Testing experiments"
-	include("experiments.jl")
 end
 
 end

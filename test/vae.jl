@@ -8,6 +8,9 @@ xdim = 5
 ldim = 1
 N = 10
 
+paramchange(frozen_params, params) = 
+	map(x-> x[1] != x[2], zip(frozen_params, params))
+
 @testset "VAE" begin
     println("           variational autoencoder")
 
@@ -52,9 +55,7 @@ N = 10
 	is, ls = get(hist, :loss)
 	@test ls[1] > ls[end] 
 	# were the layers realy trained?
-	for (fp, p) in zip(frozen_params, collect(params(model)))
-		@test fp!=p
-	end
+	@test all(paramchange(frozen_params, collect(params(model))))	
 	# sample
 	gx = AlfvenDetectors.sample(model)
 	@test typeof(gx) <: Flux.TrackedArray{AlfvenDetectors.Float,1}

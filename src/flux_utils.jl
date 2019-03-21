@@ -75,6 +75,19 @@ Abstract type to share some methods between models.
 abstract type FluxModel end
 
 """
+    update(model, optimiser)
+
+Update model parameters using optimiser.
+"""
+function update!(model, optimiser)
+    for p in params(model)
+        Δ = Flux.Optimise.apply!(optimiser, p.data, p.grad)
+        p.data .-= Δ
+        Δ .= 0
+    end
+end
+
+"""
     train!(model, data, loss, optimiser, callback)
 
 Basics taken from the Flux train! function. Callback is any function
@@ -86,11 +99,7 @@ function train!(model, data, loss, optimiser, callback)
         try
             l = loss(_data)
             Flux.Tracker.back!(l)
-            for p in params(model)
-                Δ = Flux.Optimise.apply!(optimiser, p.data, p.grad)
-                p.data .-= Δ
-                Δ .= 0
-            end
+            update!(model, optimiser)
             # now call the callback function
             # can be an object so it can store some values between individual calls
             callback(model, _data, loss, optimiser)
@@ -138,4 +147,92 @@ function basic_callback(hist,verb::Bool,eta::Real,show_it::Int;
     train_length::Int=0, epoch_size::Int=1) 
     p = Progress(train_length, 0.3)
     basic_callback(hist,eta,0,p,Array{Any,1}(),verb,epoch_size,show_it)
+end
+
+#####################################################
+### function for convolutional networks upscaling ###
+#####################################################
+"""
+    oneszeros([T],segment,length,i)
+
+Create a vector of type T of size `length*segment` where `i`th
+segment is made out of ones and the rest is zero. 
+"""
+function oneszeros(T::DataType,segment,length,i)
+    res = zeros(T,segment*length)
+    res[((i-1)*segment+1):i*segment] = ones(T,segment)
+    return res
+end
+function oneszeros(segment,length,i)
+    res = zeros(segment*length)
+    res[((i-1)*segment+1):i*segment] = ones(segment)
+    return res
+end
+"""
+    voneszeros([T,]segment,length,i)
+
+Create a vector of type T of size `length*segment` where `i`th
+segment is made out of ones and the rest is zero. 
+"""
+voneszeros(T::DataType,segment,length,i) = oneszeros(T,segment,length,i)
+voneszeros(segment,length,i) = oneszeros(segment,length,i)
+
+"""
+    honeszeros([T,]segment,length,i)
+
+Create a horizontal vector of type T of size `length*segment` where `i`th
+segment is made out of ones and the rest is zero. 
+"""
+honeszeros(T::DataType,segment,length,i) = Array(voneszeros(T,segment,length,i)')
+honeszeros(segment,length,i) = Array(voneszeros(segment,length,i)')
+
+"""
+    vscalemat([T,]scale,n)
+
+Vertical scaling matrix. `Scale` is the (integer) scaling factor and `n` is the 
+vertical size of the original matrix.
+"""
+vscalemat(T,scale::Int,n::Int) = hcat([voneszeros(T,scale,n,i) for i in 1:n]...)
+vscalemat(scale::Int,n::Int) = hcat([voneszeros(scale,n,i) for i in 1:n]...)
+
+"""
+    hscalemat([T,]scale,n)
+
+Horizontal scaling matrix. `Scale` is the (integer) scaling factor and `n` is the 
+horizontal size of the original matrix.
+"""
+hscalemat(T,scale::Int,n::Int) = vcat([honeszeros(T,scale,n,i) for i in 1:n]...)
+hscalemat(scale::Int,n::Int) = vcat([honeszeros(scale,n,i) for i in 1:n]...)
+
+"""
+    upscale(x::AbstractArray, scale)
+
+Upscales a 2D array by the integer scales given in the `scale` tuple. 
+Works for 3D and 4D array in the first two dimensions.
+"""
+function upscale(x::AbstractArray{T,2}, scale) where T
+    m,n = size(x)
+    V = vscalemat(T,scale[1],m)
+    H = hscalemat(T,scale[2],n)
+    return V*x*H
+end
+function upscale(x::AbstractArray{T,3}, scale) where T
+    M,N,C = size(x)
+    # this is important - the array must be of the same type as x, not T
+    res = Array{typeof(x[1]),3}(undef,M*scale[1],N*scale[2],C)
+    for c in 1:C
+        res[:,:,c] = upscale(x[:,:,c],scale)
+    end
+    return Tracker.collect(res)
+end
+function upscale(x::AbstractArray{T,4}, scale) where T
+    M,N,C,K = size(x)
+    # this is important - the array must be of the same type as x, not T
+    res = Array{typeof(x[1]),4}(undef,M*scale[1],N*scale[2],C,K)
+    for c in 1:C
+        for k in 1:K
+            res[:,:,c,k] = upscale(x[:,:,c,k],scale)
+        end
+    end
+    return Tracker.collect(res)
 end

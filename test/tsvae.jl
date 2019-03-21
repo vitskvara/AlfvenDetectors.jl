@@ -9,6 +9,9 @@ xdim = 5
 ldim = 1
 N = 100
 
+paramchange(frozen_params, params) = 
+  map(x-> x[1] != x[2], zip(frozen_params, params))
+
 @testset "TSVAE" begin
     println("           two-stage VAE")
     Random.seed!(12345)
@@ -49,9 +52,7 @@ N = 100
 	@test any(x->x[1]>x[2], zip(m1ls, post_m1ls))
 	@test any(x->x[1]>x[2], zip(m2ls, post_m2ls))
 	# were the layers realy trained?
-	for (fp, p) in zip(frozen_params, collect(params(model)))
-		@test fp!=p
-	end
+  @test all(paramchange(frozen_params, collect(params(model)))) 
 	_,l1h = get(history[1],:loss)
 	_,l2h = get(history[2],:loss)
 	@test length(l1h) == 10000

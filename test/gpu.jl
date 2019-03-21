@@ -11,6 +11,9 @@ N = 10
 
 sim(x,y) = abs(x-y) < 1e-6
 
+paramchange(frozen_params, params) = 
+	map(x-> x[1] != x[2], zip(frozen_params, params))
+
 @testset "flux utils" begin
 	# iscuarray
 	x = randn(4,10)
@@ -46,9 +49,7 @@ end
 	@test ls[1] > ls[end] 
 	@test ls[end] < 1e-4
 	# were the layers realy trained?
-	for (fp, p) in zip(frozen_params, collect(params(model)))
-		@test fp!=p
-	end
+	@test all(paramchange(frozen_params, collect(params(model)))) 
 end
 
 @testset "VAE-GPU" begin
@@ -68,9 +69,7 @@ end
 	is, ls = get(hist, :loss)
 	@test ls[1] > ls[end] 
 	# were the layers realy trained?
-	for (fp, p) in zip(frozen_params, collect(params(model)))
-		@test fp!=p
-	end
+	@test all(paramchange(frozen_params, collect(params(model)))) 
 
 	# diag VAE
 	Random.seed!(12345)
@@ -86,9 +85,7 @@ end
 	is, ls = get(hist, :loss)
 	@test ls[1] > ls[end] 
 	# were the layers realy trained?
-	for (fp, p) in zip(frozen_params, collect(params(model)))
-		@test fp!=p
-	end
+	@test all(paramchange(frozen_params, collect(params(model)))) 
 end
 
 @testset "TSVAE-GPU" begin
@@ -106,7 +103,5 @@ end
     _,ls = get(history[1],:loss)
 	@test ls[1] > ls[end] 
 	# were the layers realy trained?
-	for (fp, p) in zip(frozen_params, collect(params(model)))
-		@test fp!=p
-	end
+	@test all(paramchange(frozen_params, collect(params(model)))) 
 end
