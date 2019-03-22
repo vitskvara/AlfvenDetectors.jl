@@ -175,4 +175,42 @@ paramchange(frozen_params, params) =
 	Flux.back!(L)
 	AlfvenDetectors.update!(model, opt)
 	@test all(paramchange(frozen_params, collect(params(model))))
+
+	# padding
+	a = Tracker.collect(Flux.Tracker.TrackedReal.(Float32.([1.0 2.0; 3.0 4.0])))
+	a = reshape(a,2,2,1,1)
+	# 2D
+	X = AlfvenDetectors.zeropad(a[:,:,1,1],[1,2,2,3])
+	@test size(X) == (5,7)
+	@test typeof(X)  <:Flux.TrackedArray
+	# 3D
+	X = AlfvenDetectors.zeropad(a[:,:,:,1],[1,2,2,3])
+	@test size(X) == (5,7,1)
+	@test typeof(X)  <:Flux.TrackedArray
+	# 4D
+	X = AlfvenDetectors.zeropad(a,[1,2,2,3])
+	@test size(X) == (5,7,1,1)
+	@test typeof(X)  <:Flux.TrackedArray
+	# backprop
+	X = randn(Float32,4,4,1,1)
+	global model = Flux.Chain(
+	    # 4x4x1x1
+	    Flux.Conv((3,3), 1=>4, pad=(1,1)),
+	    # 4x4x4x1
+	    x->Flux.maxpool(x,(2,2)),
+	    # 2x2x4x1
+	    x->AlfvenDetectors.zeropad(x,(1,1,1,1)),
+	    # 4x4x4x1
+	    Flux.Conv((3,3), 4=>1, pad=(1,1))
+	)
+	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
+	Y = model(X)
+	@test size(Y) == size(X)
+	loss(x) = Flux.mse(x,model(x))
+	opt = Flux.ADAM()
+	L = loss(X)
+	Flux.back!(L)
+	AlfvenDetectors.update!(model, opt)
+	@test all(paramchange(frozen_params, collect(params(model))))
+	
 end

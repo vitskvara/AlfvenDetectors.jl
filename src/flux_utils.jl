@@ -236,3 +236,35 @@ function upscale(x::AbstractArray{T,4}, scale) where T
     end
     return Tracker.collect(res)
 end
+
+"""
+    zeropad(x::AbstractArray,widths)
+
+widths = [top, right, bottom, left] padding size
+"""
+function zeropad(x::AbstractArray{T,2},widths) where T
+    M,N = size(x)
+    # first do vertical padding
+    y = [zeros(T, widths[1], N); x; zeros(T, widths[3], N)]
+    # then the horizontal
+    y = [zeros(T, M+widths[1]+widths[3], widths[4]) y zeros(T, M+widths[1]+widths[3], widths[2])]
+    return y
+end
+function zeropad(x::AbstractArray{T,3},widths) where T
+    M,N,C = size(x)
+    res = Array{typeof(x[1]),3}(undef,M+widths[1]+widths[3],N+widths[2]+widths[4],C)
+    for c in 1:C
+        res[:,:,c] = zeropad(x[:,:,c],widths)
+    end
+    return Tracker.collect(res)
+end
+function zeropad(x::AbstractArray{T,4},widths) where T
+    M,N,C,K = size(x)
+    res = Array{typeof(x[1]),4}(undef,M+widths[1]+widths[3],N+widths[2]+widths[4],C,K)
+    for c in 1:C
+        for k in 1:K
+            res[:,:,c,k] = zeropad(x[:,:,c,k],widths)
+        end
+    end
+    return Tracker.collect(res)
+end
