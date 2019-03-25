@@ -217,7 +217,8 @@ end
 """
 	fit!(vae::VAE, X, batchsize::Int, nepochs::Int; 
 		L=1, β::Real= Float(1.0), cbit::Int=200, history = nothing, 
-		verb::Bool = true, η = 0.001, runtype = "experimental")
+		verb::Bool = true, η = 0.001, runtype = "experimental", 
+		[usegpu, memoryefficient])
 
 Trains the VAE neural net.
 
@@ -232,10 +233,13 @@ history [nothing] - a dictionary for training progress control
 verb [true] - if output should be produced
 η [0.001] - learning rate
 runtype ["experimental"] - if fast is selected, no output and no history is written
+usegpu - if X is not already on gpu, this will put the inidvidual batches into gpu memory rather 
+		than all data at once
+memoryefficient - calls gc after every batch, again saving some memory but prolonging computation
 """
 function fit!(vae::VAE, X, batchsize::Int, nepochs::Int; 
 	L=1, β::Real= Float(1.0), cbit::Int=200, history = nothing, 
-	verb::Bool = true, η = 0.001, runtype = "experimental")
+	verb::Bool = true, η = 0.001, runtype = "experimental", trainkwargs...)
 	@assert runtype in ["experimental", "fast"]
 	# sampler
 	sampler = EpochSampler(X,nepochs,batchsize)
@@ -265,7 +269,8 @@ function fit!(vae::VAE, X, batchsize::Int, nepochs::Int;
 		collect(sampler),
 		x->loss(vae,x,L,β),
 		opt,
-		_cb
+		_cb;
+		trainkwargs...
 		)
 end
 

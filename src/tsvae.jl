@@ -73,7 +73,7 @@ end
 	L::Union{Int, Tuple}=(1,1), β::Union{Real, Tuple}= Float(1.0), 
 	cbit::Union{Int, Tuple}=(200,200), history = nothing, 
 	verb::Bool = true, η::Union{Real, Tuple} = (0.001,0.001), 
-	runtype = "experimental")
+	runtype = "experimental", [usegpu, memoryefficient])
 
 Fit the two-stage VAE model.
 """
@@ -82,7 +82,7 @@ function fit!(tsvae::TSVAE, X, batchsize::Union{Int, Tuple},
 	L::Union{Int, Tuple}=(1,1), β::Union{Real, Tuple}= Float(1.0), 
 	cbit::Union{Int, Tuple}=(200,200), history = nothing, 
 	verb::Bool = true, η::Union{Real, Tuple} = (0.001,0.001), 
-	runtype = "experimental")
+	runtype = "experimental", trainkwargs...)
 	@assert runtype in ["experimental", "fast"]
 
 	# some argument may be scalar or a tuple
@@ -99,14 +99,19 @@ function fit!(tsvae::TSVAE, X, batchsize::Union{Int, Tuple},
 		println("Training the first stage...")
 	end
 	fit!(tsvae.m1, X, batchsize[1], nepochs[1]; L = L[1], β = β[1], cbit=cbit[1],
-		history = history[1], verb = verb, η = η[1], runtype = runtype)
+		history = history[1], verb = verb, η = η[1], runtype = runtype, trainkwargs...)
 	
 	if verb
 		println("Training the second stage...")
 	end
-	Z = tsvae.m1.sampler(tsvae.m1.encoder(X).data)
+	# this is in case taht X is already on gpu -> Z is on gpu as well
+	if iscuarray(X)
+		Z = tsvae.m1.sampler(tsvae.m1.encoder(X).data)
+	else
+		Z = tsvae.m1.sampler(cpu(tsvae.m1.encoder)(X).data)
+	end
 	fit!(tsvae.m2, Z, batchsize[2], nepochs[2]; L = L[2], β = β[2], cbit=cbit[2],
-		history = history[2], verb = verb, η = η[2], runtype = runtype)
+		history = history[2], verb = verb, η = η[2], runtype = runtype, trainkwargs...)
 end
 
 """
