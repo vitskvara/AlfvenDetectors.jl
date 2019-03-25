@@ -40,8 +40,8 @@ Returns niter batches of size batchsize, sampled unifromly from X.
 Fields:
 
 	data = original data
-	M = number of rows (features)
-	N = number of columns (samples)
+	M = number of dimensions of the data
+	N = number of samples
 	niter = how many iterations
 	batchsize = how many samples in iteration
 	iter = iteration counter
@@ -71,12 +71,13 @@ function checkbatchsize(N,batchsize,replace)
 end
 
 """
-	UniformSampler(X::Matrix, niter::Int, batchsize::Int; replace = false)
+	UniformSampler(X, niter::Int, batchsize::Int; replace = false)
 
 A standard constructor.
 """
-function UniformSampler(X::Matrix, niter::Int, batchsize::Int; replace = false)
-	M,N = size(X)
+function UniformSampler(X::AbstractArray, niter::Int, batchsize::Int; replace = false)
+	M = ndims(X)
+	N = size(X,M)
 	batchsize = checkbatchsize(N,batchsize,replace)
 	return UniformSampler(X,M,N,niter,batchsize,0, replace)
 end
@@ -89,7 +90,10 @@ Returns next batch.
 function next!(s::UniformSampler)
 	if s.iter < s.niter
 		s.iter += 1
-		return s.data[:,sample(1:s.N,s.batchsize,replace=s.replace)]
+		randinds = sample(1:s.N,s.batchsize,replace=s.replace)
+		inds = [collect(x) for x in axes(s.data)]
+		inds[end] = randinds
+		return s.data[inds...]
 	else
 		return nothing
 	end
@@ -112,8 +116,8 @@ Sample in batches that cover the entire dataset for a given number of epochs.
 Fields:
 
 	data = original data matrix
-	M = number of rows (features)
-	N = number of columns (samples)
+	M = number of dimensions
+	N = number of samples
 	nepochs = how many epochs
 	epochsize = how many iterations are in an epoch
 	batchsize = how many samples in iteration
@@ -137,7 +141,8 @@ end
 Default constructor.
 """
 function EpochSampler(X, nepochs::Int, batchsize::Int)
-	M,N = size(X) 
+	M = ndims(X)
+	N = size(X,M) 
 	batchsize = checkbatchsize(N,batchsize,false)
 	return EpochSampler(X,M,N,nepochs,Int(ceil(N/batchsize)),batchsize,0,
 		sample(1:N,N,replace = false))
@@ -152,17 +157,19 @@ function next!(s::EpochSampler)
 	if s.iter < s.nepochs
 		L = length(s.buffer)
 		if  L > s.batchsize
-			inds = s.buffer[1:s.batchsize]
+			randinds = s.buffer[1:s.batchsize]
 			s.buffer = s.buffer[s.batchsize+1:end]
 		else
-			inds = copy(s.buffer)
+			randinds = copy(s.buffer)
 			# reshuffle the indices again
 			s.buffer = sample(1:s.N,s.N,replace = false)
 			s.iter += 1
 		end
+		inds = [collect(x) for x in axes(s.data)]
+		inds[end] = randinds
 		# using views is very memory efficient, however it slows down training and is unusable for GPU
-		# return @views s.data[:,inds]
-		return s.data[:,inds]
+		# return @views s.data[inds...]
+		return s.data[inds...]
 	else
 		return nothing
 	end

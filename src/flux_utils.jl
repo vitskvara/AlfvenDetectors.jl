@@ -226,7 +226,7 @@ end
 function upscale(x::AbstractArray{T,3}, scale) where T
     M,N,C = size(x)
     # this is important - the array must be of the same type as x, not T
-    res = Array{typeof(x[1]),3}(undef,M*scale[1],N*scale[2],C)
+    res = Array{eltype(x),3}(undef,M*scale[1],N*scale[2],C)
     for c in 1:C
         res[:,:,c] = upscale(x[:,:,c],scale)
     end
@@ -235,7 +235,7 @@ end
 function upscale(x::AbstractArray{T,4}, scale) where T
     M,N,C,K = size(x)
     # this is important - the array must be of the same type as x, not T
-    res = Array{typeof(x[1]),4}(undef,M*scale[1],N*scale[2],C,K)
+    res = Array{eltype(x),4}(undef,M*scale[1],N*scale[2],C,K)
     for c in 1:C
         for k in 1:K
             res[:,:,c,k] = upscale(x[:,:,c,k],scale)
@@ -259,7 +259,7 @@ function zeropad(x::AbstractArray{T,2},widths) where T
 end
 function zeropad(x::AbstractArray{T,3},widths) where T
     M,N,C = size(x)
-    res = Array{typeof(x[1]),3}(undef,M+widths[1]+widths[3],N+widths[2]+widths[4],C)
+    res = Array{eltype(x),3}(undef,M+widths[1]+widths[3],N+widths[2]+widths[4],C)
     for c in 1:C
         res[:,:,c] = zeropad(x[:,:,c],widths)
     end
@@ -267,7 +267,7 @@ function zeropad(x::AbstractArray{T,3},widths) where T
 end
 function zeropad(x::AbstractArray{T,4},widths) where T
     M,N,C,K = size(x)
-    res = Array{typeof(x[1]),4}(undef,M+widths[1]+widths[3],N+widths[2]+widths[4],C,K)
+    res = Array{eltype(x),4}(undef,M+widths[1]+widths[3],N+widths[2]+widths[4],C,K)
     for c in 1:C
         for k in 1:K
             res[:,:,c,k] = zeropad(x[:,:,c,k],widths)
