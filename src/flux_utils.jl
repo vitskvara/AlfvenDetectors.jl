@@ -88,15 +88,19 @@ function update!(model, optimiser)
 end
 
 """
-    train!(model, data, loss, optimiser, callback)
+    train!(model, data, loss, optimiser, callback; [usegpu])
 
 Basics taken from the Flux train! function. Callback is any function
 of the remaining arguments that gets called every iteration - 
 use it to store or print training progress, stop training etc. 
 """
-function train!(model, data, loss, optimiser, callback)
+function train!(model, data, loss, optimiser, callback; 
+    usegpu = false, memoryefficient = false)
     for _data in data
         try
+            if usegpu
+             _data = _data |> gpu
+            end
             l = loss(_data)
             Flux.Tracker.back!(l)
             update!(model, optimiser)
@@ -106,6 +110,9 @@ function train!(model, data, loss, optimiser, callback)
         catch e
             # setup a special kind of exception for known cases with a break
             rethrow(e)
+        end
+        if memoryefficient
+            GC.gc();
         end
     end
 end

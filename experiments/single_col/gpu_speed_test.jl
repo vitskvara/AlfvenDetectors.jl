@@ -10,37 +10,43 @@ s = ArgParseSettings()
 @add_arg_table s begin
     "modelname"
 		required = true
-        help = "one of [AE, VAE, TSVAE]"
+        help = "One of [AE, VAE, TSVAE]."
     "ldimsize"
     	required = true
     	arg_type = Int
-    	help = "size of latent dimension"
+    	help = "Size of latent dimension."
     "nlayers"
     	required = true
     	arg_type = Int
-    	help = "number of layers"
+    	help = "Number of layers."
     "--measurement"
     	default = "mscamp"
-    	help = "one of [mscamp, mscphase or uprobe]"
+    	help = "One of [mscamp, mscphase or uprobe]."
     "--gpu"
-	    help = "use gpu?"
+	    help = "Use gpu?"
     	action = :store_true
     "--coils"
 		default = [12,13,14]
-		help = "a list of used coil"
+		help = "A list of used coils."
 		nargs = '+'
 		arg_type = Int
 	"--batchsize"
 		default = 128
 		arg_type = Int
-		help = "batch size"
+		help = "Batch size."
 	"--nepochs"
 		default = 10
 		arg_type = Int
-		help = "number of outer epochs"
+		help = "Number of outer epochs."
 	"--no-warnings"
 		action = :store_true
-		help = "dont print warnings"
+		help = "Dont print warnings."
+	"--memory-efficient"
+		action = :store_true
+		help = "If set, garbage collector is called after every epoch."
+	"--test"
+		action = :store_true
+		help = "Test run saved in the current dir."
 end
 parsed_args = parse_args(ARGS, s)
 modelname = parsed_args["modelname"]
@@ -52,7 +58,9 @@ batchsize = parsed_args["batchsize"]
 outer_nepochs = parsed_args["nepochs"]
 inner_nepochs = 1
 warnings = !parsed_args["no-warnings"]
+memoryefficient = parsed_args["memory-efficient"]
 measurement_type = parsed_args["measurement"]
+test = parsed_args["test"]
 if measurement_type == "mscamp"
 	readfun = AlfvenDetectors.readmscamp
 elseif measurement_type == "mscphase"
@@ -80,6 +88,9 @@ elseif hostname == "soroban-node-03"
 	savepath = "/compass/home/skvara/alfven/experiments/gpu_test/$measurement_type"
 end
 mkpath(savepath)
+if test
+	savepath = "."
+end
 
 shots = readdir(datapath)
 shots = joinpath.(datapath, shots)[1:ceil(Int,length(shots)/10)]
@@ -88,8 +99,7 @@ if measurement_type == "uprobe"
 else
 	rawdata = AlfvenDetectors.collect_signals(shots, readfun, coils; warns=warnings)
 end
-data = rawdata |> gpu
-
+data = rawdata
 ### setup args
 xdim = size(data,1)
 model_args = [
@@ -106,6 +116,8 @@ else
 		)
 end
 fit_kwargs = Dict(
+		:usegpu => usegpu,
+		:memoryefficient => memoryefficient
 	)
 
 ### run and save the model

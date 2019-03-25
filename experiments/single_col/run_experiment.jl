@@ -41,6 +41,12 @@ s = ArgParseSettings()
 	"--no-warnings"
 		action = :store_true
 		help = "dont print warnings"
+	"--memory-efficient"
+		action = :store_true
+		help = "Ff set, garbage collector is called after every epoch."
+	"--test"
+		action = :store_true
+		help = "Test run saved in the current dir."
 end
 parsed_args = parse_args(ARGS, s)
 modelname = parsed_args["modelname"]
@@ -52,7 +58,9 @@ batchsize = parsed_args["batchsize"]
 outer_nepochs = parsed_args["nepochs"]
 inner_nepochs = 1
 warnings = !parsed_args["no-warnings"]
+memoryefficient = parsed_args["memory-efficient"]
 measurement_type = parsed_args["measurement"]
+test = parsed_args["test"]
 if measurement_type == "mscamp"
 	readfun = AlfvenDetectors.readmscamp
 elseif measurement_type == "mscphase"
@@ -80,6 +88,9 @@ elseif hostname == "soroban-node-03"
 	savepath = "/compass/home/skvara/alfven/experiments/single_col/$measurement_type"
 end
 mkpath(savepath)
+if test
+	savepath = "."
+end
 
 shots = readdir(datapath)
 shots = joinpath.(datapath, shots)
@@ -88,7 +99,9 @@ if measurement_type == "uprobe"
 else
 	rawdata = AlfvenDetectors.collect_signals(shots, readfun, coils; warns=warnings)
 end
-data = rawdata |> gpu
+# put all data into gpu only if you want to be fast and not care about memory clogging
+# otherwise that is done in the train function now per batch
+data = rawdata
 
 ### setup args
 xdim = size(data,1)
@@ -106,6 +119,8 @@ else
 		)
 end
 fit_kwargs = Dict(
+		:usegpu => usegpu,
+		:memoryefficient => memoryefficient
 	)
 
 ### run and save the model

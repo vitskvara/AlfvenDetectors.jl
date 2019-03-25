@@ -34,17 +34,19 @@ end
 end
 
 @testset "AE-GPU" begin
-	x = AlfvenDetectors.Float.(hcat(ones(xdim, Int(N/2)), zeros(xdim, Int(N/2)))) |> gpu
+	x = AlfvenDetectors.Float.(hcat(ones(xdim, Int(N/2)), zeros(xdim, Int(N/2))))
+	gx = x |> gpu
 	Random.seed!(12345)
 	model = AlfvenDetectors.AE([xdim,2,ldim], [ldim,2,xdim]) |> gpu
-	_x = model(x)
+	_x = model(gx)
 	# for training check
 	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
 
-	@test typeof(x) == CuArray{AlfvenDetectors.Float,2}
+	@test typeof(gx) == CuArray{AlfvenDetectors.Float,2}
 	@test typeof(_x) <: TrackedArray{AlfvenDetectors.Float,2}    
 	hist = MVHistory()
-	AlfvenDetectors.fit!(model, x, 5, 1000, cbit=100, history = hist, verb=false)
+	AlfvenDetectors.fit!(model, x, 5, 1000, cbit=100, history = hist, verb=false,
+		usegpu = true, memoryefficient = false)
 	is, ls = get(hist, :loss)
 	@test ls[1] > ls[end] 
 	@test ls[end] < 1e-4

@@ -148,7 +148,7 @@ Fit an autoencoder.
 """
 function fit!(m::AE, X, batchsize::Int, nepochs::Int; 
 	cbit::Int=200, history = nothing, verb = true, η = 0.001,
-	runtype = "experimental")
+	runtype = "experimental", fitkwargs...)
 	@assert runtype in ["experimental", "fast"]
 	# sampler
 	sampler = EpochSampler(X,nepochs,batchsize)
@@ -177,6 +177,7 @@ function fit!(m::AE, X, batchsize::Int, nepochs::Int;
 		collect(sampler), 
 		x->loss(m, x), 
 		opt, 
-		cb
+		cb;
+		fitkwargs...
 		)
 end
