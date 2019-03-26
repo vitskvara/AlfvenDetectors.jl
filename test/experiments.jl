@@ -35,7 +35,7 @@ if isdir(datapath)
 	shots = readdir(datapath)[1:2]
 	shots = joinpath.(datapath, shots)
 	# msc amplitude + AE
-	rawdata = AlfvenDetectors.collect_signals(shots, AlfvenDetectors.readmscampphase, coils) 
+	rawdata = AlfvenDetectors.collect_signals(shots, AlfvenDetectors.readmscampphase, coils; type="flattop") 
 	data = rawdata |> gpu
 	xdim = size(data,1)
 	batchsize = 64
@@ -62,7 +62,7 @@ if isdir(datapath)
 
 	# msc phase + VAE
 	GC.gc()
-	rawdata = AlfvenDetectors.collect_signals(shots, AlfvenDetectors.readnormmscphase, coils) 
+	rawdata = AlfvenDetectors.collect_signals(shots, AlfvenDetectors.readnormmscphase, coils; type="valid") 
 	data = rawdata |> gpu
 	xdim = size(data,1)
 	@testset "single column unsupervised - VAE" begin
@@ -87,7 +87,7 @@ if isdir(datapath)
 		@test isfile(joinpath(savepath,"vae_test.bson"))
 	end
 
-	# msc phase + VAE
+	# uprobe psd + TSVAE
 	GC.gc()
 	rawdata = AlfvenDetectors.collect_signals(shots, AlfvenDetectors.readnormlogupsd) 
 	data = rawdata |> gpu

@@ -333,31 +333,58 @@ function flattopbe(x,th=0.7,ϵ=1e-4;wl=0)
 end
 
 """
-	get_ft_section(signal, ip; minlength=0)
+	get_ft_section(signal, ip, [minlength, wl, th, ϵ])
 
 Get the flattop part of the signal. 
 """
-function get_ft_section(signal::AbstractArray, ip::AbstractVector; minlength=0)
-	ipftstart, ipftstop = flattopbe(ip,0.6,8e-4;wl=20)
-	ls = size(signal,2)
+function get_ft_section(signal::AbstractArray, ip::AbstractVector; minlength=0, wl=20,
+		th = 0.6, ϵ = 8e-4)
+	ipftstart, ipftstop = flattopbe(ip,th,ϵ;wl=wl)
+	M = ndims(signal)
+	ls = size(signal,M)
 	lip = length(ip)
 	ftstart = ceil(Int, ipftstart/lip*ls)
 	ftstop = floor(Int, ipftstop/lip*ls)
+	inds = [collect(x) for x in axes(signal)]
 	if ftstop - ftstart > minlength
-		return signal[:,ftstart:ftstop]
+		inds[end] = collect(ftstart:ftstop)
 	else
-		return signal[:,2:1] # an empty array of the correct vertical dimension
+		inds[end] = collect(2:1)
+		# an empty array of the correct vertical dimension
 	end
+	return signal[inds...]
 end
-function get_ft_section(signal::AbstractVector, ip::AbstractVector; minlength=0)
-	ipftstart, ipftstop = flattopbe(ip,0.6,8e-4;wl=20)
-	ls = length(signal)
+
+"""
+	valid_ip(x,ϵ=0.02)
+
+Returns boolean indices of valid Ip - Ip is before rampdown and non-zero (larger than ϵ times maximum).
+"""
+function valid_ip(x,ϵ=0.02)
+    _x = makepositive(x)
+    mx,imx = findmax(_x)
+    inds = _x .>= mx*ϵ
+    return [fill(true,imx); inds[imx+1:end]]
+end
+
+"""
+	get_valid_section(signal, ip; ϵ=0.02)
+
+Get the valid (nonzero) part of the signal. 
+"""
+function get_valid_section(signal::AbstractArray, ip::AbstractVector; ϵ=0.02)
+	valinds = valid_ip(ip,ϵ)
+	# valinds are true true true ... true false ... false
+	# so we know they begin with true
+	lvalip = sum(valinds)
 	lip = length(ip)
-	ftstart = ceil(Int, ipftstart/lip*ls)
-	ftstop = floor(Int, ipftstop/lip*ls)
-	if ftstop - ftstart > minlength
-		return signal[ftstart:ftstop]
+	ls = size(signal,ndims(signal))
+	inds = [collect(x) for x in axes(signal)]
+	if lvalip > 0
+		inds[end] = collect(1:ceil(Int,ls*lvalip/lip))
 	else
-		return signal[2:1] # an empty array of the correct vertical dimension
+		# an empty array of the correct vertical dimension
+		inds[end] = collect(2:1)
 	end
+	return signal[inds...]
 end

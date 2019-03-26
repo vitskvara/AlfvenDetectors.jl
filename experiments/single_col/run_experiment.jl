@@ -47,6 +47,10 @@ s = ArgParseSettings()
 	"--test"
 		action = :store_true
 		help = "Test run saved in the current dir."
+	"--ip-trunc"
+		default = "valid"
+		help = "Data truncation method based on Ip values. One of [valid, flattop]."
+		range_tester = (x->x in ["valid", "flattop"])
 end
 parsed_args = parse_args(ARGS, s)
 modelname = parsed_args["modelname"]
@@ -61,6 +65,7 @@ warnings = !parsed_args["no-warnings"]
 memoryefficient = parsed_args["memory-efficient"]
 measurement_type = parsed_args["measurement"]
 test = parsed_args["test"]
+iptrunc = parsed_args["ip-trunc"]
 if measurement_type == "mscamp"
 	readfun = AlfvenDetectors.readmscamp
 elseif measurement_type == "mscphase"
@@ -95,9 +100,9 @@ end
 shots = readdir(datapath)
 shots = joinpath.(datapath, shots)
 if measurement_type == "uprobe"
-	rawdata = AlfvenDetectors.collect_signals(shots, readfun; warns=warnings)
+	rawdata = AlfvenDetectors.collect_signals(shots, readfun; warns=warnings, type=iptrunc)
 else
-	rawdata = AlfvenDetectors.collect_signals(shots, readfun, coils; warns=warnings)
+	rawdata = AlfvenDetectors.collect_signals(shots, readfun, coils; warns=warnings, type=iptrunc)
 end
 # put all data into gpu only if you want to be fast and not care about memory clogging
 # otherwise that is done in the train function now per batch

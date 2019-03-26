@@ -2,6 +2,7 @@ using Test
 using AlfvenDetectors
 using Random
 using HDF5
+using StatsBase
 
 fpath = joinpath(dirname(@__FILE__),"data/testdata.h5")
 
@@ -88,4 +89,38 @@ fpath = joinpath(dirname(@__FILE__),"data/testdata.h5")
 	@test AlfvenDetectors.maxsectionbe(is1) == (2,8)
 	@test AlfvenDetectors.maxsectionbe(is2) == (18,24)
 	@test AlfvenDetectors.flattopbe(x,0.8,0.1) == (6,9)
+	# get ft section
+	x = fill(1,100)
+	L = 20
+	# flattop
+	x[20:20+L-1] = sample(8:11,L)
+	# some noise
+	x[80:85] .= 10 
+	s = randn(length(x))
+	fts = AlfvenDetectors.get_ft_section(s,x;wl=5,ϵ=0.2)
+	@test length(fts) == L
+	@test fts == s[20:20+L-1] 
+	S = randn(2,3,length(x))
+	ftS = AlfvenDetectors.get_ft_section(S,x;wl=5,ϵ=0.2)
+	@test ndims(S) == ndims(ftS)
+	@test size(ftS,ndims(ftS)) == L
+	S = randn(2,3,length(x)*2)
+	ftS = AlfvenDetectors.get_ft_section(S,x;wl=5,ϵ=0.2)
+	@test size(ftS,ndims(ftS)) == L*2-1
+	
+	########################
+	### non-zero current ###
+	########################
+	ip = ones(Float64,100)
+	L = 50
+	ip[21:20+L] = sample(95:105,L)
+	valinds = AlfvenDetectors.valid_ip(ip,0.05)
+	@test length(ip[valinds]) == L+20
+	for X in [randn(length(ip)), randn(3,length(ip)), randn(3,10,4,length(ip))]
+		vs = AlfvenDetectors.get_valid_section(X, ip; ϵ = 0.05)
+		@test size(vs, ndims(X)) == L+20
+	end
+	X = randn(3,10,4,2*length(ip))
+	vs = AlfvenDetectors.get_valid_section(X, ip; ϵ = 0.05)
+	@test size(vs, ndims(X)) == (L+20)*2
 end

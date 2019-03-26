@@ -11,44 +11,54 @@ construct_model(modelname, modelargs...; modelkwargs...) =
 ################################
 
 """
-	get_ft_signal(filename, readfun, coil; warns=true)
+	return_signal(signal,ip,type)
+
+Decide whether to return valid or flattop part of signal and
+also detect NaNs.
+"""
+function return_signal(signal,ip,type)
+	if any(isnan,ip) || any(isnan,signal)
+		return NaN
+	elseif type == "flattop"
+		return get_ft_section(signal,ip;minlength = 100)
+	elseif type == "valid"
+		return get_valid_section(signal,ip;ϵ=0.02)
+	else
+		return NaN
+	end
+end
+
+"""
+	get_signal(filename, readfun, coil; warns=true, type="valid")
 
 Returns flattop portion of signal extracted by readfun and coil.
 """
-function get_ft_signal(filename, readfun, coil; warns=true)
+function get_signal(filename, readfun, coil; warns=true, type="valid")
 	signal = readfun(filename,coil; warns=warns)
 	ip = readip(filename; warns=warns)
-	if any(isnan,ip) || any(isnan,signal)
-		return NaN
-	else
-		return get_ft_section(signal,ip;minlength = 100)
-	end
+	return_signal(signal,ip,type)
 end
 
 """
-	get_ft_signal(filename, readfun; warns=true)
+	get_signal(filename, readfun; warns=true, type="valid")
 
 Returns flattop portion of signal extracted by readfun.
 """
-function get_ft_signal(filename, readfun; warns=true)
+function get_signal(filename, readfun; warns=true, type="valid")
 	signal = readfun(filename; warns=warns)
 	ip = readip(filename; warns=warns)
-	if any(isnan,ip) || any(isnan,signal)
-		return NaN
-	else
-		return get_ft_section(signal,ip;minlength = 100)
-	end
+	return_signal(signal,ip,type)
 end
 
 """
-	get_ft_signals(filename, readfun, coils; warns=true)
+	get_signals(filename, readfun, coils; warns=true, type="valid")
 
 Colelct signals from all coils.
 """
-function get_ft_signals(filename, readfun, coils; warns=true)
+function get_signals(filename, readfun, coils; warns=true, type="valid")
 	signals = []
 	for coil in coils
-		x = get_ft_signal(filename, readfun, coil; warns=warns)
+		x = get_signal(filename, readfun, coil; warns=warns, type=type)
 		if !any(isnan,x)
 			push!(signals, x)
 		end
@@ -57,18 +67,20 @@ function get_ft_signals(filename, readfun, coils; warns=true)
 end
 
 """
-	collect_signals(shots,readfun,coils; warns=true)
+	collect_signals(shots,readfun,coils; warns=true, type="valid")
 
 Collect signals from multiple files.
 """
-collect_signals(shots,readfun,coils; warns=true) = hcat(filter(x->x!=[], map(x->get_ft_signals(x,readfun,coils; warns=warns), shots))...)
+collect_signals(shots,readfun,coils; warns=true, type="valid") = 
+	hcat(filter(x->x!=[], map(x->get_signals(x,readfun,coils; warns=warns, type=type), shots))...)
 
 """
 	collect_signals(shots,readfun; warns=true)
 
 Collect signals from multiple files.
 """
-collect_signals(shots,readfun; warns=true) = hcat(filter(x->!any(isnan,x), map(x->get_ft_signal(x,readfun; warns=warns), shots))...)
+collect_signals(shots,readfun; warns=true, type="valid") = 
+	hcat(filter(x->!any(isnan,x), map(x->get_signal(x,readfun; warns=warns, type=type), shots))...)
 
 """
 	fitsave_unsupervised(modelname, batchsize, outer_nepochs, inner_nepochs,
