@@ -20,6 +20,7 @@ if "CuArrays" in keys(Pkg.installed())
 end
 
 # only run the test if the needed data is present
+
 if isdir(datapath)
 	savepath = joinpath(dirname(@__FILE__), "tmp")
 	mkpath(savepath)
@@ -31,11 +32,27 @@ if isdir(datapath)
 	if usegpu
 		using CuArrays
 	end
-
 	shots = readdir(datapath)[1:2]
 	shots = joinpath.(datapath, shots)
+
+	# get conv data
+	width = 32
+	for readfun in [AlfvenDetectors.readmscamp,
+					AlfvenDetectors.readnormmscphase,
+					AlfvenDetectors.readnormmscphase]
+		alldata = hcat(map(x->x[:,1:(end-size(x,2)%width)], AlfvenDetectors.collect_signals(shots, readfun, coils))...);
+		convdata = AlfvenDetectors.collect_conv_signals(shots, readfun, 32, coils);
+		@test alldata[:,1:width] == convdata[:,:,1,1]
+		@test size(alldata,2) == size(convdata,2)*size(convdata,4)
+	end
+	readfun = AlfvenDetectors.readnormlogupsd
+	alldata = hcat(map(x->x[:,1:(end-size(x,2)%width)], AlfvenDetectors.collect_signals(shots, readfun))...)
+	convdata = AlfvenDetectors.collect_conv_signals(shots, readfun, 32)
+	@test alldata[:,1:width] == convdata[:,:,1,1]
+	@test size(alldata,2) == size(convdata,2)*size(convdata,4)
+
 	# msc amplitude + AE
-	rawdata = AlfvenDetectors.collect_signals(shots, AlfvenDetectors.readmscampphase, coils; type="flattop") 
+	rawdata = hcat(AlfvenDetectors.collect_signals(shots, AlfvenDetectors.readmscampphase, coils; type="flattop")...)
 	data = rawdata |> gpu
 	xdim = size(data,1)
 	batchsize = 64
@@ -62,7 +79,7 @@ if isdir(datapath)
 
 	# msc phase + VAE
 	GC.gc()
-	rawdata = AlfvenDetectors.collect_signals(shots, AlfvenDetectors.readnormmscphase, coils; type="valid") 
+	rawdata = hcat(AlfvenDetectors.collect_signals(shots, AlfvenDetectors.readnormmscphase, coils; type="valid")...)
 	data = rawdata |> gpu
 	xdim = size(data,1)
 	@testset "single column unsupervised - VAE" begin
@@ -89,7 +106,7 @@ if isdir(datapath)
 
 	# uprobe psd + TSVAE
 	GC.gc()
-	rawdata = AlfvenDetectors.collect_signals(shots, AlfvenDetectors.readnormlogupsd) 
+	rawdata = hcat(AlfvenDetectors.collect_signals(shots, AlfvenDetectors.readnormlogupsd)...)
 	data = rawdata |> gpu
 	xdim = size(data,1)
 	@testset "single column unsupervised - TSVAE" begin

@@ -72,7 +72,7 @@ end
 Collect signals from multiple files.
 """
 collect_signals(shots,readfun,coils; warns=true, type="valid") = 
-	hcat(filter(x->x!=[], map(x->get_signals(x,readfun,coils; warns=warns, type=type), shots))...)
+	filter(x->x!=[], map(x->get_signals(x,readfun,coils; warns=warns, type=type), shots))
 
 """
 	collect_signals(shots,readfun; warns=true)
@@ -80,7 +80,7 @@ collect_signals(shots,readfun,coils; warns=true, type="valid") =
 Collect signals from multiple files.
 """
 collect_signals(shots,readfun; warns=true, type="valid") = 
-	hcat(filter(x->!any(isnan,x), map(x->get_signal(x,readfun; warns=warns, type=type), shots))...)
+	filter(x->!any(isnan,x), map(x->get_signal(x,readfun; warns=warns, type=type), shots))
 
 """
 	fitsave_unsupervised(modelname, batchsize, outer_nepochs, inner_nepochs,
@@ -136,3 +136,30 @@ function fitsave_unsupervised(data, modelname, batchsize, outer_nepochs, inner_n
 
 	return cpumodel, history, t
 end
+
+###############################
+### stuff for conv networks ###
+###############################
+
+"""
+	collect_conv_signals(shots,readfun,width,coils [,warns, type])
+
+Returns a 4D array consisting of blocks of given width, extracted by readfun.
+"""
+function collect_conv_signals(shots,readfun,width,coils; warns=true, type="valid")
+	data = collect_signals(shots, readfun, coils; warns=warns, type=type)
+	data = hcat(map(x->x[:,1:(end-size(x,2)%width)],data)...)
+	return reshape(data, size(data,1),width,1,:)
+end
+
+"""
+	collect_conv_signals(shots,readfun,width [,warns, type])
+
+Returns a 4D array consisting of blocks of given width, extracted by readfun.
+"""
+function collect_conv_signals(shots,readfun,width; warns=true, type="valid")
+	data = collect_signals(shots, readfun; warns=warns, type=type)
+	data = hcat(map(x->x[:,1:(end-size(x,2)%width)],data)...)
+	return reshape(data, size(data,1),width,1,:)
+end
+

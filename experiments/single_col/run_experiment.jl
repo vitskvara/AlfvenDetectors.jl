@@ -100,9 +100,9 @@ end
 shots = readdir(datapath)
 shots = joinpath.(datapath, shots)
 if measurement_type == "uprobe"
-	rawdata = AlfvenDetectors.collect_signals(shots, readfun; warns=warnings, type=iptrunc)
+	rawdata = hcat(AlfvenDetectors.collect_signals(shots, readfun; warns=warnings, type=iptrunc)...)
 else
-	rawdata = AlfvenDetectors.collect_signals(shots, readfun, coils; warns=warnings, type=iptrunc)
+	rawdata = hcat(AlfvenDetectors.collect_signals(shots, readfun, coils; warns=warnings, type=iptrunc)...)
 end
 # put all data into gpu only if you want to be fast and not care about memory clogging
 # otherwise that is done in the train function now per batch
