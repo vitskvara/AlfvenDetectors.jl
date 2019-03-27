@@ -301,6 +301,101 @@ function convmaxpool(ks::Int, channels::Pair, scales::Union{Tuple,Int};
 end
 
 """
+    convencoder(ins,ds,das,ks,cs,scs,as,sts)
+
+Create a convolution encoder with dense output layers.
+
+ins = (height,width,no channels) of input
+ds = vector of widths of dense layers    
+das = vector of activations of dense layers - 1 element shorter then ds (last is always unit)
+ks = vector of kernel sizes
+cs = vector of channel pairs
+scs = vector of scale factors
+cas = vector of convolutional activations
+sts = vector of strides
+"""
+function convencoder(ins,ds::AbstractVector, das::AbstractVector,
+    ks::AbstractVector, cs::AbstractVector, 
+    scs::AbstractVector, cas::AbstractVector, sts::AbstractVector)
+    conv_layers = Flux.Chain(map(x->convmaxpool(x[1],x[2],x[3];activation=x[4],stride=x[5]),zip(ks,cs,scs,cas,sts))...)
+    # there is a problem with automatic determination of the input size of the last dense layer
+    # it can be computed from the indims and the size, padding, stride and scale of the convmaxpool layer
+    # however that is quit complicated so use a trick - we initialize a random array of indim size,
+    # pass it through the conv layers and get its size
+    testin = randn(Float32,ins...,1)
+    testout = conv_layers(testin)
+    convoutdim = reduce(*,size(testout)[1:3]) # size if the first dense layer
+    ds = vcat([convoutdim], ds)
+    ndl = length(ds)-1 # no of dense layers
+    # and also the previous ones if needed
+    dense_layers = Flux.Chain(
+            map(i->Flux.Dense(ds[i],ds[i+1],((i==ndl) ? identity : das[i])),1:ndl)...)
+    # finally put it all into one chain
+    Flux.Chain(conv_layers,
+        x->reshape(x,:,size(x,4)),
+        dense_layers
+        )
+end
+"""
+    convencoder(insize, latentdim, nconv, kernelsize, channels, scaling,
+        [ndense, dsizes, activation, stride])
+
+Create a convolutional encoder.
+
+insize = (height,width,no channels) of input
+latentdim = size of latent space
+nconv = number of conv layers
+kernelsize = scalar, tuple or a list of those
+channels = a list of channel numbers, same length as nconv
+scaling = scalar, tuple or a list of those
+ndense = number of dense layers (default 1)
+dsizes = if ndense > 1, specify a list of latent layer widths of length = ndense - 1
+activation = default relu
+lstride = length of stride, default 1, can be a scalar or a list of scalars
+"""
+function convencoder(insize, latentdim::Int, nconv::Int, kernelsize, channels::AbstractVector, 
+    scaling; ndense::Int=1, dsizes=nothing, activation=relu, lstride=1)
+    # construct ds - vector of widths of dense layers
+    if ndense>1
+        (dsizes==nothing) ? error("If more than one Dense layer is require, specify their widths in dsizes.") : nothing 
+        ds = vcat(dsizes, [latentdim])
+    else
+        ds = [latentdim]
+    end
+    # das - vector of dense activations
+    das = fill(activation, length(ds)-1)
+    # construct ks - vector of kernel sizes
+    if typeof(kernelsize) <: AbstractVector
+        @assert length(kernelsize) == nconv
+        ks = kernelsize
+    else
+        ks = fill(kernelsize,nconv)
+    end
+    # construct cs - vector of channel pairs
+    # first does not have to be specified as it is in insize
+    @assert length(channels)==nconv
+    cs = vcat(insize[3]=>channels[1], map(i->channels[i]=>channels[i+1],1:length(channels)-1))
+    # construct scs - vector of scaling factors
+    if typeof(scaling) <: AbstractVector
+        @assert length(scaling) == nconv
+        scs = scaling
+    else
+        scs = fill(scaling,nconv)
+    end
+    # cas - vector of convolutional activations
+    cas = fill(activation, nconv)
+    # sts - vector of strides
+    if typeof(lstride) <: AbstractVector
+        @assert length(lstride) == nconv
+        sts = lstride
+    else
+        sts = fill(lstride,nconv)
+    end
+    
+    return convencoder(insize, ds, das, ks, cs, scs, cas, sts) 
+end
+
+"""
     convupscale(ks, channels, scales [,activation, stride]
 
 Upscaling coupled with convolution.
