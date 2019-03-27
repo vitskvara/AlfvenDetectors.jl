@@ -245,12 +245,7 @@ paramchange(frozen_params, params) =
 	model = AlfvenDetectors.convencoder(ins,ds,das,ks,cs,scs,cas,sts)
 	@test size(model(X)) == (2,3)
 
-	using Test
-	using AlfvenDetectors
-	using Flux
-	using ValueHistories
-
-	# lightweight constructor
+	# lightweight convencoder constructor
 	# basic call
 	X = randn(16,8,2,3)
 	insize = size(X)[1:3]
@@ -303,4 +298,74 @@ paramchange(frozen_params, params) =
 		lstride = lstride)
 	@test size(model(X)) == (latentdim,3)
 	@test size(model.layers[1](X)) == (4,2,16,3) 
+
+	# convdecoder
+	L = 2
+	X = randn(12,6,2,3)
+	y = randn(3,3)
+	outs = size(X)[1:3]
+	ds = [3,10]
+	das = [relu,relu]
+	ks = fill(3,L)
+	cs = [8=>4, 4=>2]
+    scs = [3,2]
+    cas = fill(relu,L-1)
+    sts = fill(1,L)
+	model = AlfvenDetectors.convdecoder(outs,ds,das,ks,cs,scs,cas,sts)
+	@test size(model(y)) == size(X)
+
+	using Test
+	using AlfvenDetectors
+	using Flux
+	using ValueHistories
+
+	# lightweight convdecoder constructor
+	# basic call
+	n = 5
+	X = randn(16,8,2,n)
+	outsize = size(X)[1:3]
+	latentdim = 3
+	y = randn(latentdim,n)
+	nconv = 3
+	kernelsize = 3
+	channels = [16,8,4]
+	scaling = 2
+	model = AlfvenDetectors.convdecoder(outsize, latentdim, nconv, kernelsize, channels, scaling)
+	@test size(model(y)) == size(X)
+	# more dense layers
+	ndense = 2
+	dsizes = [16]
+	model = AlfvenDetectors.convdecoder(outsize, latentdim, nconv, kernelsize, channels, scaling;
+		ndense = ndense, dsizes=dsizes)
+	@test size(model(y)) == size(X)
+	@test length(model.layers[1]) == 2
+	@test size(model.layers[1][1].W,1) == dsizes[1]
+	# different kernelsizes
+	kernelsize = [3,5,3]
+	model = AlfvenDetectors.convdecoder(outsize, latentdim, nconv, kernelsize, channels, scaling)
+	@test size(model(y)) == size(X)
+	# different scaling factors
+	scaling = [2,1,2]
+	model = AlfvenDetectors.convdecoder(outsize, latentdim, nconv, kernelsize, channels, scaling)
+	@test size(model(y)) == size(X)
+	# different scaling factors in dimesions
+	scaling = (2,1)
+	model = AlfvenDetectors.convdecoder(outsize, latentdim, nconv, kernelsize, channels, scaling)
+	@test size(model(y)) == size(X)
+	# scaling factors different for each layer and dimension
+	scaling = [(2,1),(1,2),(2,2)]
+	model = AlfvenDetectors.convdecoder(outsize, latentdim, nconv, kernelsize, channels, scaling)
+	@test size(model(y)) == size(X)
+	# stride
+	scaling = [1,1,1]
+	lstride = 2
+	model = AlfvenDetectors.convdecoder(outsize, latentdim, nconv, kernelsize, channels, scaling;
+		lstride = lstride)
+	@test size(model(y)) == size(X)
+	# different stride for each layer
+	scaling = [1,1,1]
+	lstride = [2,1,2]
+	model = AlfvenDetectors.convdecoder(outsize, latentdim, nconv, kernelsize, channels, scaling;
+			lstride = lstride)
+	@test size(model(y)) == size(X)
 end
