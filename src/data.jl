@@ -191,7 +191,7 @@ readupsd(filepath::String; warns=true) = readsignal(filepath, "Uprobe_coil_A1pol
 """
 	readlogupsd(filepath::String; warns=true)
 """
-readlogupsd(filepath::String; warns=true) = Float(20.0)*log10.(readupsd(filepath; warns=warns) .+ 1e-10)
+readlogupsd(filepath::String; warns=true) = Float(20.0)*log10.(readupsd(filepath; warns=warns) .+ Float(1e-10))
 
 """
 	readnormlogupsd(filepath::String; warns=true)

@@ -70,6 +70,20 @@ function AE(xdim::Int, zdim::Int, nlayers::Int; activation = Flux.relu,
 	AE(esize,dsize; activation=activation, layer=layer)
 end
 
+"""
+	CAE(insize, latentdim, nconv, kernelsize, channels, scaling; 
+		[ndense, dsizes, activation, stride])
+
+Initializes a convolutional autoencoder.
+"""
+function CAE(insize, latentdim, nconv, kernelsize, channels, scaling; kwargs...)
+	encoder = AlfvenDetectors.convencoder(insize, latentdim, nconv, kernelsize, 
+		channels, scaling; kwargs...)
+	decoder = AlfvenDetectors.convdecoder(insize, latentdim, nconv, kernelsize, 
+		reverse(channels), scaling; kwargs...)
+	return AE(encoder, decoder)
+end
+
 ################
 ### training ###
 ################

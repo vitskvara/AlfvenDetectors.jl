@@ -353,7 +353,7 @@ dsizes = if ndense > 1, specify a list of latent layer widths of length = ndense
 activation = default relu
 lstride = length of stride, default 1, can be a scalar or a list of scalars
 """
-function convencoder(insize, latentdim::Int, nconv::Int, kernelsize, channels::AbstractVector, 
+function convencoder(insize, latentdim::Int, nconv::Int, kernelsize, channels, 
     scaling; ndense::Int=1, dsizes=nothing, activation=relu, lstride=1)
     # construct ds - vector of widths of dense layers
     if ndense>1
@@ -480,7 +480,7 @@ dsizes = if ndense > 1, specify a list of latent layer widths of length = ndense
 activation = default relu
 lstride = length of stride, default 1, can be a scalar or a list of scalars
 """
-function convdecoder(outsize, latentdim::Int, nconv::Int, kernelsize, channels::AbstractVector, 
+function convdecoder(outsize, latentdim::Int, nconv::Int, kernelsize, channels, 
     scaling; ndense::Int=1, dsizes=nothing, activation=relu, lstride=1)
     # construct ds - vector of widths of dense layers
     if ndense>1

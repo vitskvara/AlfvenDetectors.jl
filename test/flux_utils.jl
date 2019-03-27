@@ -314,11 +314,6 @@ paramchange(frozen_params, params) =
 	model = AlfvenDetectors.convdecoder(outs,ds,das,ks,cs,scs,cas,sts)
 	@test size(model(y)) == size(X)
 
-	using Test
-	using AlfvenDetectors
-	using Flux
-	using ValueHistories
-
 	# lightweight convdecoder constructor
 	# basic call
 	n = 5
