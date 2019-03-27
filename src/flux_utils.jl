@@ -156,9 +156,9 @@ function basic_callback(hist,verb::Bool,eta::Real,show_it::Int;
     basic_callback(hist,eta,0,p,Array{Any,1}(),verb,epoch_size,show_it)
 end
 
-#####################################################
-### function for convolutional networks upscaling ###
-#####################################################
+######################################################
+### functions for convolutional networks upscaling ###
+######################################################
 """
     oneszeros([T],segment,length,i)
 
@@ -274,4 +274,27 @@ function zeropad(x::AbstractArray{T,4},widths) where T
         end
     end
     return Tracker.collect(res)
+end
+
+"""
+    convmaxpool(ks, channels, scales; activation = relu)
+
+Create a simple two layered net consisting of a convolutional layer that preservves dimensions
+and a subsequent dowscaling using maxpooling layer.
+
+    layer = convmaxpool(3, 8=>16, (4,4))
+
+This will have convolutional kernel of size (3,3), produce 16 channels out of 8 and 
+downscale with 
+"""
+function convmaxpool(ks::Int, channels, scales::Union{Tuple,Int}; 
+    activation = relu)
+    if !(typeof(scales) <: Tuple)
+        scales = (scales,scales)
+    end
+    padwidth = floor(Int,ks/2)
+    return Flux.Chain(
+                Flux.Conv((ks,ks), channels, activation, pad=(padwidth,padwidth)),
+                x->maxpool(x,scales)
+            )
 end

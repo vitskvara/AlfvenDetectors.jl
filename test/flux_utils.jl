@@ -213,4 +213,10 @@ paramchange(frozen_params, params) =
 	AlfvenDetectors.update!(model, opt)
 	@test all(paramchange(frozen_params, collect(params(model))))
 	
+	# convmaxpool
+	X = randn(12,6,2,5)
+	layer = AlfvenDetectors.convmaxpool(3,2=>4,2)
+	@test size(layer(X)) == (6,3,4,5)
+	layer = AlfvenDetectors.convmaxpool(5,2=>8,(3,2))
+	@test size(layer(X)) == (4,3,8,5)
 end
