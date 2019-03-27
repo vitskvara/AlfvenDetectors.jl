@@ -277,7 +277,7 @@ function zeropad(x::AbstractArray{T,4},widths) where T
 end
 
 """
-    convmaxpool(ks, channels, scales; activation = relu)
+    convmaxpool(ks, channels, scales; [activation, stride])
 
 Create a simple two layered net consisting of a convolutional layer that preservves dimensions
 and a subsequent dowscaling using maxpooling layer.
@@ -288,13 +288,17 @@ This will have convolutional kernel of size (3,3), produce 16 channels out of 8 
 downscale with 
 """
 function convmaxpool(ks::Int, channels, scales::Union{Tuple,Int}; 
-    activation = relu)
-    if !(typeof(scales) <: Tuple)
+    activation = relu, stride::Int=1)
+    if !(typeof(scales) <: Tuple)   
         scales = (scales,scales)
     end
     padwidth = floor(Int,ks/2)
     return Flux.Chain(
-                Flux.Conv((ks,ks), channels, activation, pad=(padwidth,padwidth)),
+                Flux.Conv((ks,ks), channels, activation, pad=(padwidth,padwidth),
+                    stride = (stride,stride)),
                 x->maxpool(x,scales)
             )
+end
+
+function convdownscale(ks::Int, channels, scales::Union{Tuple,Int})
 end
