@@ -279,7 +279,7 @@ end
 """
     convmaxpool(ks, channels, scales; [activation, stride])
 
-Create a simple two layered net consisting of a convolutional layer that preservves dimensions
+Create a simple two layered net consisting of a convolutional layer
 and a subsequent dowscaling using maxpooling layer.
 
     layer = convmaxpool(3, 8=>16, (4,4))
@@ -287,7 +287,7 @@ and a subsequent dowscaling using maxpooling layer.
 This will have convolutional kernel of size (3,3), produce 16 channels out of 8 and 
 downscale with 
 """
-function convmaxpool(ks::Int, channels, scales::Union{Tuple,Int}; 
+function convmaxpool(ks::Int, channels::Pair, scales::Union{Tuple,Int}; 
     activation = relu, stride::Int=1)
     if !(typeof(scales) <: Tuple)   
         scales = (scales,scales)
@@ -300,5 +300,25 @@ function convmaxpool(ks::Int, channels, scales::Union{Tuple,Int};
             )
 end
 
-function convdownscale(ks::Int, channels, scales::Union{Tuple,Int})
+"""
+    convupscale(ks, channels, scales [,activation, stride]
+
+Upscaling coupled with convolution.
+
+    layer = convupscale(5, 4=>2, 2)
+
+This will upscale the input in x and y two times and then apply 
+a kernel of size 5 to reduce the number of channels from 4 to 2.
+"""
+function convupscale(ks::Int, channels::Pair, scales::Union{Tuple,Int};
+    activation = relu, stride::Int=1)
+    if !(typeof(scales) <: Tuple)   
+        scales = (scales,scales)
+    end
+    padwidth = floor(Int,ks/2)
+    return Flux.Chain(
+                x -> upscale(x,scales),
+                Flux.Conv((ks,ks), channels, activation; pad=(padwidth,padwidth),
+                    stride = (stride,stride))
+        )
 end

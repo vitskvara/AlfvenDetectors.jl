@@ -221,4 +221,14 @@ paramchange(frozen_params, params) =
 	@test size(layer(X)) == (4,3,8,5)
 	layer = AlfvenDetectors.convmaxpool(3,2=>8,2;stride=3)
 	@test size(layer(X)) == (2,1,8,5)
+
+	# convupscale
+	X = randn(2,4,4,10)
+	layer = AlfvenDetectors.convupscale(3,4=>2,2)
+	@test size(layer(X)) == (4,8,2,10)
+	layer = AlfvenDetectors.convupscale(5,4=>1,(4,3))
+	@test size(layer(X)) == (8,12,1,10)
+	layer = AlfvenDetectors.convupscale(3,4=>2,2;stride=2)
+	@test size(layer(X)) == (2,4,2,10)
+	
 end
