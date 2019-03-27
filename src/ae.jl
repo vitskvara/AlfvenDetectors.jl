@@ -76,7 +76,7 @@ end
 
 Initializes a convolutional autoencoder.
 """
-function CAE(insize, latentdim, nconv, kernelsize, channels, scaling; kwargs...)
+function ConvAE(insize, latentdim, nconv, kernelsize, channels, scaling; kwargs...)
 	encoder = AlfvenDetectors.convencoder(insize, latentdim, nconv, kernelsize, 
 		channels, scaling; kwargs...)
 	decoder = AlfvenDetectors.convdecoder(insize, latentdim, nconv, kernelsize, 
@@ -162,7 +162,7 @@ Fit an autoencoder.
 """
 function fit!(m::AE, X, batchsize::Int, nepochs::Int; 
 	cbit::Int=200, history = nothing, verb = true, η = 0.001,
-	runtype = "experimental", trainkwargs...)
+	opt = nothing, runtype = "experimental", trainkwargs...)
 	@assert runtype in ["experimental", "fast"]
 	# sampler
 	sampler = EpochSampler(X,nepochs,batchsize)
@@ -175,8 +175,10 @@ function fit!(m::AE, X, batchsize::Int, nepochs::Int;
 	#loss(x) = loss(m, x[2]) # since first element of x is the index from enumerate
 
 	# optimizer
-	opt = ADAM(η)
-	
+	if opt == nothing
+		opt = ADAM(η)
+	end
+
 	# callback
 	if runtype == "experimental"
 		cb = basic_callback(history,verb,η,cbit; 
@@ -194,4 +196,6 @@ function fit!(m::AE, X, batchsize::Int, nepochs::Int;
 		cb;
 		trainkwargs...
 		)
+	
+	return opt
 end

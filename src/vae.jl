@@ -138,7 +138,9 @@ loglikelihood(vae::VAE, X, L) = StatsBase.mean([loglikelihood(vae, X) for m in 1
 Loss function of the variational autoencoder. β is scaling parameter of
 the KLD, 1 = full KL, 0 = no KL.
 """
-loss(vae::VAE, X, L, β) = -loglikelihood(vae,X,L) + Float(β)*KL(vae, X)
+loss(vae::VAE, X, L, β) = Float(β)*KL(vae, X) - ((L>1) ? loglikelihood(vae,X,L) : loglikelihood(vae,X))
+# the fork for L>1 is because of conv nets - for some reaseon the conv_data is broken when using sampling
+# therefore we do not support sampling for conv nets
 
 """
 	evalloss(vae, X, L, β)
@@ -238,7 +240,7 @@ usegpu - if X is not already on gpu, this will put the inidvidual batches into g
 memoryefficient - calls gc after every batch, again saving some memory but prolonging computation
 """
 function fit!(vae::VAE, X, batchsize::Int, nepochs::Int; 
-	L=1, β::Real= Float(1.0), cbit::Int=200, history = nothing, 
+	L=1, β::Real= Float(1.0), cbit::Int=200, history = nothing, opt=nothing,
 	verb::Bool = true, η = 0.001, runtype = "experimental", trainkwargs...)
 	@assert runtype in ["experimental", "fast"]
 	# sampler
@@ -251,8 +253,10 @@ function fit!(vae::VAE, X, batchsize::Int, nepochs::Int;
 	# use default loss
 
 	# optimizer
-	opt = ADAM(η)
-
+	if opt == nothing
+		opt = ADAM(η)
+	end
+	
 	# callback
 	if runtype == "experimental"
 		cb = basic_callback(history,verb,η,cbit; 
@@ -272,6 +276,8 @@ function fit!(vae::VAE, X, batchsize::Int, nepochs::Int;
 		_cb;
 		trainkwargs...
 		)
+
+	return opt
 end
 
 ##### auxiliarry functions #####

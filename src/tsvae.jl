@@ -46,7 +46,7 @@ function TSVAE(xdim::Int, zdim::Int, nlayers::Union{Int, Tuple};
 	activation = Flux.relu,	layer = Flux.Dense)
 	# if nlayers is scalar (both nets are to be the same depth)
 	# create a tuple anyway
-	nlayers = scalar2tuple(nlayers)
+	nlayers = scalar2vec(nlayers)
 
 	m1 = VAE(xdim, zdim, nlayers[1]; activation=activation, layer=layer,
 		variant=:scalar)
@@ -82,23 +82,24 @@ function fit!(tsvae::TSVAE, X, batchsize::Union{Int, Tuple},
 	L::Union{Int, Tuple}=(1,1), β::Union{Real, Tuple}= Float(1.0), 
 	cbit::Union{Int, Tuple}=(200,200), history = nothing, 
 	verb::Bool = true, η::Union{Real, Tuple} = (0.001,0.001), 
-	runtype = "experimental", trainkwargs...)
+	runtype = "experimental", opt=nothing, trainkwargs...)
 	@assert runtype in ["experimental", "fast"]
 
 	# some argument may be scalar or a tuple
 	# this will convert them all to tuples
-	batchsize = scalar2tuple(batchsize)
-	nepochs = scalar2tuple(nepochs)
-	L = scalar2tuple(L)
-	β = scalar2tuple(β)
-	cbit = scalar2tuple(cbit)
-	history = scalar2tuple(history)
-	η = scalar2tuple(η)
+	batchsize = scalar2vec(batchsize)
+	nepochs = scalar2vec(nepochs)
+	L = scalar2vec(L)
+	β = scalar2vec(β)
+	cbit = scalar2vec(cbit)
+	history = scalar2vec(history)
+	η = scalar2vec(η)
+	opt = scalar2vec(opt)
 
 	if verb
 		println("Training the first stage...")
 	end
-	fit!(tsvae.m1, X, batchsize[1], nepochs[1]; L = L[1], β = β[1], cbit=cbit[1],
+	opt[1] = fit!(tsvae.m1, X, batchsize[1], nepochs[1]; L = L[1], β = β[1], cbit=cbit[1], opt=opt[1],
 		history = history[1], verb = verb, η = η[1], runtype = runtype, trainkwargs...)
 	
 	if verb
@@ -110,8 +111,9 @@ function fit!(tsvae::TSVAE, X, batchsize::Union{Int, Tuple},
 	else
 		Z = tsvae.m1.sampler(cpu(tsvae.m1.encoder)(X).data)
 	end
-	fit!(tsvae.m2, Z, batchsize[2], nepochs[2]; L = L[2], β = β[2], cbit=cbit[2],
+	opt[2] = fit!(tsvae.m2, Z, batchsize[2], nepochs[2]; L = L[2], β = β[2], cbit=cbit[2], opt=opt[2],
 		history = history[2], verb = verb, η = η[2], runtype = runtype, trainkwargs...)
+	return opt
 end
 
 """

@@ -1,5 +1,6 @@
 const l2pi = Float(log(2*pi)) # the model converges the same with zero or correct value
 const δ = Float(1e-6)
+const half = Float(0.5)
 
 """
     KL(μ, σ2)
@@ -15,17 +16,17 @@ KL(μ, σ2) = Float(1/2)*StatsBase.mean(sum(σ2 + μ.^2 - log.(σ2) .- Float(1.0
 
 Loglikelihood of a normal sample X given mean and variance.
 """
-loglikelihood(X::Real, μ::Real) = - ((μ - X)^2 + l2pi)/2
-loglikelihood(X::Real, μ::Real, σ2::Real) = - ((μ - X)^2/σ2 + log(σ2) + l2pi)/2
-loglikelihood(X, μ) = - StatsBase.mean(sum((μ - X).^2 .+ l2pi,dims = 1))/2
-loglikelihood(X, μ, σ2) = - StatsBase.mean(sum((μ - X).^2 ./σ2 + log.(σ2) .+ l2pi,dims = 1))/2
+loglikelihood(X::Real, μ::Real) = - ((μ - X)^2 + l2pi)*half
+loglikelihood(X::Real, μ::Real, σ2::Real) = - ((μ - X)^2/σ2 + log(σ2) + l2pi)*half
+loglikelihood(X, μ) = - StatsBase.mean(sum((μ - X).^2 .+ l2pi,dims = 1))*half
+loglikelihood(X, μ, σ2) = - StatsBase.mean(sum((μ - X).^2 ./σ2 + log.(σ2) .+ l2pi,dims = 1))*half
 # in order to work on gpu and for faster backpropagation, dont use .+ here for arrays
 # see also https://github.com/FluxML/Flux.jl/issues/385
 function loglikelihood(X::AbstractMatrix, μ::AbstractMatrix, σ2::AbstractVector) 
     # again, this has to be split otherwise it is very slow
     y = (μ - X).^2
     y = (one(Float) ./σ2)' .* y 
-    - StatsBase.mean(sum( y .+ reshape(log.(σ2), 1, length(σ2)) .+ l2pi,dims = 1))/2
+    - StatsBase.mean(sum( y .+ reshape(log.(σ2), 1, length(σ2)) .+ l2pi,dims = 1))*half
 end
 
 """
@@ -34,17 +35,17 @@ end
 Loglikelihood of a normal sample X given mean and variance without the constant term. For
 optimalization the results is the same and this is faster.
 """
-loglikelihoodopt(X::Real, μ::Real) = - ((μ - X)^2)/2
-loglikelihoodopt(X::Real, μ::Real, σ2::Real) = - ((μ - X)^2/σ2 + log(σ2))/2
-loglikelihoodopt(X, μ) = - StatsBase.mean(sum((μ - X).^2,dims = 1))/2
-loglikelihoodopt(X, μ, σ2) = - StatsBase.mean(sum( (μ - X).^2 ./σ2 + log.(σ2),dims = 1))/2
+loglikelihoodopt(X::Real, μ::Real) = - ((μ - X)^2)*half
+loglikelihoodopt(X::Real, μ::Real, σ2::Real) = - ((μ - X)^2/σ2 + log(σ2))*half
+loglikelihoodopt(X, μ) = - StatsBase.mean(sum((μ - X).^2,dims = 1))*half
+loglikelihoodopt(X, μ, σ2) = - StatsBase.mean(sum( (μ - X).^2 ./σ2 + log.(σ2),dims = 1))*half
 # in order to work on gpu and for faster backpropagation, dont use .+ here
 # see also https://github.com/FluxML/Flux.jl/issues/385
 function loglikelihoodopt(X::AbstractMatrix, μ::AbstractMatrix, σ2::AbstractVector) 
     # again, this has to be split otherwise it is very slow
     y = (μ - X).^2
     y = (one(Float) ./σ2)' .* y 
-    - StatsBase.mean(sum( y .+ reshape(log.(σ2), 1, length(σ2)),dims = 1))/2
+    - StatsBase.mean(sum( y .+ reshape(log.(σ2), 1, length(σ2)),dims = 1))*half
 end
 
 """
@@ -122,9 +123,11 @@ end
 
 If x is scalar, return a tuple containing (x,deepcopy(x)). 
 """
-function scalar2tuple(x)
-    if length(x) == 1
-        return (x,deepcopy(x))
+function scalar2vec(x)
+    if x == nothing
+        return Array{Any,1}([nothing,nothing])
+    elseif length(x) == 1
+        return Array{Any,1}([x,deepcopy(x)])
     end
     return x
 end

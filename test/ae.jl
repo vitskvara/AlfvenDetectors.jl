@@ -68,7 +68,7 @@ paramchange(frozen_params, params) =
 	kernelsize = 3
 	channels = (2,4,6)
 	scaling = [(2,2),(2,2),(1,1)]
-	model = AlfvenDetectors.CAE(insize, latentdim, nconv, kernelsize, channels, scaling)
+	model = AlfvenDetectors.ConvAE(insize, latentdim, nconv, kernelsize, channels, scaling)
 	hist = MVHistory()
 	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
 	@test size(model(data)) == size(data)
