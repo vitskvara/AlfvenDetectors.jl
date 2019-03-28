@@ -87,6 +87,20 @@ function VAE(xdim::Int, zdim::Int, nlayers::Int; activation = Flux.relu,
 	VAE(esize,dsize; activation=activation, layer=layer, variant=variant)
 end
 
+"""
+	ConvBAE(insize, latentdim, nconv, kernelsize, channels, scaling; 
+		[variant, ndense, dsizes, activation, stride])
+
+Initializes a convolutional autoencoder.
+"""
+function ConvVAE(insize, latentdim, nconv, kernelsize, channels, scaling; variant=:unit, kwargs...)
+	encoder = AlfvenDetectors.convencoder(insize, latentdim*2, nconv, kernelsize, 
+		channels, scaling; kwargs...)
+	decoder = AlfvenDetectors.convdecoder(insize, latentdim, nconv, kernelsize, 
+		reverse(channels), scaling; kwargs...)
+	return VAE(encoder, samplenormal, decoder, variant)
+end
+
 ################
 ### training ###
 ################
@@ -126,7 +140,8 @@ end
 
 Loglikelihood of an autoencoded sample X sampled L times.
 """
-loglikelihood(vae::VAE, X, L) = StatsBase.mean([loglikelihood(vae, X) for m in 1:L])
+loglikelihood(vae::VAE, X, L) = sum([loglikelihood(vae, X) for m in 1:L])/Float(L)
+# conv layers dont like using mean (probably because there is no promotion of 1/L to Float32)
 
 ### anomaly score jako pxvita?
 # muz, sigmaz = encoder(x)
@@ -138,7 +153,7 @@ loglikelihood(vae::VAE, X, L) = StatsBase.mean([loglikelihood(vae, X) for m in 1
 Loss function of the variational autoencoder. β is scaling parameter of
 the KLD, 1 = full KL, 0 = no KL.
 """
-loss(vae::VAE, X, L, β) = Float(β)*KL(vae, X) - ((L>1) ? loglikelihood(vae,X,L) : loglikelihood(vae,X))
+loss(vae::VAE, X, L, β) = Float(β)*KL(vae, X) - loglikelihood(vae,X,L)
 # the fork for L>1 is because of conv nets - for some reaseon the conv_data is broken when using sampling
 # therefore we do not support sampling for conv nets
 

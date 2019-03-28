@@ -54,6 +54,7 @@ end
 Extract mean as the first horizontal half of X.
 """
 mu(X) = X[1:Int(size(X,1)/2),:]
+mu(X::AbstractArray{T,4}) where T = X[1:Int(size(X,1)/2),:,:,:]
 
 """
     mu_scalarvar(X)
@@ -61,6 +62,7 @@ mu(X) = X[1:Int(size(X,1)/2),:]
 Extract mean as all but the last rows of X.
 """
 mu_scalarvar(X) = X[1:end-1,:]
+mu_scalarvar(X::AbstractArray{T,4}) where T = X[1:Int(size(X,1)/2),:,:,:]
 
 """
     sigma2(X)
