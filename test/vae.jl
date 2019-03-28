@@ -120,16 +120,16 @@ paramchange(frozen_params, params) =
 	model = AlfvenDetectors.VAE(xdim, ldim, 4, variant = :diag)
 	@test size(model(x)) == (xdim*2, N)
 
-	# convolutional VAE
+	# convolutional VAES
 	data = randn(Float32,32,16,1,8);
 	m,n,c,k = size(data)
-	# now setup the convolutional net
 	insize = (m,n,c)
 	latentdim = 2
 	nconv = 3
 	kernelsize = 3
 	channels = (2,4,6)
 	scaling = [(2,2),(2,2),(1,1)]
+	# unit
 	model = AlfvenDetectors.ConvVAE(insize, latentdim, nconv, kernelsize, channels, scaling)
 	hist = MVHistory()
 	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
@@ -139,5 +139,26 @@ paramchange(frozen_params, params) =
 	@test all(paramchange(frozen_params, collect(params(model))))	
 	(i,ls) = get(hist,:loss)
 	@test ls[end] < ls[1]
-
+	# diag
+	model = AlfvenDetectors.ConvVAE(insize, latentdim, nconv, kernelsize, channels, scaling; 
+		variant=:diag)
+	hist = MVHistory()
+	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
+	@test size(model(data)) == (m,n,c*2,k)
+	@test size(model.encoder(data)) == (latentdim*2,k)
+	AlfvenDetectors.fit!(model, data, 4, 10, cbit=1, history=hist, verb=false);
+	@test all(paramchange(frozen_params, collect(params(model))))	
+	(i,ls) = get(hist,:loss)
+	@test ls[end] < ls[1]
+	#scalar
+	model = AlfvenDetectors.ConvVAE(insize, latentdim, nconv, kernelsize, channels, scaling; 
+		variant=:scalar)
+	hist = MVHistory()
+	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
+	@test size(model(data)) == (m,n,c*2,k)
+	@test size(model.encoder(data)) == (latentdim*2,k)
+	AlfvenDetectors.fit!(model, data, 4, 10, cbit=1, history=hist, verb=false);
+	@test all(paramchange(frozen_params, collect(params(model))))	
+	(i,ls) = get(hist,:loss)
+	@test ls[end] < ls[1]
 end

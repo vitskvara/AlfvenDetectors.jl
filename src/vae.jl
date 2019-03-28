@@ -96,6 +96,10 @@ Initializes a convolutional autoencoder.
 function ConvVAE(insize, latentdim, nconv, kernelsize, channels, scaling; variant=:unit, kwargs...)
 	encoder = AlfvenDetectors.convencoder(insize, latentdim*2, nconv, kernelsize, 
 		channels, scaling; kwargs...)
+	if variant in [:diag, :scalar]
+		insize = [x for x in insize]
+		insize[end] = 2*insize[end]
+	end
 	decoder = AlfvenDetectors.convdecoder(insize, latentdim, nconv, kernelsize, 
 		reverse(channels), scaling; kwargs...)
 	return VAE(encoder, samplenormal, decoder, variant)

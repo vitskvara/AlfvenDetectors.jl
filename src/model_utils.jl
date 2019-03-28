@@ -39,6 +39,7 @@ loglikelihoodopt(X::Real, μ::Real) = - ((μ - X)^2)*half
 loglikelihoodopt(X::Real, μ::Real, σ2::Real) = - ((μ - X)^2/σ2 + log(σ2))*half
 loglikelihoodopt(X, μ) = - StatsBase.mean(sum((μ - X).^2,dims = 1))*half
 loglikelihoodopt(X, μ, σ2) = - StatsBase.mean(sum( (μ - X).^2 ./σ2 + log.(σ2),dims = 1))*half
+loglikelihoodopt(X::AbstractArray{T,4}, μ::AbstractArray{T,4}, σ2::AbstractArray{T,4}) where T = - StatsBase.mean(sum( (μ - X).^2 ./σ2 .+ log.(σ2),dims = 1))*half
 # in order to work on gpu and for faster backpropagation, dont use .+ here
 # see also https://github.com/FluxML/Flux.jl/issues/385
 function loglikelihoodopt(X::AbstractMatrix, μ::AbstractMatrix, σ2::AbstractVector) 
@@ -54,7 +55,7 @@ end
 Extract mean as the first horizontal half of X.
 """
 mu(X) = X[1:Int(size(X,1)/2),:]
-mu(X::AbstractArray{T,4}) where T = X[1:Int(size(X,1)/2),:,:,:]
+mu(X::AbstractArray{T,4}) where T = X[:,:,1:Int(size(X,3)/2),:]
 
 """
     mu_scalarvar(X)
@@ -62,7 +63,7 @@ mu(X::AbstractArray{T,4}) where T = X[1:Int(size(X,1)/2),:,:,:]
 Extract mean as all but the last rows of X.
 """
 mu_scalarvar(X) = X[1:end-1,:]
-mu_scalarvar(X::AbstractArray{T,4}) where T = X[1:Int(size(X,1)/2),:,:,:]
+mu_scalarvar(X::AbstractArray{T,4}) where T = X[:,:,1:Int(size(X,3)/2),:]
 
 """
     sigma2(X)
@@ -70,6 +71,7 @@ mu_scalarvar(X::AbstractArray{T,4}) where T = X[1:Int(size(X,1)/2),:,:,:]
 Extract sigma^2 as the second horizontal half of X. 
 """
 sigma2(X) = softplus.(X[Int(size(X,1)/2+1):end,:]) .+ δ
+sigma2(X::AbstractArray{T,4}) where T = softplus.(X[:,:,Int(size(X,3)/2+1):end,:]) .+ δ
 
 """
     sigma2_scalarvar(X)
@@ -77,6 +79,7 @@ sigma2(X) = softplus.(X[Int(size(X,1)/2+1):end,:]) .+ δ
 Extract sigma^2 as the last row of X. 
 """
 sigma2_scalarvar(X) = softplus.(X[end,:]) .+ δ
+sigma2_scalarvar(X::AbstractArray{T,4}) where T = StatsBase.mean(softplus.(X[:,:,Int(size(X,3)/2+1):end,:]) .+ δ, dims=[1,2])
 
 """
    samplenormal(μ, σ2)
