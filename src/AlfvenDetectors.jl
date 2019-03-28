@@ -9,6 +9,7 @@ using StatsBase # for samplers
 using ProgressMeter
 using Dates # for experiments
 using BSON
+using SparseArrays
 
 const Float = Float32
 

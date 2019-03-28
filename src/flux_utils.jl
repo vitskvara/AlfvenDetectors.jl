@@ -165,12 +165,12 @@ end
 Create a vector of type T of size `length*segment` where `i`th
 segment is made out of ones and the rest is zero. 
 """
-function oneszeros(T::DataType,segment,length,i)
+function oneszeros(T::DataType,segment::Int,length::Int,i::Int)
     res = zeros(T,segment*length)
     res[((i-1)*segment+1):i*segment] = ones(T,segment)
     return res
 end
-function oneszeros(segment,length,i)
+function oneszeros(segment::Int,length::Int,i::Int)
     res = zeros(segment*length)
     res[((i-1)*segment+1):i*segment] = ones(segment)
     return res
@@ -181,8 +181,8 @@ end
 Create a vector of type T of size `length*segment` where `i`th
 segment is made out of ones and the rest is zero. 
 """
-voneszeros(T::DataType,segment,length,i) = oneszeros(T,segment,length,i)
-voneszeros(segment,length,i) = oneszeros(segment,length,i)
+voneszeros(T::DataType,segment::Int,length::Int,i::Int) = oneszeros(T,segment,length,i)
+voneszeros(segment::Int,length::Int,i::Int) = oneszeros(segment,length,i)
 
 """
     honeszeros([T,]segment,length,i)
@@ -190,8 +190,8 @@ voneszeros(segment,length,i) = oneszeros(segment,length,i)
 Create a horizontal vector of type T of size `length*segment` where `i`th
 segment is made out of ones and the rest is zero. 
 """
-honeszeros(T::DataType,segment,length,i) = Array(voneszeros(T,segment,length,i)')
-honeszeros(segment,length,i) = Array(voneszeros(segment,length,i)')
+honeszeros(T::DataType,segment::Int,length::Int,i::Int) = Array(voneszeros(T,segment,length,i)')
+honeszeros(segment::Int,length::Int,i::Int) = Array(voneszeros(segment,length,i)')
 
 """
     vscalemat([T,]scale,n)
@@ -201,6 +201,8 @@ vertical size of the original matrix.
 """
 vscalemat(T,scale::Int,n::Int) = hcat([voneszeros(T,scale,n,i) for i in 1:n]...)
 vscalemat(scale::Int,n::Int) = hcat([voneszeros(scale,n,i) for i in 1:n]...)
+vscalemat_sparse(T,scale::Int, n::Int) = sparse(1:scale*n, vcat([fill(i,scale) for i in 1:n]...), fill(one(T),scale*n))
+vscalemat_sparse(scale::Int, n::Int) = sparse(1:scale*n, vcat([fill(i,scale) for i in 1:n]...), fill(1.0,scale*n))
 
 """
     hscalemat([T,]scale,n)
@@ -210,6 +212,8 @@ horizontal size of the original matrix.
 """
 hscalemat(T,scale::Int,n::Int) = vcat([honeszeros(T,scale,n,i) for i in 1:n]...)
 hscalemat(scale::Int,n::Int) = vcat([honeszeros(scale,n,i) for i in 1:n]...)
+hscalemat_sparse(T,scale::Int, n::Int) = sparse(vcat([fill(i,scale) for i in 1:n]...), 1:scale*n, fill(one(T),scale*n))
+hscalemat_sparse(scale::Int, n::Int) = sparse(vcat([fill(i,scale) for i in 1:n]...), 1:scale*n, fill(1.0,scale*n))
 
 """
     upscale(x::AbstractArray, scale)
@@ -217,13 +221,14 @@ hscalemat(scale::Int,n::Int) = vcat([honeszeros(scale,n,i) for i in 1:n]...)
 Upscales a 2D array by the integer scales given in the `scale` tuple. 
 Works for 3D and 4D array in the first two dimensions.
 """
-function upscale(x::AbstractArray{T,2}, scale) where T
+function upscale(x::AbstractArray{T,2}, scale::Tuple{Int,Int}) where T
     m,n = size(x)
+    # using the sparse matrices here only slows things down
     V = vscalemat(T,scale[1],m)
     H = hscalemat(T,scale[2],n)
     return V*x*H
 end
-function upscale(x::AbstractArray{T,3}, scale) where T
+function upscale(x::AbstractArray{T,3}, scale::Tuple{Int,Int}) where T
     M,N,C = size(x)
     # this is important - the array must be of the same type as x, not T
     res = Array{eltype(x),3}(undef,M*scale[1],N*scale[2],C)
@@ -232,12 +237,12 @@ function upscale(x::AbstractArray{T,3}, scale) where T
     end
     return Tracker.collect(res)
 end
-function upscale(x::AbstractArray{T,4}, scale) where T
+function upscale(x::AbstractArray{T,4}, scale::Tuple{Int,Int}) where T
     M,N,C,K = size(x)
     # this is important - the array must be of the same type as x, not T
     res = Array{eltype(x),4}(undef,M*scale[1],N*scale[2],C,K)
-    for c in 1:C
-        for k in 1:K
+    for k in 1:K
+        for c in 1:C
             res[:,:,c,k] = upscale(x[:,:,c,k],scale)
         end
     end
@@ -268,8 +273,8 @@ end
 function zeropad(x::AbstractArray{T,4},widths) where T
     M,N,C,K = size(x)
     res = Array{eltype(x),4}(undef,M+widths[1]+widths[3],N+widths[2]+widths[4],C,K)
-    for c in 1:C
-        for k in 1:K
+    for k in 1:K
+        for c in 1:C
             res[:,:,c,k] = zeropad(x[:,:,c,k],widths)
         end
     end
@@ -396,16 +401,16 @@ function convencoder(insize, latentdim::Int, nconv::Int, kernelsize, channels,
 end
 
 """
-    convupscale(ks, channels, scales [,activation, stride]
+    upscaleconv(ks, channels, scales [,activation, stride]
 
 Upscaling coupled with convolution.
 
-    layer = convupscale(5, 4=>2, 2)
+    layer = upscaleconv(5, 4=>2, 2)
 
 This will upscale the input in x and y two times and then apply 
 a kernel of size 5 to reduce the number of channels from 4 to 2.
 """
-function convupscale(ks::Int, channels::Pair, scales::Union{Tuple,Int};
+function upscaleconv(ks::Int, channels::Pair, scales::Union{Tuple,Int};
     activation = relu, stride::Int=1)
     if !(typeof(scales) <: Tuple)   
         scales = (scales,scales)
@@ -419,7 +424,30 @@ function convupscale(ks::Int, channels::Pair, scales::Union{Tuple,Int};
 end
 
 """
-    convdecoder(ins,ds,das,ks,cs,scs,as,sts)
+    convtransposeconv(ks, channels, scales [,activation, stride]
+
+Transposed convolution followed by convolution for upscaling.
+
+    layer = convtransposeconv(5, 4=>2, 2)
+
+This will upscale the input in x and y two times and then apply 
+a kernel of size 5 to reduce the number of channels from 4 to 2.
+"""
+function convtransposeconv(ks::Int, channels::Pair, scales::Union{Tuple,Int};
+    activation = relu, stride::Int=1)
+    if !(typeof(scales) <: Tuple)   
+        scales = (scales,scales)
+    end
+    padwidth = floor(Int,ks/2)
+    return Flux.Chain(
+                Flux.ConvTranspose(scales, channels[1]=>channels[1], stride=scales),
+                Flux.Conv((ks,ks), channels, activation; pad=(padwidth,padwidth),
+                    stride = (stride,stride))
+        )
+end
+
+"""
+    convdecoder(ins,ds,das,ks,cs,scs,as,sts [,layertype])
 
 Create a convolutional decoder with dense input layer(s).
 
@@ -431,10 +459,11 @@ cs = vector of channel pairs
 scs = vector of scale factors
 cas = vector of convolutional activations one shorter than the rest (last activation is always identity)
 sts = vector of strides
+layertype = one of ["transpose", "upscale"]
 """
-function convdecoder(outs, ds::AbstractVector, das::AbstractVector,
-    ks::AbstractVector, cs::AbstractVector, 
-    scs::AbstractVector, cas::AbstractVector, sts::AbstractVector)
+function convdecoder(outs, ds::AbstractVector, das::AbstractVector, ks::AbstractVector, 
+    cs::AbstractVector, scs::AbstractVector, cas::AbstractVector, sts::AbstractVector;
+    layertype = "transpose")
     # the second one should be basically just a reversed first one
     conv_layers = Flux.Chain(map(x->convmaxpool(x[1],x[2],x[3];activation=x[4],stride=x[5]),
         zip(reverse(ks),map(x->x[2]=>x[1],reverse(cs)),
@@ -442,10 +471,16 @@ function convdecoder(outs, ds::AbstractVector, das::AbstractVector,
     # the last output activation is identity
     # the x[3].*x[5] is there for non-unit strides
     cas = vcat(cas, [identity])
-    upscaleconv_layers = Flux.Chain(map(x->convupscale(x[1],x[2],x[3].*x[5];activation=x[4],stride=x[5]),
+    @assert layertype in ["transpose", "upscale"]
+    if layertype == "transpose"
+        uplayer = convtransposeconv
+    elseif layertype == "upscale"
+        uplayer = upscaleconv
+    end
+    upscaleconv_layers = Flux.Chain(map(x->uplayer(x[1],x[2],x[3].*x[5];activation=x[4],stride=x[5]),
         zip(ks,cs,scs,cas,sts))...)
     # there is a problem with automatic determination of the reshape dims
-    # it can be computed from the indims and the size, padding, stride and scale of the convupscale
+    # it can be computed from the indims and the size, padding, stride and scale of the upscaleconv
     # however that is quite complicated so lets use a trick - we initialize a random array of indim size,
     # pass it through the conv layers and get its size
     testin = randn(Float32,outs...,1)
@@ -465,7 +500,7 @@ function convdecoder(outs, ds::AbstractVector, das::AbstractVector,
 end
 """
     convdecoder(insize, latentdim, nconv, kernelsize, channels, scaling,
-        [ndense, dsizes, activation, stride])
+        [ndense, dsizes, activation, stride, layertype])
 
 Create a convolutional decoder.
 
@@ -479,9 +514,10 @@ ndense = number of dense layers (default 1)
 dsizes = if ndense > 1, specify a list of latent layer widths of length = ndense
 activation = default relu
 lstride = length of stride, default 1, can be a scalar or a list of scalars
+layertype = one of ["transpose", "upscale"]
 """
 function convdecoder(outsize, latentdim::Int, nconv::Int, kernelsize, channels, 
-    scaling; ndense::Int=1, dsizes=nothing, activation=relu, lstride=1)
+    scaling; ndense::Int=1, dsizes=nothing, activation=relu, lstride=1, layertype="transpose")
     # construct ds - vector of widths of dense layers
     if ndense>1
         (dsizes==nothing) ? error("If more than one Dense layer is require, specify their widths in dsizes.") : nothing 
@@ -519,5 +555,5 @@ function convdecoder(outsize, latentdim::Int, nconv::Int, kernelsize, channels,
         sts = fill(lstride,nconv)
     end
     
-    return convdecoder(outsize, ds, das, ks, cs, scs, cas, sts) 
+    return convdecoder(outsize, ds, das, ks, cs, scs, cas, sts; layertype=layertype) 
 end

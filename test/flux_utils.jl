@@ -222,13 +222,13 @@ paramchange(frozen_params, params) =
 	layer = AlfvenDetectors.convmaxpool(3,2=>8,2;stride=3)
 	@test size(layer(X)) == (2,1,8,5)
 
-	# convupscale
+	# upscaleconv
 	X = randn(2,4,4,10)
-	layer = AlfvenDetectors.convupscale(3,4=>2,2)
+	layer = AlfvenDetectors.upscaleconv(3,4=>2,2)
 	@test size(layer(X)) == (4,8,2,10)
-	layer = AlfvenDetectors.convupscale(5,4=>1,(4,3))
+	layer = AlfvenDetectors.upscaleconv(5,4=>1,(4,3))
 	@test size(layer(X)) == (8,12,1,10)
-	layer = AlfvenDetectors.convupscale(3,4=>2,2;stride=2)
+	layer = AlfvenDetectors.upscaleconv(3,4=>2,2;stride=2)
 	@test size(layer(X)) == (2,4,2,10)
 	
 	# convencoder
@@ -326,6 +326,10 @@ paramchange(frozen_params, params) =
 	channels = [16,8,4]
 	scaling = 2
 	model = AlfvenDetectors.convdecoder(outsize, latentdim, nconv, kernelsize, channels, scaling)
+	@test size(model(y)) == size(X)
+	# upscale layer instead of convtranspose
+	model = AlfvenDetectors.convdecoder(outsize, latentdim, nconv, kernelsize, channels, scaling;
+		layertype = "upscale")
 	@test size(model(y)) == size(X)
 	# more dense layers
 	ndense = 2
