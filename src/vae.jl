@@ -88,7 +88,7 @@ function VAE(xdim::Int, zdim::Int, nlayers::Int; activation = Flux.relu,
 end
 
 """
-	ConvBAE(insize, latentdim, nconv, kernelsize, channels, scaling; 
+	ConvVAE(insize, latentdim, nconv, kernelsize, channels, scaling; 
 		[variant, ndense, dsizes, activation, stride])
 
 Initializes a convolutional autoencoder.

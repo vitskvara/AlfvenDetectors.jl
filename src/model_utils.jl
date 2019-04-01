@@ -1,3 +1,5 @@
+import Base.length
+
 const l2pi = Float(log(2*pi)) # the model converges the same with zero or correct value
 const δ = Float(1e-6)
 const half = Float(0.5)
@@ -126,6 +128,8 @@ function samplenormal_scalarvar(X)
     μ, σ2 = mu_scalarvar(X), sigma2_scalarvar(X)
     return samplenormal(μ, σ2)
 end
+
+length(x::MVHistory) = 1
 
 """
    scalar2tuple(x)

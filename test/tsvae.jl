@@ -71,4 +71,27 @@ paramchange(frozen_params, params) =
   # test fast training
   model = AlfvenDetectors.TSVAE(xdim, ldim, (3,2))
 
+  # Conv TSVAE
+  m,n,c,k = (8,8,1,16)
+  X = randn(Float32,m,n,c,k)
+  latentdim = 2
+  nlayers = (2,3)
+  model = AlfvenDetectors.ConvTSVAE((m,n,c),latentdim, nlayers, 3, (2,4), 2)
+  frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
+  _X = model(X)
+  @test size(_X) == (m,n,2*c,k)
+  z = model.m1.sampler(model.m1.encoder(X))
+  @test size(z) == (latentdim, k)
+  u = model.m2.encoder(z)
+  @test size(u) == (latentdim*2, k)
+  @test length(model.m1.encoder.layers[1].layers) == nlayers[1]
+  @test length(model.m2.encoder.layers) == nlayers[2]
+  hist = (MVHistory(), MVHistory())
+  opts=AlfvenDetectors.fit!(model, X, 4, 10; cbit=1, history=hist,verb=false)
+  for h in hist
+    (is,ls) = get(h,:loss)
+    @test ls[1] > ls[end]
+  end
+  @test all(paramchange(frozen_params, collect(params(model)))) 
+  
 end

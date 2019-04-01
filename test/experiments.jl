@@ -15,7 +15,9 @@ else
 	datapath = "xyz"
 end
 
-if "CuArrays" in keys(Pkg.installed())
+usegpu = false
+
+if "CuArrays" in keys(Pkg.installed()) && usegpu
 	using CuArrays
 end
 
@@ -25,7 +27,6 @@ if isdir(datapath)
 	savepath = joinpath(dirname(@__FILE__), "tmp")
 	mkpath(savepath)
 
-	usegpu = false
 	ldim = 2
 	nlayers = 2
 	coils = [12,13,14]	

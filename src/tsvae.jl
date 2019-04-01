@@ -1,5 +1,5 @@
 """
-	TSVAE{encoder, sampler, decoder, variant}
+	TSVAE{m1, m2}
 
 Flux-like structure for the two-stage variational autoencoder.
 """
@@ -14,7 +14,7 @@ end
 Flux.@treelike TSVAE #encoder, decoder
 
 """
-	TSVAE(m1size, m2size; [activation, layer, variant])
+	TSVAE(m1size, m2size; [activation, layer])
 
 Initialize a variational autoencoder with given encoder size and decoder size.
 
@@ -37,8 +37,7 @@ function TSVAE(m1size::AbstractVector, m2size::AbstractVector;
 end
 
 """
-	TSVAE(xdim::Int, zdim::Int, nlayers::Union{Int, Tuple}; 
-	activation = Flux.relu,	layer = Flux.Dense)
+	TSVAE(xdim, latentdim, nlayers; [activation, layer])
 
 A lightweight constructor for TSVAE.
 """
@@ -54,6 +53,23 @@ function TSVAE(xdim::Int, zdim::Int, nlayers::Union{Int, Tuple};
 		variant=:scalar)
 	return TSVAE(m1,m2)
 end
+
+"""
+	ConvTSVAE(insize, latentdim, nconv, kernelsize, channels, scaling; 
+		[variant, ndense, dsizes, activation, stride])
+
+Initializes a two stage variational autoencoder with convolutional first stage.
+"""
+function ConvTSVAE(insize, latentdim, nlayers::Union{Int, Tuple}, kernelsize, channels, scaling; 
+	kwargs...)
+	nlayers = scalar2vec(nlayers)
+	
+	m1 = ConvVAE(insize, latentdim, nlayers[1], kernelsize, channels, scaling; variant = :scalar,
+		kwargs...)
+	m2 = VAE(latentdim, latentdim, nlayers[2]; variant = :scalar, kwargs...)
+	return TSVAE(m1,m2)
+end
+
 
 """
 	getlosses(tsvae, X, L, β)
