@@ -28,7 +28,8 @@ paramchange(frozen_params, params) =
 	@test !AlfvenDetectors.iscuarray(randn(4,10))
 	_x = model(randn(xdim,10))
 	@test !AlfvenDetectors.iscuarray(_x)
-
+	@test !AlfvenDetectors.iscuarray(randn(4,10,1,1))
+	
 	# layerbuilder
 	m = AlfvenDetectors.layerbuilder([5,4,3,2], fill(Flux.Dense, 3), [Flux.relu, Flux.relu, Flux.relu])
 	@test length(m.layers) == 3

@@ -39,7 +39,11 @@ loglikelihoodopt(X::Real, μ::Real) = - ((μ - X)^2)*half
 loglikelihoodopt(X::Real, μ::Real, σ2::Real) = - ((μ - X)^2/σ2 + log(σ2))*half
 loglikelihoodopt(X, μ) = - StatsBase.mean(sum((μ - X).^2,dims = 1))*half
 loglikelihoodopt(X, μ, σ2) = - StatsBase.mean(sum( (μ - X).^2 ./σ2 + log.(σ2),dims = 1))*half
-loglikelihoodopt(X::AbstractArray{T,4}, μ::AbstractArray{T,4}, σ2::AbstractArray{T,4}) where T = - StatsBase.mean(sum( (μ - X).^2 ./σ2 .+ log.(σ2),dims = 1))*half
+function loglikelihoodopt(X::AbstractArray{T,4}, μ::AbstractArray{T,4}, σ2::AbstractArray{T,4}) where T
+    y = (μ - X).^2
+    y = y ./ σ2
+    - StatsBase.mean(sum( y .+ log.(σ2),dims = 1))*half
+end
 # in order to work on gpu and for faster backpropagation, dont use .+ here
 # see also https://github.com/FluxML/Flux.jl/issues/385
 function loglikelihoodopt(X::AbstractMatrix, μ::AbstractMatrix, σ2::AbstractVector) 

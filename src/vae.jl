@@ -131,11 +131,11 @@ function loglikelihood(vae::VAE, X)
 	elseif vae.variant == :scalar
 		vx = vae(X)
 		μ, σ2 = mu_scalarvar(vx), sigma2_scalarvar(vx)
-		return loglikelihoodopt(X,μ, σ2)
+		return loglikelihoodopt(X,μ,σ2)
 	elseif vae.variant == :diag
 		vx = vae(X)
 		μ, σ2 = mu(vx), sigma2(vx)
-		return loglikelihoodopt(X,μ, σ2)
+		return loglikelihoodopt(X,μ,σ2)
 	end
 end
 
