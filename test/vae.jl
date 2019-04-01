@@ -19,6 +19,8 @@ paramchange(frozen_params, params) =
 
 	# this has unit variance on output
     model = AlfvenDetectors.VAE([xdim,2,2*ldim], [ldim,2,xdim])
+    @test !AlfvenDetectors.isconvvae(model)
+    @test AlfvenDetectors.getlsize(model) == ldim
 	# for training check
 	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
 	_x = model(x)
@@ -67,6 +69,8 @@ paramchange(frozen_params, params) =
     ### VAE with estimated diagonal of covariance on output ###
     ###########################################################
     model = AlfvenDetectors.VAE([xdim,2,2*ldim], [ldim,2,xdim*2], variant = :diag)
+	@test !AlfvenDetectors.isconvvae(model)
+    @test AlfvenDetectors.getlsize(model) == ldim
 	_x = model(x)
 	# test correct construction
 	@test size(model.encoder.layers,1) == 2
@@ -89,6 +93,8 @@ paramchange(frozen_params, params) =
     ### VAE with scalar variance on output ###
     ##########################################
     model = AlfvenDetectors.VAE([xdim,2,2*ldim], [ldim,2,xdim + 1], variant = :scalar)
+	@test !AlfvenDetectors.isconvvae(model)
+    @test AlfvenDetectors.getlsize(model) == ldim
 	_x = model(x)
 	# test correct construction
 	@test size(model.encoder.layers,1) == 2
@@ -109,15 +115,21 @@ paramchange(frozen_params, params) =
 
 	# alternative constructor test
 	model = AlfvenDetectors.VAE(xdim, ldim, 4)
+	@test !AlfvenDetectors.isconvvae(model)
+    @test AlfvenDetectors.getlsize(model) == ldim
 	@test length(model.encoder.layers) == 4
 	@test length(model.decoder.layers) == 4
 	@test size(model.encoder(x)) == (ldim*2, N)
 	@test size(model(x)) == (xdim, N)
 
 	model = AlfvenDetectors.VAE(xdim, ldim, 4, variant = :scalar)
+	@test !AlfvenDetectors.isconvvae(model)
+    @test AlfvenDetectors.getlsize(model) == ldim
 	@test size(model(x)) == (xdim+1, N)
 
 	model = AlfvenDetectors.VAE(xdim, ldim, 4, variant = :diag)
+	@test !AlfvenDetectors.isconvvae(model)
+    @test AlfvenDetectors.getlsize(model) == ldim
 	@test size(model(x)) == (xdim*2, N)
 
 	# convolutional VAES
@@ -131,6 +143,8 @@ paramchange(frozen_params, params) =
 	scaling = [(2,2),(2,2),(1,1)]
 	# unit
 	model = AlfvenDetectors.ConvVAE(insize, latentdim, nconv, kernelsize, channels, scaling)
+	@test AlfvenDetectors.isconvvae(model)
+    @test AlfvenDetectors.getlsize(model) == latentdim
 	hist = MVHistory()
 	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
 	@test size(model(data)) == size(data)
@@ -139,9 +153,17 @@ paramchange(frozen_params, params) =
 	@test all(paramchange(frozen_params, collect(params(model))))	
 	(i,ls) = get(hist,:loss)
 	@test ls[end] < ls[1]
+	gx = AlfvenDetectors.sample(model)
+	@test typeof(gx) <: Flux.TrackedArray{AlfvenDetectors.Float,4}
+	gx = AlfvenDetectors.sample(model,5)
+	@test typeof(gx) <: Flux.TrackedArray{AlfvenDetectors.Float,4}
+	@test size(gx) == (m,n,c,5)
+
 	# diag
 	model = AlfvenDetectors.ConvVAE(insize, latentdim, nconv, kernelsize, channels, scaling; 
 		variant=:diag)
+	@test AlfvenDetectors.isconvvae(model)
+    @test AlfvenDetectors.getlsize(model) == latentdim
 	hist = MVHistory()
 	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
 	@test size(model(data)) == (m,n,c*2,k)
@@ -150,9 +172,17 @@ paramchange(frozen_params, params) =
 	@test all(paramchange(frozen_params, collect(params(model))))	
 	(i,ls) = get(hist,:loss)
 	@test ls[end] < ls[1]
+	gx = AlfvenDetectors.sample(model)
+	@test typeof(gx) <: Flux.TrackedArray{AlfvenDetectors.Float,4}
+	gx = AlfvenDetectors.sample(model,5)
+	@test typeof(gx) <: Flux.TrackedArray{AlfvenDetectors.Float,4}
+	@test size(gx) == (m,n,c,5)
+
 	#scalar
 	model = AlfvenDetectors.ConvVAE(insize, latentdim, nconv, kernelsize, channels, scaling; 
 		variant=:scalar)
+	@test AlfvenDetectors.isconvvae(model)
+    @test AlfvenDetectors.getlsize(model) == latentdim
 	hist = MVHistory()
 	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
 	@test size(model(data)) == (m,n,c*2,k)
@@ -161,4 +191,10 @@ paramchange(frozen_params, params) =
 	@test all(paramchange(frozen_params, collect(params(model))))	
 	(i,ls) = get(hist,:loss)
 	@test ls[end] < ls[1]
+	gx = AlfvenDetectors.sample(model)
+	@test typeof(gx) <: Flux.TrackedArray{AlfvenDetectors.Float,4}
+	gx = AlfvenDetectors.sample(model,5)
+	@test typeof(gx) <: Flux.TrackedArray{AlfvenDetectors.Float,4}
+	@test size(gx) == (m,n,c,5)
+
 end

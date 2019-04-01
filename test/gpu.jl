@@ -63,7 +63,6 @@ end
 	_x = model(gx)
 	# for training check
 	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
-
 	@test typeof(gx) == CuArray{AlfvenDetectors.Float,2}
 	@test typeof(_x) <: TrackedArray{AlfvenDetectors.Float,2}    
 	hist = MVHistory()
@@ -80,7 +79,6 @@ end
 	_x = model(gx)
 	# for training check
 	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
-
 	@test typeof(gx) == CuArray{AlfvenDetectors.Float,2}
 	@test typeof(_x) <: TrackedArray{AlfvenDetectors.Float,2}    
 	hist = MVHistory()
