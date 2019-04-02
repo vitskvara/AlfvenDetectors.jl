@@ -38,6 +38,10 @@ s = ArgParseSettings()
     	help = "a scalar or a vector of scaling factors"
     	arg_type = Int
     	nargs = '+'
+    "--nshots"
+    	default = 6
+    	arg_type = Int
+    	help = "number of shots used"
     "--measurement"
     	default = "uprobe"
     	help = "one of [mscamp, mscphase, mscampphase or uprobe]"
@@ -81,6 +85,7 @@ kernelsize = parsed_args["kernelsize"]
 length(kernelsize) == 1 ? kernelsize = kernelsize[1] : nothing
 scaling = parsed_args["scaling"]
 length(scaling) == 1 ? scaling = scaling[1] : nothing
+nshots = parsed_args["nshots"]
 measurement_type = parsed_args["measurement"]
 usegpu = parsed_args["gpu"]
 coils = parsed_args["coils"]
@@ -121,9 +126,15 @@ mkpath(savepath)
 
 shots = readdir(datapath)
 # select only some shots
-shots = filter(x-> any(map(y -> occursin(y,x), 
-	["10370", "10514", "10800", "10866", "10870", "10893"])), 
-	shots)
+if nshots <= 6
+	shots = filter(x-> any(map(y -> occursin(y,x), 
+		["10370", "10514", "10800", "10866", "10870", "10893"][1:nshots])), 
+		shots)
+else
+	shots = vcat(shots[1:(nshots-6)], filter(x-> any(map(y -> occursin(y,x), 
+		["10370", "10514", "10800", "10866", "10870", "10893"])), 
+		shots)
+end
 shots = joinpath.(datapath, shots)
 
 if test
