@@ -120,6 +120,10 @@ end
 mkpath(savepath)
 
 shots = readdir(datapath)
+# select only some shots
+shots = filter(x-> any(map(y -> occursin(y,x), 
+	["10370", "10514", "10800", "10866", "10870", "10893"])), 
+	shots)
 shots = joinpath.(datapath, shots)
 
 if test
