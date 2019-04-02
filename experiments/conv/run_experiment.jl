@@ -133,7 +133,7 @@ if nshots <= 6
 else
 	shots = vcat(shots[1:(nshots-6)], filter(x-> any(map(y -> occursin(y,x), 
 		["10370", "10514", "10800", "10866", "10870", "10893"])), 
-		shots)
+		shots))
 end
 shots = joinpath.(datapath, shots)
 
