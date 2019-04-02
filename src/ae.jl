@@ -141,7 +141,7 @@ function (cb::basic_callback)(m::AE, d, l, opt)
 			ls = getlosses(m, d)
 			cb.progress_vals = Array{Any,1}()
 			push!(cb.progress_vals, ceil(Int, cb.iter_counter/cb.epoch_size))
-			push!(cb.progress_vals, cb.iter_counter%cb.epoch_size)
+			push!(cb.progress_vals, cb.iter_counter)
 			push!(cb.progress_vals, ls[1])			
 		end
 		# now give them to the progress bar object

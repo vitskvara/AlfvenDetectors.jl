@@ -122,7 +122,7 @@ function fitsave_unsupervised(data, modelname, batchsize, outer_nepochs, inner_n
 	tall = @timed for epoch in 1:outer_nepochs
 		verb ? println("outer epoch counter: $epoch/$outer_nepochs") : nothing
 		timestats = @timed AlfvenDetectors.fit!(model, data, batchsize, inner_nepochs; 
-			usegpu = usegpu, verb = verb, history = history, fit_kwargs...)
+			usegpu = usegpu, verb = verb, history = history, cbit=1, fit_kwargs...)
 		t += timestats[2]
 
 		# save the model structure, history and time of training after each epoch
