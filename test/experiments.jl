@@ -11,6 +11,8 @@ if hostname == "vit-ThinkPad-E470"
 	datapath = "/home/vit/vyzkum/alfven/cdb_data/data_sample"
 elseif hostname == "tarbik.utia.cas.cz"
 	datapath = "/home/skvara/work/alfven/cdb_data/data_sample"
+elseif hostname == "soroban-node-03"
+	datapath = "/compass/Shared/Exchange/Havranek/Link to Alfven"
 else 
 	datapath = "xyz"
 end
