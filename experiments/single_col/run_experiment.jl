@@ -93,12 +93,14 @@ elseif hostname == "soroban-node-03"
 	savepath = "/compass/home/skvara/alfven/experiments/single_col/$measurement_type"
 end
 mkpath(savepath)
-if test
-	savepath = "."
-end
-
 shots = readdir(datapath)
 shots = joinpath.(datapath, shots)
+
+if test
+	savepath = "."
+	shots = shots[1:10]
+end
+
 if measurement_type == "uprobe"
 	rawdata = hcat(AlfvenDetectors.collect_signals(shots, readfun; warns=warnings, type=iptrunc)...)
 else
