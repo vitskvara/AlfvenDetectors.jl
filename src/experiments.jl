@@ -89,10 +89,11 @@ collect_signals(shots,readfun; warns=true, type="valid") =
 Create, fit and save a model.
 """
 function fitsave_unsupervised(data, modelname, batchsize, outer_nepochs, inner_nepochs,
-	 model_args, model_kwargs, fit_kwargs, savepath; filename = "", verb = true)
+	 model_args, model_kwargs, fit_kwargs, savepath; usegpu = false, filename = "", verb = true)
 	# create the model
-	model = AlfvenDetectors.construct_model(modelname, [x[2] for x in model_args]...; model_kwargs...) |> gpu
-	if "$modelname" == "TSVAE"
+	model = AlfvenDetectors.construct_model(modelname, [x[2] for x in model_args]...; model_kwargs...)
+	usegpu ? model = model |> gpu : nothing
+	if occursin("TSVAE", "$modelname")
 		history = (MVHistory(), MVHistory())
 	else
 		history = MVHistory()
@@ -120,7 +121,8 @@ function fitsave_unsupervised(data, modelname, batchsize, outer_nepochs, inner_n
 	t = 0.0
 	tall = @timed for epoch in 1:outer_nepochs
 		verb ? println("outer epoch counter: $epoch/$outer_nepochs") : nothing
-		timestats = @timed AlfvenDetectors.fit!(model, data, batchsize, inner_nepochs; cbit = 1, verb = verb, history = history, fit_kwargs...)
+		timestats = @timed AlfvenDetectors.fit!(model, data, batchsize, inner_nepochs; 
+			usegpu = usegpu, verb = verb, history = history, fit_kwargs...)
 		t += timestats[2]
 
 		# save the model structure, history and time of training after each epoch
@@ -142,24 +144,38 @@ end
 ###############################
 
 """
-	collect_conv_signals(shots,readfun,width,coils [,warns, type])
+	cat_split_reshape(data, heigth, width)
+
+Transforms a list of arrays into a 4D array chunks for convolutional networks.
+"""
+function cat_split_reshape(data,heigth,width)
+	data = hcat(map(x->x[1:(end-size(x,1)%heigth),1:(end-size(x,2)%width)],data)...)
+	permutedims(reshape(permutedims(reshape(data,size(data,1),width,1,:), [2,1,3,4]), 
+			width, heigth, 1, :), 
+			[2,1,3,4])
+end
+
+"""
+	collect_conv_signals(shots,readfun,heigth,width,coils [,warns, type])
 
 Returns a 4D array consisting of blocks of given width, extracted by readfun.
 """
-function collect_conv_signals(shots,readfun,width,coils; warns=true, type="valid")
+function collect_conv_signals(shots,readfun,heigth::Int,width::Int,coils::AbstractVector; warns=true, type="valid")
 	data = collect_signals(shots, readfun, coils; warns=warns, type=type)
-	data = hcat(map(x->x[:,1:(end-size(x,2)%width)],data)...)
-	return reshape(data, size(data,1),width,1,:)
+	cat_split_reshape(data, heigth, width)
 end
+collect_conv_signals(shots,readfun,s::Int,coils::AbstractVector; warns=true, type="valid") = 
+	collect_conv_signals(shots,readfun,s,s,coils; warns=warns, type=type)
 
 """
-	collect_conv_signals(shots,readfun,width [,warns, type])
+	collect_conv_signals(shots,readfun,heigth,width [,warns, type])
 
 Returns a 4D array consisting of blocks of given width, extracted by readfun.
 """
-function collect_conv_signals(shots,readfun,width; warns=true, type="valid")
+function collect_conv_signals(shots,readfun,heigth::Int,width::Int; warns=true, type="valid")
 	data = collect_signals(shots, readfun; warns=warns, type=type)
-	data = hcat(map(x->x[:,1:(end-size(x,2)%width)],data)...)
-	return reshape(data, size(data,1),width,1,:)
+	cat_split_reshape(data, heigth, width)
 end
+collect_conv_signals(shots,readfun,s::Int; warns=true, type="valid") = 
+	collect_conv_signals(shots,readfun,s,s; warns=warns, type=type)
 

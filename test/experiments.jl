@@ -30,27 +30,27 @@ if isdir(datapath)
 	ldim = 2
 	nlayers = 2
 	coils = [12,13,14]	
-	if usegpu
-		using CuArrays
-	end
 	shots = readdir(datapath)[1:2]
 	shots = joinpath.(datapath, shots)
 
 	# get conv data
-	width = 32
+	heigth = 32
+	width = 16
 	for readfun in [AlfvenDetectors.readmscamp,
 					AlfvenDetectors.readnormmscphase,
 					AlfvenDetectors.readnormmscphase]
 		alldata = hcat(map(x->x[:,1:(end-size(x,2)%width)], AlfvenDetectors.collect_signals(shots, readfun, coils))...);
-		convdata = AlfvenDetectors.collect_conv_signals(shots, readfun, 32, coils);
-		@test alldata[:,1:width] == convdata[:,:,1,1]
-		@test size(alldata,2) == size(convdata,2)*size(convdata,4)
+		convdata = AlfvenDetectors.collect_conv_signals(shots, readfun, heigth, width, coils);
+		@test alldata[1:heigth,1:width] == convdata[:,:,1,1]
+		@test alldata[heigth+1:2*heigth,1:width] == convdata[:,:,1,2]
+		@test floor(Int,size(alldata,1)/heigth)*size(alldata,2) == size(convdata,2)*size(convdata,4)
 	end
 	readfun = AlfvenDetectors.readnormlogupsd
 	alldata = hcat(map(x->x[:,1:(end-size(x,2)%width)], AlfvenDetectors.collect_signals(shots, readfun))...)
-	convdata = AlfvenDetectors.collect_conv_signals(shots, readfun, 32)
-	@test alldata[:,1:width] == convdata[:,:,1,1]
-	@test size(alldata,2) == size(convdata,2)*size(convdata,4)
+	convdata = AlfvenDetectors.collect_conv_signals(shots, readfun, heigth, width)
+	@test alldata[1:heigth,1:width] == convdata[:,:,1,1]
+	@test alldata[heigth+1:2*heigth,1:width] == convdata[:,:,1,2]
+	@test floor(Int,size(alldata,1)/heigth)*size(alldata,2) == size(convdata,2)*size(convdata,4)
 
 	# msc amplitude + AE
 	rawdata = hcat(AlfvenDetectors.collect_signals(shots, AlfvenDetectors.readmscampphase, coils; type="flattop")...)
@@ -130,5 +130,41 @@ if isdir(datapath)
 			savepath; filename = "tsvae_test", verb = verb)
 		@test isfile(joinpath(savepath,"tsvae_test.bson"))
 	end
+	
+	# uprobe psd + ConvTSVAE
+	readfun = AlfvenDetectors.readnormlogupsd
+	patchsize = 64
+	convdata = AlfvenDetectors.collect_conv_signals(shots, readfun, patchsize)
+	GC.gc()
+	xdim = size(convdata)
+	kernelsize = 3
+	channels = (4,8)
+	scaling = 4
+	batchsize = 16
+	outer_nepochs = 2
+	inner_nepochs = 1
+	@testset "patches of uprobe data - TSVAE" begin
+		modelname = "ConvTSVAE"
+		model_args = [
+			:xdim => xdim[1:3],
+			:ldim => ldim, 
+			:nlayers => nlayers,
+			:kernelsize => kernelsize,
+			:channels => channels,
+			:scaling => scaling
+			]
+		model_kwargs = Dict(
+			)
+		fit_kwargs = Dict(
+			:L => 1
+			)
+
+		model, history, t = AlfvenDetectors.fitsave_unsupervised(convdata, modelname, batchsize, 
+			outer_nepochs, inner_nepochs,
+			model_args, model_kwargs, fit_kwargs, 
+			savepath; usegpu=usegpu, filename = "convtsvae_test", verb = verb)
+		@test isfile(joinpath(savepath,"convtsvae_test.bson"))
+	end
+	
 	rm(savepath, recursive = true)
 end

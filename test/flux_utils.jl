@@ -353,7 +353,7 @@ paramchange(frozen_params, params) =
 	model = AlfvenDetectors.convdecoder(outsize, latentdim, nconv, kernelsize, channels, scaling)
 	@test size(model(y)) == size(X)
 	# scaling factors different for each layer and dimension
-	scaling = [(2,1),(1,2),(2,2)]
+	scaling = [(2,1),(1,1),(2,2)]
 	model = AlfvenDetectors.convdecoder(outsize, latentdim, nconv, kernelsize, channels, scaling)
 	@test size(model(y)) == size(X)
 	# stride
