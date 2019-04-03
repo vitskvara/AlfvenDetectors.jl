@@ -121,7 +121,7 @@ function fit!(tsvae::TSVAE, X, batchsize::Union{Int, Tuple},
 	if verb
 		println("Training the second stage...")
 	end
-	# this is in case taht X is already on gpu -> Z is on gpu as well
+	# this is in case that X is already on gpu -> Z is on gpu as well
 	if iscuarray(X)
 		Z = tsvae.m1.sampler(tsvae.m1.encoder(X).data)
 	else

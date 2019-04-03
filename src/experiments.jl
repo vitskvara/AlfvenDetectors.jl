@@ -89,14 +89,17 @@ collect_signals(shots,readfun; warns=true, type="valid") =
 Create, fit and save a model.
 """
 function fitsave_unsupervised(data, modelname, batchsize, outer_nepochs, inner_nepochs,
-	 model_args, model_kwargs, fit_kwargs, savepath; usegpu = false, filename = "", verb = true)
+	 model_args, model_kwargs, fit_kwargs, savepath;
+	 eta = 0.001, usegpu = false, filename = "", verb = true)
 	# create the model
 	model = AlfvenDetectors.construct_model(modelname, [x[2] for x in model_args]...; model_kwargs...)
 	usegpu ? model = model |> gpu : nothing
 	if occursin("TSVAE", "$modelname")
 		history = (MVHistory(), MVHistory())
+		opt = Array{Any,1}([nothing, nothing])
 	else
 		history = MVHistory()
+		opt = nothing
 	end
 
 	# now create the filename
@@ -110,6 +113,7 @@ function fitsave_unsupervised(data, modelname, batchsize, outer_nepochs, inner_n
 		end
 		filename *= "_batchsize-$batchsize"
 		filename *= "_nepochs-$(outer_nepochs*inner_nepochs)"
+		filename *= "_eta-$eta"
 		for (key, val) in fit_kwargs
 			filename *= "_$(key)-$(val)"
 		end
@@ -119,11 +123,14 @@ function fitsave_unsupervised(data, modelname, batchsize, outer_nepochs, inner_n
 	
 	# fit the model
 	t = 0.0
+
+	println(a)
 	tall = @timed for epoch in 1:outer_nepochs
 		verb ? println("outer epoch counter: $epoch/$outer_nepochs") : nothing
-		timestats = @timed AlfvenDetectors.fit!(model, data, batchsize, inner_nepochs; 
-			usegpu = usegpu, verb = verb, history = history, cbit=1, fit_kwargs...)
-		t += timestats[2]
+		restime = @timed AlfvenDetectors.fit!(model, data, batchsize, inner_nepochs; 
+			η = eta, usegpu = usegpu, verb = verb, history = history, cbit=1, opt=opt, fit_kwargs...)
+		t += restime[2]
+		opt = restime[1]
 
 		# save the model structure, history and time of training after each epoch
 		# to load this, you need to load Flux, AlfvenDetectors and ValueHistories
