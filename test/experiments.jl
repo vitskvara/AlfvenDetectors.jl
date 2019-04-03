@@ -103,7 +103,7 @@ if isdir(datapath)
 		model, history, t = AlfvenDetectors.fitsave_unsupervised(data, modelname, batchsize, 
 			outer_nepochs, inner_nepochs,
 			model_args, model_kwargs, fit_kwargs, 
-			savepath; filename = "vae_test", verb = verb)
+			savepath; optname = "NADAM", eta=0.0005, filename = "vae_test", verb = verb)
 		@test isfile(joinpath(savepath,"vae_test.bson"))
 	end
 

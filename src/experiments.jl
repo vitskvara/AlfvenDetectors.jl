@@ -90,16 +90,16 @@ Create, fit and save a model.
 """
 function fitsave_unsupervised(data, modelname, batchsize, outer_nepochs, inner_nepochs,
 	 model_args, model_kwargs, fit_kwargs, savepath;
-	 eta = 0.001, usegpu = false, filename = "", verb = true)
+	 optname = "ADAM", eta = 0.001, usegpu = false, filename = "", verb = true)
 	# create the model
 	model = AlfvenDetectors.construct_model(modelname, [x[2] for x in model_args]...; model_kwargs...)
 	usegpu ? model = model |> gpu : nothing
 	if occursin("TSVAE", "$modelname")
 		history = (MVHistory(), MVHistory())
-		opt = Array{Any,1}([nothing, nothing])
+		opt = Array{Any,1}([eval(Meta.parse(optname))(eta), eval(Meta.parse(optname))(eta)])
 	else
 		history = MVHistory()
-		opt = nothing
+		opt = eval(Meta.parse(optname))(eta)
 	end
 
 	# now create the filename
@@ -113,6 +113,7 @@ function fitsave_unsupervised(data, modelname, batchsize, outer_nepochs, inner_n
 		end
 		filename *= "_batchsize-$batchsize"
 		filename *= "_nepochs-$(outer_nepochs*inner_nepochs)"
+		filename *= "_opt-$optname"
 		filename *= "_eta-$eta"
 		for (key, val) in fit_kwargs
 			filename *= "_$(key)-$(val)"
@@ -124,11 +125,10 @@ function fitsave_unsupervised(data, modelname, batchsize, outer_nepochs, inner_n
 	# fit the model
 	t = 0.0
 
-	println(a)
 	tall = @timed for epoch in 1:outer_nepochs
 		verb ? println("outer epoch counter: $epoch/$outer_nepochs") : nothing
 		restime = @timed AlfvenDetectors.fit!(model, data, batchsize, inner_nepochs; 
-			η = eta, usegpu = usegpu, verb = verb, history = history, cbit=1, opt=opt, fit_kwargs...)
+			usegpu = usegpu, verb = verb, history = history, cbit=1, opt=opt, fit_kwargs...)
 		t += restime[2]
 		opt = restime[1]
 

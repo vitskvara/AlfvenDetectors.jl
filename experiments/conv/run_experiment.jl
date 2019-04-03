@@ -57,6 +57,13 @@ s = ArgParseSettings()
 		default = 128
 		arg_type = Int
 		help = "batch size"
+	"--eta"
+		default = Float32(0.001)
+		arg_type = Float32
+		help = "learning rate"
+	"--optimiser"
+		default = "ADAM"
+		help = "optimiser type"
 	"--nepochs"
 		default = 10
 		arg_type = Int
@@ -90,6 +97,8 @@ measurement_type = parsed_args["measurement"]
 usegpu = parsed_args["gpu"]
 coils = parsed_args["coils"]
 batchsize = parsed_args["batchsize"]
+eta = parsed_args["eta"]
+optimiser = parsed_args["optimiser"]
 outer_nepochs = parsed_args["nepochs"]
 inner_nepochs = 1
 warnings = !parsed_args["no-warnings"]
@@ -139,7 +148,7 @@ shots = joinpath.(datapath, shots)
 
 if test
 	savepath = "."
-	shots = shots[1:10]
+	shots = shots[1:min(nshots,10)]
 end
 
 if measurement_type == "uprobe"
@@ -179,4 +188,4 @@ fit_kwargs = Dict(
 ### run and save the model
 model, history, t = AlfvenDetectors.fitsave_unsupervised(data, modelname, batchsize, 
 	outer_nepochs, inner_nepochs, model_args, model_kwargs, fit_kwargs, savepath; 
-	usegpu=usegpu)
+	optname=optimiser, eta=eta, usegpu=usegpu)
