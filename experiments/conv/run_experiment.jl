@@ -64,6 +64,9 @@ s = ArgParseSettings()
 	"--optimiser"
 		default = "ADAM"
 		help = "optimiser type"
+	"--vae-variant"
+		default = "scalar"
+		help = "variant of the VAE model, one of [unit, scalar, diag]"
 	"--nepochs"
 		default = 10
 		arg_type = Int
@@ -99,6 +102,7 @@ coils = parsed_args["coils"]
 batchsize = parsed_args["batchsize"]
 eta = parsed_args["eta"]
 optimiser = parsed_args["optimiser"]
+vae_variant = Symbol(parsed_args["vae-variant"])
 outer_nepochs = parsed_args["nepochs"]
 inner_nepochs = 1
 warnings = !parsed_args["no-warnings"]
@@ -172,9 +176,9 @@ model_args = [
 		:channels => channels,
 		:scaling => scaling
 	]
-if modelname == "ConvVAE"
+if occursin("VAE", modelname)
 	model_kwargs = Dict(
-		:variant => :scalar
+		:variant => vae_variant
 		)
 else
 	model_kwargs = Dict(

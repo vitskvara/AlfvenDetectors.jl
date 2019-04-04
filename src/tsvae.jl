@@ -24,14 +24,15 @@ activation [Flux.relu] - arbitrary activation function
 layer [Flux.Dense] - type of layer
 """
 function TSVAE(m1size::AbstractVector, m2size::AbstractVector; 
-	activation = Flux.relu,	layer = Flux.Dense)
+	variant = :scalar, activation = Flux.relu,	layer = Flux.Dense)
 	@assert m1size[2][1] == m2size[1][1]
+	variant = scalar2vec(variant)
 
 	# construct models
 	m1 = VAE(m1size[1], m1size[2], activation=activation, layer=layer,
-		variant = :scalar)
+		variant = variant[1])
 	m2 = VAE(m2size[1], m2size[2], activation=activation, layer=layer,
-		variant = :scalar)
+		variant = variant[2])
 	
 	return TSVAE(m1,m2)
 end
@@ -42,15 +43,16 @@ end
 A lightweight constructor for TSVAE.
 """
 function TSVAE(xdim::Int, zdim::Int, nlayers::Union{Int, Tuple}; 
-	activation = Flux.relu,	layer = Flux.Dense)
+	variant = :scalar, activation = Flux.relu,	layer = Flux.Dense)
 	# if nlayers is scalar (both nets are to be the same depth)
 	# create a tuple anyway
 	nlayers = scalar2vec(nlayers)
+	variant = scalar2vec(variant)
 
 	m1 = VAE(xdim, zdim, nlayers[1]; activation=activation, layer=layer,
-		variant=:scalar)
+		variant=variant[1])
 	m2 = VAE(zdim, zdim, nlayers[2]; activation=activation, layer=layer,
-		variant=:scalar)
+		variant=variant[2])
 	return TSVAE(m1,m2)
 end
 
@@ -61,12 +63,13 @@ end
 Initializes a two stage variational autoencoder with convolutional first stage.
 """
 function ConvTSVAE(insize, latentdim, nlayers::Union{Int, Tuple}, kernelsize, channels, scaling; 
-	kwargs...)
+	variant = :scalar, kwargs...)
 	nlayers = scalar2vec(nlayers)
-	
-	m1 = ConvVAE(insize, latentdim, nlayers[1], kernelsize, channels, scaling; variant = :scalar,
+	variant = scalar2vec(variant)
+
+	m1 = ConvVAE(insize, latentdim, nlayers[1], kernelsize, channels, scaling; variant = variant[1],
 		kwargs...)
-	m2 = VAE(latentdim, latentdim, nlayers[2]; variant = :scalar, kwargs...)
+	m2 = VAE(latentdim, latentdim, nlayers[2]; variant = variant[2], kwargs...)
 	return TSVAE(m1,m2)
 end
 

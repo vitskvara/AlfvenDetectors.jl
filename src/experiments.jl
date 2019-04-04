@@ -155,12 +155,21 @@ end
 
 Transforms a list of arrays into a 4D array chunks for convolutional networks.
 """
-function cat_split_reshape(data,heigth,width)
+function split_reshape(data::AbstractArray,heigth::Int,width::Int)
+	data = data[1:(end-size(data,1)%heigth),1:(end-size(data,2)%width)]
+	permutedims(reshape(permutedims(reshape(data,size(data,1),width,1,:), [2,1,3,4]), 
+			width, heigth, 1, :), 
+			[2,1,3,4])
+end
+split_reshape(data,s::Int) = split_reshape(data,s,s)
+function cat_split_reshape(data::AbstractVector,heigth::Int,width::Int)
 	data = hcat(map(x->x[1:(end-size(x,1)%heigth),1:(end-size(x,2)%width)],data)...)
 	permutedims(reshape(permutedims(reshape(data,size(data,1),width,1,:), [2,1,3,4]), 
 			width, heigth, 1, :), 
 			[2,1,3,4])
 end
+cat_split_reshape(data,s::Int) = cat_split_reshape(data,s,s)
+
 
 """
 	collect_conv_signals(shots,readfun,heigth,width,coils [,warns, type])

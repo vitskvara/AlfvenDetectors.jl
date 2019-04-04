@@ -139,6 +139,8 @@ If x is scalar, return a tuple containing (x,deepcopy(x)).
 function scalar2vec(x)
     if x == nothing
         return Array{Any,1}([nothing,nothing])
+    elseif typeof(x) == Symbol
+        return Array{Any,1}([x,x])
     elseif length(x) == 1
         return Array{Any,1}([x,deepcopy(x)])
     end
