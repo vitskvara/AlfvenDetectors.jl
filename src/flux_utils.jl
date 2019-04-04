@@ -431,20 +431,29 @@ This will upscale the input in x and y two times and then apply
 a kernel of size 5 to reduce the number of channels from 4 to 2.
 """
 function upscaleconv(ks::Int, channels::Pair, scales::Union{Tuple,Int};
-    activation = relu, stride::Int=1)
+    activation = relu, stride::Int=1, batchnorm = false)
     if !(typeof(scales) <: Tuple)   
         scales = (scales,scales)
     end
     padwidth = floor(Int,ks/2)
-    return Flux.Chain(
+    if batchnorm
+        return Flux.Chain(
+                BatchNorm(channels[1]),
                 x -> upscale(x,scales),
                 Flux.Conv((ks,ks), channels, activation; pad=(padwidth,padwidth),
                     stride = (stride,stride))
         )
+    else
+        return Flux.Chain(
+                    x -> upscale(x,scales),
+                    Flux.Conv((ks,ks), channels, activation; pad=(padwidth,padwidth),
+                        stride = (stride,stride))
+            )
+    end
 end
 
 """
-    convtransposeconv(ks, channels, scales [,activation, stride]
+    convtransposeconv(ks, channels, scales [,activation, stride, batchnorm]
 
 Transposed convolution followed by convolution for upscaling.
 
@@ -454,20 +463,29 @@ This will upscale the input in x and y two times and then apply
 a kernel of size 5 to reduce the number of channels from 4 to 2.
 """
 function convtransposeconv(ks::Int, channels::Pair, scales::Union{Tuple,Int};
-    activation = relu, stride::Int=1)
+    activation = relu, stride::Int=1, batchnorm=false)
     if !(typeof(scales) <: Tuple)   
         scales = (scales,scales)
     end
     padwidth = floor(Int,ks/2)
-    return Flux.Chain(
+    if batchnorm
+        return Flux.Chain(
+                BatchNorm(channels[1]),
                 Flux.ConvTranspose(scales, channels[1]=>channels[1], stride=scales),
                 Flux.Conv((ks,ks), channels, activation; pad=(padwidth,padwidth),
                     stride = (stride,stride))
         )
+    else
+        return Flux.Chain(
+                    Flux.ConvTranspose(scales, channels[1]=>channels[1], stride=scales),
+                    Flux.Conv((ks,ks), channels, activation; pad=(padwidth,padwidth),
+                        stride = (stride,stride))
+            )
+    end
 end
 
 """
-    convdecoder(ins,ds,das,ks,cs,scs,as,sts [,layertype])
+    convdecoder(ins,ds,das,ks,cs,scs,as,sts,bns [,layertype])
 
 Create a convolutional decoder with dense input layer(s).
 
@@ -479,11 +497,12 @@ cs = vector of channel pairs
 scs = vector of scale factors
 cas = vector of convolutional activations one shorter than the rest (last activation is always identity)
 sts = vector of strides
+bns = boolean vector of batch normalization switches
 layertype = one of ["transpose", "upscale"]
 """
 function convdecoder(outs, ds::AbstractVector, das::AbstractVector, ks::AbstractVector, 
-    cs::AbstractVector, scs::AbstractVector, cas::AbstractVector, sts::AbstractVector;
-    layertype = "transpose")
+    cs::AbstractVector, scs::AbstractVector, cas::AbstractVector, sts::AbstractVector,
+    bns::AbstractVector; layertype = "transpose")
     # the second one should be basically just a reversed first one
     conv_layers = Flux.Chain(map(x->convmaxpool(x[1],x[2],x[3];activation=x[4],stride=x[5]),
         zip(reverse(ks),map(x->x[2]=>x[1],reverse(cs)),
@@ -497,8 +516,8 @@ function convdecoder(outs, ds::AbstractVector, das::AbstractVector, ks::Abstract
     elseif layertype == "upscale"
         uplayer = upscaleconv
     end
-    upscaleconv_layers = Flux.Chain(map(x->uplayer(x[1],x[2],x[3].*x[5];activation=x[4],stride=x[5]),
-        zip(ks,cs,scs,cas,sts))...)
+    upscaleconv_layers = Flux.Chain(map(x->uplayer(x[1],x[2],x[3].*x[5];activation=x[4],stride=x[5],batchnorm=x[6]),
+        zip(ks,cs,scs,cas,sts,bns))...)
     # there is a problem with automatic determination of the reshape dims
     # it can be computed from the indims and the size, padding, stride and scale of the upscaleconv
     # however that is quite complicated so lets use a trick - we initialize a random array of indim size,
@@ -520,7 +539,7 @@ function convdecoder(outs, ds::AbstractVector, das::AbstractVector, ks::Abstract
 end
 """
     convdecoder(insize, latentdim, nconv, kernelsize, channels, scaling,
-        [ndense, dsizes, activation, stride, layertype])
+        [ndense, dsizes, activation, stride, layertype, batchnorm])
 
 Create a convolutional decoder.
 
@@ -535,9 +554,11 @@ dsizes = if ndense > 1, specify a list of latent layer widths of length = ndense
 activation = default relu
 lstride = length of stride, default 1, can be a scalar or a list of scalars
 layertype = one of ["transpose", "upscale"]
+batchnorm = boolean
 """
 function convdecoder(outsize, latentdim::Int, nconv::Int, kernelsize, channels, 
-    scaling; ndense::Int=1, dsizes=nothing, activation=relu, lstride=1, layertype="transpose")
+    scaling; ndense::Int=1, dsizes=nothing, activation=relu, lstride=1, 
+    layertype="transpose", batchnorm = false)
     # construct ds - vector of widths of dense layers
     if ndense>1
         (dsizes==nothing) ? error("If more than one Dense layer is require, specify their widths in dsizes.") : nothing 
@@ -574,6 +595,13 @@ function convdecoder(outsize, latentdim::Int, nconv::Int, kernelsize, channels,
     else
         sts = fill(lstride,nconv)
     end
+    # bns - vector of batchnorm swithes
+    if typeof(batchnorm) <: AbstractVector
+        @assert length(batchnorm) == nconv
+        bns = batchnorm
+    else
+        bns = fill(batchnorm,nconv)
+    end
     
-    return convdecoder(outsize, ds, das, ks, cs, scs, cas, sts; layertype=layertype) 
+    return convdecoder(outsize, ds, das, ks, cs, scs, cas, sts, bns; layertype=layertype) 
 end

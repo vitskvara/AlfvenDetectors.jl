@@ -230,17 +230,7 @@ paramchange(frozen_params, params) =
 	@test size(layer(X)) == (4,3,8,5)
 	layer = AlfvenDetectors.convmaxpool(3,2=>8,2;stride=3,batchnorm=true)
 	@test size(layer(X)) == (2,1,8,5)
-	
-
-	# upscaleconv
-	X = randn(2,4,4,10)
-	layer = AlfvenDetectors.upscaleconv(3,4=>2,2)
-	@test size(layer(X)) == (4,8,2,10)
-	layer = AlfvenDetectors.upscaleconv(5,4=>1,(4,3))
-	@test size(layer(X)) == (8,12,1,10)
-	layer = AlfvenDetectors.upscaleconv(3,4=>2,2;stride=2)
-	@test size(layer(X)) == (2,4,2,10)
-	
+		
 	# convencoder
 	L = 2
 	X = randn(12,6,2,3)
@@ -317,6 +307,40 @@ paramchange(frozen_params, params) =
 	@test size(model.layers[1](X)) == (2,1,16,3) 
 	@test length(model.layers[1].layers[1].layers) == 3
 
+	# upscaleconv
+	X = randn(2,4,4,10)
+	layer = AlfvenDetectors.upscaleconv(3,4=>2,2)
+	@test length(layer.layers) == 2
+	@test size(layer(X)) == (4,8,2,10)
+	layer = AlfvenDetectors.upscaleconv(5,4=>1,(4,3))
+	@test size(layer(X)) == (8,12,1,10)
+	layer = AlfvenDetectors.upscaleconv(3,4=>2,2;stride=2)
+	@test size(layer(X)) == (2,4,2,10)
+	layer = AlfvenDetectors.upscaleconv(3,4=>2,2,batchnorm=true)
+	@test length(layer.layers) == 3
+	@test size(layer(X)) == (4,8,2,10)
+	layer = AlfvenDetectors.upscaleconv(5,4=>1,(4,3),batchnorm=true)
+	@test size(layer(X)) == (8,12,1,10)
+	layer = AlfvenDetectors.upscaleconv(3,4=>2,2;stride=2,batchnorm=true)
+	@test size(layer(X)) == (2,4,2,10)
+
+	# convtransposeconv
+	X = randn(2,4,4,10)
+	layer = AlfvenDetectors.convtransposeconv(3,4=>2,2)
+	@test length(layer.layers) == 2
+	@test size(layer(X)) == (4,8,2,10)
+	layer = AlfvenDetectors.convtransposeconv(5,4=>1,(4,3))
+	@test size(layer(X)) == (8,12,1,10)
+	layer = AlfvenDetectors.convtransposeconv(3,4=>2,2;stride=2)
+	@test size(layer(X)) == (2,4,2,10)
+	layer = AlfvenDetectors.convtransposeconv(3,4=>2,2,batchnorm=true)
+	@test length(layer.layers) == 3
+	@test size(layer(X)) == (4,8,2,10)
+	layer = AlfvenDetectors.convtransposeconv(5,4=>1,(4,3),batchnorm=true)
+	@test size(layer(X)) == (8,12,1,10)
+	layer = AlfvenDetectors.convtransposeconv(3,4=>2,2;stride=2,batchnorm=true)
+	@test size(layer(X)) == (2,4,2,10)
+
 	# convdecoder
 	L = 2
 	X = randn(12,6,2,3)
@@ -329,7 +353,8 @@ paramchange(frozen_params, params) =
     scs = [3,2]
     cas = fill(relu,L-1)
     sts = fill(1,L)
-	model = AlfvenDetectors.convdecoder(outs,ds,das,ks,cs,scs,cas,sts)
+    bns = fill(true, L)
+	model = AlfvenDetectors.convdecoder(outs,ds,das,ks,cs,scs,cas,sts,bns)
 	@test size(model(y)) == size(X)
 
 	# lightweight convdecoder constructor
@@ -345,6 +370,7 @@ paramchange(frozen_params, params) =
 	scaling = 2
 	model = AlfvenDetectors.convdecoder(outsize, latentdim, nconv, kernelsize, channels, scaling)
 	@test size(model(y)) == size(X)
+	@test length(model.layers[3].layers[1].layers) == 2
 	# upscale layer instead of convtranspose
 	model = AlfvenDetectors.convdecoder(outsize, latentdim, nconv, kernelsize, channels, scaling;
 		layertype = "upscale")
@@ -385,4 +411,11 @@ paramchange(frozen_params, params) =
 	model = AlfvenDetectors.convdecoder(outsize, latentdim, nconv, kernelsize, channels, scaling;
 			lstride = lstride)
 	@test size(model(y)) == size(X)
+	# batchnorm
+	scaling = 2
+	model = AlfvenDetectors.convdecoder(outsize, latentdim, nconv, kernelsize, channels, scaling;
+		batchnorm = true)
+	@test length(model.layers[3].layers[1].layers) == 3
+	@test size(model(y)) == size(X)
+
 end
