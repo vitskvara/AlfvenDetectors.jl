@@ -25,7 +25,7 @@ s = ArgParseSettings()
     	help = "a list of channel numbers"
     	nargs = '+'
     "--patchsize"
-    	default = 64
+    	default = 128
     	arg_type= Int
     	help = "size of image patch"
     "--kernelsize"
