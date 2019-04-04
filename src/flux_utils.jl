@@ -282,7 +282,7 @@ function zeropad(x::AbstractArray{T,4},widths) where T
 end
 
 """
-    convmaxpool(ks, channels, scales; [activation, stride])
+    convmaxpool(ks, channels, scales; [activation, stride, batchnorm])
 
 Create a simple two layered net consisting of a convolutional layer
 and a subsequent dowscaling using maxpooling layer.
@@ -290,23 +290,32 @@ and a subsequent dowscaling using maxpooling layer.
     layer = convmaxpool(3, 8=>16, (4,4))
 
 This will have convolutional kernel of size (3,3), produce 16 channels out of 8 and 
-downscale with 
+downscale 4 time in each dimension. If batchnorm is true, batch normalisation is going to be used.
 """
 function convmaxpool(ks::Int, channels::Pair, scales::Union{Tuple,Int}; 
-    activation = relu, stride::Int=1)
+    activation = relu, stride::Int=1, batchnorm = false)
     if !(typeof(scales) <: Tuple)   
         scales = (scales,scales)
     end
     padwidth = floor(Int,ks/2)
-    return Flux.Chain(
-                Flux.Conv((ks,ks), channels, activation, pad=(padwidth,padwidth),
-                    stride = (stride,stride)),
-                x->maxpool(x,scales)
-            )
+    if batchnorm
+        return Flux.Chain(
+                    Flux.Conv((ks,ks), channels, activation, pad=(padwidth,padwidth),
+                        stride = (stride,stride)),
+                    x->maxpool(x,scales),
+                    BatchNorm(channels[2])
+                )
+    else
+        return Flux.Chain(
+                    Flux.Conv((ks,ks), channels, activation, pad=(padwidth,padwidth),
+                        stride = (stride,stride)),
+                    x->maxpool(x,scales)
+                )
+    end
 end
 
 """
-    convencoder(ins,ds,das,ks,cs,scs,as,sts)
+    convencoder(ins,ds,das,ks,cs,scs,as,sts,bns)
 
 Create a convolutional encoder with dense output layer(s).
 
@@ -318,11 +327,14 @@ cs = vector of channel pairs
 scs = vector of scale factors
 cas = vector of convolutional activations
 sts = vector of strides
+bns = binary vector of batchnorm usage
 """
 function convencoder(ins,ds::AbstractVector, das::AbstractVector,
     ks::AbstractVector, cs::AbstractVector, 
-    scs::AbstractVector, cas::AbstractVector, sts::AbstractVector)
-    conv_layers = Flux.Chain(map(x->convmaxpool(x[1],x[2],x[3];activation=x[4],stride=x[5]),zip(ks,cs,scs,cas,sts))...)
+    scs::AbstractVector, cas::AbstractVector, sts::AbstractVector,
+    bns::AbstractVector)
+    conv_layers = Flux.Chain(map(x->convmaxpool(x[1],x[2],x[3];activation=x[4],stride=x[5],batchnorm=x[6])
+        ,zip(ks,cs,scs,cas,sts,bns))...)
     # there is a problem with automatic determination of the input size of the last dense layer
     # it can be computed from the indims and the size, padding, stride and scale of the convmaxpool layer
     # however that is quit complicated so lets use a trick - we initialize a random array of indim size,
@@ -343,7 +355,7 @@ function convencoder(ins,ds::AbstractVector, das::AbstractVector,
 end
 """
     convencoder(insize, latentdim, nconv, kernelsize, channels, scaling,
-        [ndense, dsizes, activation, stride])
+        [ndense, dsizes, activation, stride, batchnorm])
 
 Create a convolutional encoder.
 
@@ -357,9 +369,10 @@ ndense = number of dense layers (default 1)
 dsizes = if ndense > 1, specify a list of latent layer widths of length = ndense - 1
 activation = default relu
 lstride = length of stride, default 1, can be a scalar or a list of scalars
+batchnorm = boolean
 """
 function convencoder(insize, latentdim::Int, nconv::Int, kernelsize, channels, 
-    scaling; ndense::Int=1, dsizes=nothing, activation=relu, lstride=1)
+    scaling; ndense::Int=1, dsizes=nothing, activation=relu, lstride=1, batchnorm=false)
     # construct ds - vector of widths of dense layers
     if ndense>1
         (dsizes==nothing) ? error("If more than one Dense layer is require, specify their widths in dsizes.") : nothing 
@@ -396,12 +409,19 @@ function convencoder(insize, latentdim::Int, nconv::Int, kernelsize, channels,
     else
         sts = fill(lstride,nconv)
     end
+    # bns - vector of batch norm usage
+    if typeof(batchnorm) <: AbstractVector
+        @assert length(batchnorm) == nconv
+        bns = batchnorm
+    else
+        bns = fill(batchnorm,nconv)
+    end
     
-    return convencoder(insize, ds, das, ks, cs, scs, cas, sts) 
+    return convencoder(insize, ds, das, ks, cs, scs, cas, sts, bns) 
 end
 
 """
-    upscaleconv(ks, channels, scales [,activation, stride]
+    upscaleconv(ks, channels, scales [,activation, stride, batchnorm]
 
 Upscaling coupled with convolution.
 

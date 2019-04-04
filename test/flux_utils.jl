@@ -217,11 +217,20 @@ paramchange(frozen_params, params) =
 	# convmaxpool
 	X = randn(12,6,2,5)
 	layer = AlfvenDetectors.convmaxpool(3,2=>4,2)
+	@test length(layer.layers) == 2
 	@test size(layer(X)) == (6,3,4,5)
 	layer = AlfvenDetectors.convmaxpool(5,2=>8,(3,2))
 	@test size(layer(X)) == (4,3,8,5)
 	layer = AlfvenDetectors.convmaxpool(3,2=>8,2;stride=3)
 	@test size(layer(X)) == (2,1,8,5)
+	layer = AlfvenDetectors.convmaxpool(3,2=>4,2,batchnorm=true)
+	@test length(layer.layers) == 3
+	@test size(layer(X)) == (6,3,4,5)
+	layer = AlfvenDetectors.convmaxpool(5,2=>8,(3,2),batchnorm=true)
+	@test size(layer(X)) == (4,3,8,5)
+	layer = AlfvenDetectors.convmaxpool(3,2=>8,2;stride=3,batchnorm=true)
+	@test size(layer(X)) == (2,1,8,5)
+	
 
 	# upscaleconv
 	X = randn(2,4,4,10)
@@ -243,7 +252,8 @@ paramchange(frozen_params, params) =
     scs = [2,3]
     cas = fill(relu,L)
     sts = fill(1,L)
-	model = AlfvenDetectors.convencoder(ins,ds,das,ks,cs,scs,cas,sts)
+    bns = fill(true,L)
+	model = AlfvenDetectors.convencoder(ins,ds,das,ks,cs,scs,cas,sts,bns)
 	@test size(model(X)) == (2,3)
 
 	# lightweight convencoder constructor
@@ -299,6 +309,13 @@ paramchange(frozen_params, params) =
 		lstride = lstride)
 	@test size(model(X)) == (latentdim,3)
 	@test size(model.layers[1](X)) == (4,2,16,3) 
+	# batchnorm 
+	scaling = 2
+	model = AlfvenDetectors.convencoder(insize, latentdim, nconv, kernelsize, channels, scaling;
+		batchnorm=true)
+	@test size(model(X)) == (latentdim,3)
+	@test size(model.layers[1](X)) == (2,1,16,3) 
+	@test length(model.layers[1].layers[1].layers) == 3
 
 	# convdecoder
 	L = 2
