@@ -91,6 +91,9 @@ s = ArgParseSettings()
 		default = "valid"
 		help = "Data truncation method based on Ip values. One of [valid, flattop]."
 		range_tester = (x->x in ["valid", "flattop"])
+	"--savepath"
+		default = ""
+		help = "alternative saving path"
 end
 parsed_args = parse_args(ARGS, s)
 modelname = "Conv"*parsed_args["modelname"]
@@ -118,6 +121,7 @@ warnings = !parsed_args["no-warnings"]
 memoryefficient = parsed_args["memory-efficient"]
 test = parsed_args["test"]
 iptrunc = parsed_args["ip-trunc"]
+svpth = parsed_args["savepath"]
 if measurement_type == "mscamp"
 	readfun = AlfvenDetectors.readmscamp
 elseif measurement_type == "mscphase"
@@ -144,6 +148,16 @@ elseif hostname == "soroban-node-03"
 	datapath = "/compass/Shared/Exchange/Havranek/Link to Alfven"
 	savepath = "/compass/home/skvara/alfven/experiments/conv/$measurement_type"
 end
+if test
+	savepath = "."
+end
+if svpth != ""
+	if svpth[1] != "/"
+		savepath = joinpath(savepath, svpth)
+	else
+		savepath = svpth
+	end
+end 
 mkpath(savepath)
 
 shots = readdir(datapath)
@@ -160,7 +174,6 @@ end
 shots = joinpath.(datapath, shots)
 
 if test
-	savepath = "."
 	shots = shots[1:min(nshots,10)]
 end
 
