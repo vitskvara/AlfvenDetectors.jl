@@ -128,7 +128,8 @@ function fitsave_unsupervised(data, modelname, batchsize, outer_nepochs, inner_n
 	tall = @timed for epoch in 1:outer_nepochs
 		verb ? println("outer epoch counter: $epoch/$outer_nepochs") : nothing
 		restime = @timed AlfvenDetectors.fit!(model, data, batchsize, inner_nepochs; 
-			usegpu = usegpu, verb = verb, history = history, cbit=1, opt=opt, fit_kwargs...)
+			usegpu = usegpu, verb = verb, history = history, cbit=1, opt=opt, η = eta,
+			fit_kwargs...)
 		t += restime[2]
 		opt = restime[1]
 

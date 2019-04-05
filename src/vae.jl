@@ -89,7 +89,7 @@ end
 
 """
 	ConvVAE(insize, latentdim, nconv, kernelsize, channels, scaling; 
-		[variant, ndense, dsizes, activation, stride])
+		[variant, ndense, dsizes, activation, stride, batchnorm])
 
 Initializes a convolutional autoencoder.
 """
@@ -148,43 +148,43 @@ loglikelihood(vae::VAE, X, L) = sum([loglikelihood(vae, X) for m in 1:L])/Float(
 # conv layers dont like using mean (probably because there is no promotion of 1/L to Float32)
 
 """
-	loss(vae, X, L, β)
+	loss(vae, X, L, beta)
 
-Loss function of the variational autoencoder. β is scaling parameter of
+Loss function of the variational autoencoder. beta is scaling parameter of
 the KLD, 1 = full KL, 0 = no KL.
 """
-loss(vae::VAE, X, L, β) = Float(β)*KL(vae, X) - loglikelihood(vae,X,L)
+loss(vae::VAE, X, L, beta) = Float(beta)*KL(vae, X) - loglikelihood(vae,X,L)
 
 """
-	evalloss(vae, X, L, β)
+	evalloss(vae, X, L, beta)
 
 Print vae loss function values.
 """
-function evalloss(vae::VAE, X, L, β) 
-	l, lk, kl = getlosses(vae, X, L, β)
+function evalloss(vae::VAE, X, L, beta) 
+	l, lk, kl = getlosses(vae, X, L, beta)
 	print("total loss: ", l,
 	"\n-loglikelihood: ", lk,
 	"\nKL: ", kl, "\n\n")
 end
 
 """
-	getlosses(vae, X, L, β)
+	getlosses(vae, X, L, beta)
 
 Return the numeric values of current losses.
 """
-getlosses(vae::VAE, X, L, β) = (
-	Flux.Tracker.data(loss(vae, X, L, β)),
+getlosses(vae::VAE, X, L, beta) = (
+	Flux.Tracker.data(loss(vae, X, L, beta)),
 	Flux.Tracker.data(-loglikelihood(vae,X,L)),
 	Flux.Tracker.data(KL(vae, X))
 	)
 
 """
-	track!(vae, history, X, L, β)
+	track!(vae, history, X, L, beta)
 
 Save current progress.
 """
-function track!(vae::VAE, history::MVHistory, X, L, β)
-	l, lk, kl = getlosses(vae, X, L, β)
+function track!(vae::VAE, history::MVHistory, X, L, beta)
+	l, lk, kl = getlosses(vae, X, L, beta)
 	push!(history, :loss, l)
 	push!(history, :loglikelihood, lk)
 	push!(history, :KL, kl)
@@ -193,24 +193,24 @@ end
 ########### callback #################
 
 """
-	(cb::basic_callback)(m::VAE, d, l, opt, L::Int, β::Real)
+	(cb::basic_callback)(m::VAE, d, l, opt, L::Int, beta::Real)
 
 Callback for the train! function.
 TODO: stopping condition, change learning rate.
 """
-function (cb::basic_callback)(m::VAE, d, l, opt, L::Int, β::Real)
+function (cb::basic_callback)(m::VAE, d, l, opt, L::Int, beta::Real)
 	# update iteration count
 	cb.iter_counter += 1
 	# save training progress to a MVHistory
 	if cb.history != nothing
-		track!(m, cb.history, d, L, β)
+		track!(m, cb.history, d, L, beta)
 	end
 	# verbal output
 	if cb.verb 
 		# if first iteration or a progress print iteration
 		# recalculate the shown values
 		if (cb.iter_counter%cb.show_it == 0 || cb.iter_counter == 1)
-			ls = getlosses(m, d, L, β)
+			ls = getlosses(m, d, L, beta)
 			cb.progress_vals = Array{Any,1}()
 			push!(cb.progress_vals, ceil(Int, cb.iter_counter/cb.epoch_size))
 			push!(cb.progress_vals, cb.iter_counter)
@@ -231,7 +231,7 @@ end
 
 """
 	fit!(vae::VAE, X, batchsize::Int, nepochs::Int; 
-		L=1, β::Real= Float(1.0), cbit::Int=200, history = nothing, 
+		L=1, beta::Real= Float(1.0), cbit::Int=200, history = nothing, 
 		verb::Bool = true, η = 0.001, runtype = "experimental", 
 		[usegpu, memoryefficient])
 
@@ -242,7 +242,7 @@ X - data array with instances as columns
 batchsize - batchsize
 nepochs - number of epochs
 L [1] - number of samples for likelihood
-β [1.0] - scaling for the KLD loss
+beta [1.0] - scaling for the KLD loss
 cbit [200] - after this # of iterations, progress is updated
 history [nothing] - a dictionary for training progress control
 verb [true] - if output should be produced
@@ -253,7 +253,7 @@ usegpu - if X is not already on gpu, this will put the inidvidual batches into g
 memoryefficient - calls gc after every batch, again saving some memory but prolonging computation
 """
 function fit!(vae::VAE, X, batchsize::Int, nepochs::Int; 
-	L=1, β::Real= Float(1.0), cbit::Int=200, history = nothing, opt=nothing,
+	L=1, beta::Real= Float(1.0), cbit::Int=200, history = nothing, opt=nothing,
 	verb::Bool = true, η = 0.001, runtype = "experimental", trainkwargs...)
 	@assert runtype in ["experimental", "fast"]
 	# sampler
@@ -275,7 +275,7 @@ function fit!(vae::VAE, X, batchsize::Int, nepochs::Int;
 		cb = basic_callback(history,verb,η,cbit; 
 			train_length = nepochs*epochsize,
 			epoch_size = epochsize)
-		_cb(m::VAE,d,l,o) =  cb(m,d,l,o,L,β)
+		_cb(m::VAE,d,l,o) =  cb(m,d,l,o,L,beta)
 	elseif runtype == "fast"
 		_cb = fast_callback 
 	end
@@ -284,7 +284,7 @@ function fit!(vae::VAE, X, batchsize::Int, nepochs::Int;
 	train!(
 		vae,
 		collect(sampler),
-		x->loss(vae,x,L,β),
+		x->loss(vae,x,L,beta),
 		opt,
 		_cb;
 		trainkwargs...

@@ -68,7 +68,7 @@ end
 	@test typeof(gx) == CuArray{AlfvenDetectors.Float,2}
 	@test typeof(_x) <: TrackedArray{AlfvenDetectors.Float,2}    
 	hist = MVHistory()
-	AlfvenDetectors.fit!(model, x, 5, 50, β =0.1, cbit=5, history = hist, verb = false,
+	AlfvenDetectors.fit!(model, x, 5, 50, beta =0.1, cbit=5, history = hist, verb = false,
 		usegpu = true, memoryefficient = false)
 	is, ls = get(hist, :loss)
 	@test ls[1] > ls[end] 
@@ -84,7 +84,7 @@ end
 	@test typeof(gx) == CuArray{AlfvenDetectors.Float,2}
 	@test typeof(_x) <: TrackedArray{AlfvenDetectors.Float,2}    
 	hist = MVHistory()
-	AlfvenDetectors.fit!(model, x, 5, 50, β =0.1, cbit=5, history = hist, verb = false,
+	AlfvenDetectors.fit!(model, x, 5, 50, beta =0.1, cbit=5, history = hist, verb = false,
 		usegpu = true)
 	is, ls = get(hist, :loss)
 	@test ls[1] > ls[end] 
@@ -110,7 +110,7 @@ end
 	@test typeof(_X.data) == CuArray{AlfvenDetectors.Float, 4}
 	@test AlfvenDetectors.iscuarray(_X)
 	hist = MVHistory()
-	AlfvenDetectors.fit!(model, X, 5, 10, β =0.01, history = hist, verb = false,
+	AlfvenDetectors.fit!(model, X, 5, 10, beta =0.01, history = hist, verb = false,
 		usegpu = true, memoryefficient = false)
 	is, ls = get(hist, :loss)
 	@test ls[1] > ls[end] 
@@ -127,7 +127,7 @@ end
 	@test typeof(_X.data) == CuArray{AlfvenDetectors.Float, 4}
 	@test AlfvenDetectors.iscuarray(_X)
 	hist = MVHistory()
-	AlfvenDetectors.fit!(model, X, 5, 10, β =0.01, history = hist, verb = false,
+	AlfvenDetectors.fit!(model, X, 5, 10, beta =0.01, history = hist, verb = false,
 		usegpu = true, memoryefficient = false)
 	is, ls = get(hist, :loss)
 	@test ls[1] > ls[end] 
@@ -144,7 +144,7 @@ end
 	@test typeof(_X.data) == CuArray{AlfvenDetectors.Float, 4}
 	@test AlfvenDetectors.iscuarray(_X)
 	hist = MVHistory()
-	AlfvenDetectors.fit!(model, X, 5, 10, β =0.01, history = hist, verb = false,
+	AlfvenDetectors.fit!(model, X, 5, 10, beta =0.01, history = hist, verb = false,
 		usegpu = true, memoryefficient = false)
 	is, ls = get(hist, :loss)
 	@test ls[1] > ls[end] 
@@ -191,7 +191,7 @@ end
 	@test typeof(_X.data) == CuArray{AlfvenDetectors.Float, 4}
 	@test AlfvenDetectors.iscuarray(_X)
 	hist = (MVHistory(), MVHistory())
-	AlfvenDetectors.fit!(model, X, 5, 40, β = 1.0, history = hist, verb = false,
+	AlfvenDetectors.fit!(model, X, 5, 40, beta = 1.0, history = hist, verb = false,
 		usegpu = true, memoryefficient = false, cbit=1, η = 0.1);
 	for h in hist
 		is, ls = get(h, :loss)

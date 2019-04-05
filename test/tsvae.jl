@@ -76,7 +76,9 @@ paramchange(frozen_params, params) =
   X = randn(Float32,m,n,c,k)
   latentdim = 2
   nlayers = (2,3)
-  model = AlfvenDetectors.ConvTSVAE((m,n,c),latentdim, nlayers, 3, (2,4), 2)
+  batchnorm = true
+  model = AlfvenDetectors.ConvTSVAE((m,n,c),latentdim, nlayers, 3, (2,4), 2; 
+    batchnorm = batchnorm)
   frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
   _X = model(X)
   @test size(_X) == (m,n,2*c,k)

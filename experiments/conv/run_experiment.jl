@@ -57,10 +57,17 @@ s = ArgParseSettings()
 		default = 128
 		arg_type = Int
 		help = "batch size"
+	"--batchnorm"
+		action = :store_true
+		help = "use batchnorm in convolutional layers"
 	"--eta"
 		default = Float32(0.001)
 		arg_type = Float32
 		help = "learning rate"
+	"--beta"
+		default = 1.0f0
+		arg_type = Float32
+		help = "value of beta for VAE loss"
 	"--optimiser"
 		default = "ADAM"
 		help = "optimiser type"
@@ -100,7 +107,9 @@ measurement_type = parsed_args["measurement"]
 usegpu = parsed_args["gpu"]
 coils = parsed_args["coils"]
 batchsize = parsed_args["batchsize"]
+batchnorm = parsed_args["batchnorm"]
 eta = parsed_args["eta"]
+beta = parsed_args["beta"]
 optimiser = parsed_args["optimiser"]
 vae_variant = Symbol(parsed_args["vae-variant"])
 outer_nepochs = parsed_args["nepochs"]
@@ -176,18 +185,17 @@ model_args = [
 		:channels => channels,
 		:scaling => scaling
 	]
-if occursin("VAE", modelname)
-	model_kwargs = Dict(
-		:variant => vae_variant
-		)
-else
-	model_kwargs = Dict(
-		)
-end
+model_kwargs = Dict{Symbol, Any}(
+	:batchnorm => batchnorm
+	)
 fit_kwargs = Dict(
 		:usegpu => usegpu,
 		:memoryefficient => memoryefficient
 	)
+if occursin("VAE", modelname)
+	model_kwargs[:variant] = vae_variant
+	fit_kwargs[:beta] = beta
+end
 
 ### run and save the model
 model, history, t = AlfvenDetectors.fitsave_unsupervised(data, modelname, batchsize, 

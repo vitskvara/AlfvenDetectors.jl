@@ -72,7 +72,7 @@ end
 
 """
 	ConvAE(insize, latentdim, nconv, kernelsize, channels, scaling; 
-		[ndense, dsizes, activation, stride])
+		[ndense, dsizes, activation, stride, batchnorm])
 
 Initializes a convolutional autoencoder.
 """

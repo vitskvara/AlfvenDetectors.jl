@@ -58,38 +58,38 @@ end
 
 """
 	ConvTSVAE(insize, latentdim, nconv, kernelsize, channels, scaling; 
-		[variant, ndense, dsizes, activation, stride])
+		[variant, ndense, dsizes, activation, stride, batchnorm])
 
 Initializes a two stage variational autoencoder with convolutional first stage.
 """
 function ConvTSVAE(insize, latentdim, nlayers::Union{Int, Tuple}, kernelsize, channels, scaling; 
-	variant = :scalar, kwargs...)
+	variant = :scalar, batchnorm = false, kwargs...)
 	nlayers = scalar2vec(nlayers)
 	variant = scalar2vec(variant)
 
 	m1 = ConvVAE(insize, latentdim, nlayers[1], kernelsize, channels, scaling; variant = variant[1],
-		kwargs...)
+		batchnorm = batchnorm, kwargs...)
 	m2 = VAE(latentdim, latentdim, nlayers[2]; variant = variant[2], kwargs...)
 	return TSVAE(m1,m2)
 end
 
 
 """
-	getlosses(tsvae, X, L, β)
+	getlosses(tsvae, X, L, beta)
 
 Return the numeric values of current losses as a tuple.
 """
-function getlosses(tsvae::TSVAE, X, L, β) 
-	m1ls = getlosses(tsvae.m1, X, L, β)
+function getlosses(tsvae::TSVAE, X, L, beta) 
+	m1ls = getlosses(tsvae.m1, X, L, beta)
 	Z = tsvae.m1.sampler(tsvae.m1.encoder(X))
-	m2ls = getlosses(tsvae.m2, Z, L, β)
+	m2ls = getlosses(tsvae.m2, Z, L, beta)
 	return m1ls, m2ls
 end
 
 """
 	fit!(tsvae::TSVAE, X, batchsize::Union{Int, Tuple}, 
 	nepochs::Union{Int, Tuple}; 
-	L::Union{Int, Tuple}=(1,1), β::Union{Real, Tuple}= Float(1.0), 
+	L::Union{Int, Tuple}=(1,1), beta::Union{Real, Tuple}= Float(1.0), 
 	cbit::Union{Int, Tuple}=(200,200), history = nothing, 
 	verb::Bool = true, η::Union{Real, Tuple} = (0.001,0.001), 
 	runtype = "experimental", [usegpu, memoryefficient])
@@ -98,7 +98,7 @@ Fit the two-stage VAE model.
 """
 function fit!(tsvae::TSVAE, X, batchsize::Union{Int, Tuple}, 
 	nepochs::Union{Int, Tuple}; 
-	L::Union{Int, Tuple}=(1,1), β::Union{Real, Tuple}= Float(1.0), 
+	L::Union{Int, Tuple}=(1,1), beta::Union{Real, Tuple}= Float(1.0), 
 	cbit::Union{Int, Tuple}=(200,200), history = nothing, 
 	verb::Bool = true, η::Union{Real, Tuple} = (0.001,0.001), 
 	runtype = "experimental", opt=nothing, trainkwargs...)
@@ -109,7 +109,7 @@ function fit!(tsvae::TSVAE, X, batchsize::Union{Int, Tuple},
 	batchsize = scalar2vec(batchsize)
 	nepochs = scalar2vec(nepochs)
 	L = scalar2vec(L)
-	β = scalar2vec(β)
+	beta = scalar2vec(beta)
 	cbit = scalar2vec(cbit)
 	history = scalar2vec(history)
 	η = scalar2vec(η)
@@ -118,7 +118,7 @@ function fit!(tsvae::TSVAE, X, batchsize::Union{Int, Tuple},
 	if verb
 		println("Training the first stage...")
 	end
-	opt[1] = fit!(tsvae.m1, X, batchsize[1], nepochs[1]; L = L[1], β = β[1], cbit=cbit[1], opt=opt[1],
+	opt[1] = fit!(tsvae.m1, X, batchsize[1], nepochs[1]; L = L[1], beta = beta[1], cbit=cbit[1], opt=opt[1],
 		history = history[1], verb = verb, η = η[1], runtype = runtype, trainkwargs...)
 	
 	if verb
@@ -130,7 +130,7 @@ function fit!(tsvae::TSVAE, X, batchsize::Union{Int, Tuple},
 	else
 		Z = tsvae.m1.sampler(cpu(tsvae.m1.encoder)(X).data)
 	end
-	opt[2] = fit!(tsvae.m2, Z, batchsize[2], nepochs[2]; L = L[2], β = β[2], cbit=cbit[2], opt=opt[2],
+	opt[2] = fit!(tsvae.m2, Z, batchsize[2], nepochs[2]; L = L[2], beta = beta[2], cbit=cbit[2], opt=opt[2],
 		history = history[2], verb = verb, η = η[2], runtype = runtype, trainkwargs...)
 	return opt
 end

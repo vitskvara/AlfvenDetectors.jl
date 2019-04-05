@@ -53,7 +53,7 @@ paramchange(frozen_params, params) =
 	@test abs(ls[1] - l) < 2e-1
 	@test abs(ls[1] - ls[2]) < 1e-1
 	# training
-	AlfvenDetectors.fit!(model, x, 5, 100, β =0.1, cbit=5, history = hist, verb = false)
+	AlfvenDetectors.fit!(model, x, 5, 100, beta =0.1, cbit=5, history = hist, verb = false)
 	is, ls = get(hist, :loss)
 	@test ls[1] > ls[end] 
 	# were the layers realy trained?
@@ -80,7 +80,7 @@ paramchange(frozen_params, params) =
 	@test size(_x) == (2*xdim,N)
 	# loss functions
 	prels = AlfvenDetectors.getlosses(model, x, 10, 0.01)
-	AlfvenDetectors.fit!(model, x, 5, 500, β =0.1, runtype = "fast")
+	AlfvenDetectors.fit!(model, x, 5, 500, beta =0.1, runtype = "fast")
 	postls = AlfvenDetectors.getlosses(model, x, 10, 0.01)
 	@test any(x->x[1]>x[2], zip(prels, postls))
 	gx = AlfvenDetectors.sample(model)
@@ -104,7 +104,7 @@ paramchange(frozen_params, params) =
 	@test size(_x) == (1+xdim,N)
 	# loss functions
 	prels = AlfvenDetectors.getlosses(model, x, 10, 0.01)
-	AlfvenDetectors.fit!(model, x, 5, 100, β =0.1, runtype = "fast")
+	AlfvenDetectors.fit!(model, x, 5, 100, beta =0.1, runtype = "fast")
 	postls = AlfvenDetectors.getlosses(model, x, 10, 0.01)
 	@test all(x->x[1]>x[2], zip(prels, postls))
 	gx = AlfvenDetectors.sample(model)
@@ -141,8 +141,10 @@ paramchange(frozen_params, params) =
 	kernelsize = 3
 	channels = (2,4,6)
 	scaling = [(2,2),(2,2),(1,1)]
+	batchnorm = true
 	# unit
-	model = AlfvenDetectors.ConvVAE(insize, latentdim, nconv, kernelsize, channels, scaling)
+	model = AlfvenDetectors.ConvVAE(insize, latentdim, nconv, kernelsize, channels, scaling;
+		batchnorm = batchnorm)
 	@test AlfvenDetectors.isconvvae(model)
     @test AlfvenDetectors.getlsize(model) == latentdim
 	hist = MVHistory()
@@ -161,7 +163,7 @@ paramchange(frozen_params, params) =
 
 	# diag
 	model = AlfvenDetectors.ConvVAE(insize, latentdim, nconv, kernelsize, channels, scaling; 
-		variant=:diag)
+		variant=:diag, batchnorm = batchnorm)
 	@test AlfvenDetectors.isconvvae(model)
     @test AlfvenDetectors.getlsize(model) == latentdim
 	hist = MVHistory()
@@ -180,7 +182,7 @@ paramchange(frozen_params, params) =
 
 	#scalar
 	model = AlfvenDetectors.ConvVAE(insize, latentdim, nconv, kernelsize, channels, scaling; 
-		variant=:scalar)
+		variant=:scalar, batchnorm = batchnorm)
 	@test AlfvenDetectors.isconvvae(model)
     @test AlfvenDetectors.getlsize(model) == latentdim
 	hist = MVHistory()

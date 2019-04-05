@@ -96,7 +96,7 @@ if isdir(datapath)
 			:variant => :unit
 			)
 		fit_kwargs = Dict(
-			:β => 1.0,
+			:beta => 1.0,
 			:L => 1
 			)
 
@@ -122,7 +122,7 @@ if isdir(datapath)
 		model_kwargs = Dict(
 			)
 		fit_kwargs = Dict(
-			:β => 1.0,
+			:beta => 1.0,
 			:L => 1
 			)
 
