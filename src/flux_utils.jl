@@ -608,3 +608,17 @@ end
 
 ##### ResNet module ####
 
+struct ResBlock
+    conv
+end
+
+function ResBlock(ks,cs,a=identity;kwargs...)
+    # compute the padding margins so that the size of the image does not change
+    pad = map(x->floor(Int,x/2),ks)
+    conv = Flux.Conv(ks,cs,a;pad=pad,kwargs...)
+    return ResBlock(conv)
+end
+
+(rb::ResBlock)(X::Array{T,4}) where T = rb.conv(X) .+ X
+
+Flux.@treelike ResBlock

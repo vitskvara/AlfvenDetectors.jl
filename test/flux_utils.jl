@@ -418,4 +418,20 @@ paramchange(frozen_params, params) =
 	@test length(model.layers[3].layers[1].layers) == 3
 	@test size(model(y)) == size(X)
 
+	# res block
+	m,n,c,k = (9,6,1,2)
+	X = randn(Float32,m,n,c,k)
+	model = AlfvenDetectors.ResBlock((3,3), 1=>2, relu)
+	y = model(X)
+	@test size(y) == (m,n,2,k)
+	loss(x) = Flux.mse(model(x), x)
+	opt = ADAM()
+	L = loss(X)
+	l = Flux.Tracker.data(L)
+	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
+	#update!
+	Flux.back!(L)
+	AlfvenDetectors.update!(model,opt)
+	@test all(paramchange(frozen_params, collect(params(model))))
+	@test loss(X) < l
 end
