@@ -605,3 +605,6 @@ function convdecoder(outsize, latentdim::Int, nconv::Int, kernelsize, channels,
     
     return convdecoder(outsize, ds, das, ks, cs, scs, cas, sts, bns; layertype=layertype) 
 end
+
+##### ResNet module ####
+
