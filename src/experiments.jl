@@ -101,7 +101,7 @@ function create_filename(modelname, model_args, model_kwargs, fit_kwargs, kwargs
 	for (key, val) in kwargs
 		filename *= "_$(key)-$(val)"
 	end
-	filename *= "$(now()).bson"
+	filename *= "_$(now()).bson"
 
 	return filename
 end
