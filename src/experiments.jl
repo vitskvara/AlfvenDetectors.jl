@@ -83,14 +83,40 @@ collect_signals(shots,readfun; warns=true, type="valid") =
 	filter(x->!any(isnan,x), map(x->get_signal(x,readfun; warns=warns, type=type), shots))
 
 """
+	create_filename(modelname, model_args, model_kwargs, fit_kwargs, kwargs...)
+
+Create model filename.
+"""
+function create_filename(modelname, model_args, model_kwargs, fit_kwargs, kwargs...)
+	filename = "$(modelname)"
+	for pair in model_args
+		filename*="_$(pair[1])-$(pair[2])"
+	end
+	for (key, val) in model_kwargs
+		filename *= "_$(key)-$(val)"
+	end
+	for (key, val) in fit_kwargs
+		filename *= "_$(key)-$(val)"
+	end
+	for (key, val) in kwargs
+		filename *= "_$(key)-$(val)"
+	end
+	filename *= "$(now()).bson"
+
+	return filename
+end
+
+"""
 	fitsave_unsupervised(modelname, batchsize, outer_nepochs, inner_nepochs,
-	 model_args, model_kwargs, fit_kwargs, savepath)
+	 model_args, model_kwargs, fit_kwargs, savepath[,optname, eta, usegpu,
+	 filename,verb,savepoint)
 
 Create, fit and save a model.
 """
 function fitsave_unsupervised(data, modelname, batchsize, outer_nepochs, inner_nepochs,
 	 model_args, model_kwargs, fit_kwargs, savepath;
-	 optname = "ADAM", eta = 0.001, usegpu = false, filename = "", verb = true)
+	 optname = "ADAM", eta = 0.001, usegpu = false, filename = "", verb = true,
+	 savepoint=1)
 	# create the model
 	model = AlfvenDetectors.construct_model(modelname, [x[2] for x in model_args]...; model_kwargs...)
 	usegpu ? model = model |> gpu : nothing
@@ -102,25 +128,10 @@ function fitsave_unsupervised(data, modelname, batchsize, outer_nepochs, inner_n
 		opt = eval(Meta.parse(optname))(eta)
 	end
 
-	# now create the filename
+	# append time and bson suffix to filename
 	if filename == ""
-		filename = "$(modelname)"
-		for pair in model_args
-			filename*="_$(pair[1])-$(pair[2])"
-		end
-		for (key, val) in model_kwargs
-			filename *= "_$(key)-$(val)"
-		end
-		filename *= "_batchsize-$batchsize"
-		filename *= "_nepochs-$(outer_nepochs*inner_nepochs)"
-		filename *= "_opt-$optname"
-		filename *= "_eta-$eta"
-		for (key, val) in fit_kwargs
-			filename *= "_$(key)-$(val)"
-		end
-		filename *= "_$(now())"
+		filename *= "$(now()).bson"
 	end
-	filename = joinpath(savepath, "$(filename).bson")
 	
 	# fit the model
 	t = 0.0
@@ -133,14 +144,21 @@ function fitsave_unsupervised(data, modelname, batchsize, outer_nepochs, inner_n
 		t += restime[2]
 		opt = restime[1]
 
-		# save the model structure, history and time of training after each epoch
+		# save the model structure, history and time of training after each savepoint epoch
 		# to load this, you need to load Flux, AlfvenDetectors and ValueHistories
-		cpumodel = model |> cpu
-		bson(filename, model = cpumodel, history = history, time = t)
+		if epoch%savepoint==0
+			# replace the number of epochs in the filename string with the current number of epochs
+			fs = split(filename, "_")
+			fs[collect(1:length(fs))[map(x->occursin("nepochs",x), fs)][1]] = "nepochs-$epoch"
+			filename = join(fs, "_")
+			cpumodel = model |> cpu
+			bson(joinpath(savepath, filename), model = cpumodel, history = history, time = t)
+		end
 		GC.gc()
 	end
+	# save the final version
 	cpumodel = model |> cpu
-	bson(filename, model = cpumodel, history = history, time = t, timeall=tall[2])
+	bson(joinpath(savepath, filename), model = cpumodel, history = history, time = t, timeall=tall[2])
 	
 	println("model and timing saved to $filename")
 

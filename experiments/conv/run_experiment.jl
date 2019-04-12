@@ -106,6 +106,10 @@ s = ArgParseSettings()
 	"--savepath"
 		default = ""
 		help = "alternative saving path"
+	"--savepoint"
+		default = 100
+		arg_type = Int
+		help = "how often should an intermediate state of the model be saved"
 end
 parsed_args = parse_args(ARGS, s)
 modelname = "Conv"*parsed_args["modelname"]
@@ -137,6 +141,7 @@ memoryefficient = parsed_args["memory-efficient"]
 test = parsed_args["test"]
 iptrunc = parsed_args["ip-trunc"]
 svpth = parsed_args["savepath"]
+savepoint = parsed_args["savepoint"]
 if measurement_type == "mscamp"
 	readfun = AlfvenDetectors.readmscamp
 elseif measurement_type == "mscphase"
@@ -185,11 +190,11 @@ labeled_shots = labels_shots[:,1]
 Random.seed!(12345)
 train_inds = sample(1:length(labels[labels.==label]), 10, replace=false)
 train_shots = labeled_shots[labels.==label][train_inds]
-println(train_shots)
 if nshots <= 10
 	shots = filter(x-> any(map(y -> occursin(y,x), string.(train_shots)[1:nshots])), shots)
 else
-	shots = unique(vcat(shots[sample(1:length(shots), nshots-10, replace=false)], filter(x-> any(map(y -> occursin(y,x), string.(train_shots))), shots)))
+	shots = unique(vcat(shots[sample(1:length(shots), nshots-10, replace=false)], 
+		filter(x-> any(map(y -> occursin(y,x), string.(train_shots))), shots)))
 end
 println("using $(shots)")
 shots = joinpath.(datapath, shots)
@@ -233,6 +238,16 @@ if occursin("VAE", modelname)
 end
 
 ### run and save the model
+filename_kwargs = Dict(
+	:batchsize => batchsize,
+	:nepochs => outer_nepochs*inner_nepochs,
+	:opt => optimiser,
+	:eta => eta,
+	:nshots => nshots,
+	:noalfven => noalfven
+)
+filename = AlfvenDetectors.create_filename(modelname, model_args, model_kwargs, fit_kwargs, 
+	filename_kwargs...)
 model, history, t = AlfvenDetectors.fitsave_unsupervised(data, modelname, batchsize, 
 	outer_nepochs, inner_nepochs, model_args, model_kwargs, fit_kwargs, savepath; 
-	optname=optimiser, eta=eta, usegpu=usegpu)
+	optname=optimiser, eta=eta, usegpu=usegpu, savepoint=savepoint, filename=filename)
