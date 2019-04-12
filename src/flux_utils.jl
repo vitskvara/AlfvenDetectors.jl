@@ -315,7 +315,7 @@ function convmaxpool(ks::Int, channels::Pair, scales::Union{Tuple,Int};
 end
 
 """
-    convencoder(ins,ds,das,ks,cs,scs,as,sts,bns)
+    convencoder(ins,ds,das,ks,cs,scs,as,sts,bns[,lastbatchnorm])
 
 Create a convolutional encoder with dense output layer(s).
 
@@ -328,11 +328,12 @@ scs = vector of scale factors
 cas = vector of convolutional activations
 sts = vector of strides
 bns = binary vector of batchnorm usage
+outbatchnorm [false] = boolean - should batchnorm be used after the output layer?
 """
 function convencoder(ins,ds::AbstractVector, das::AbstractVector,
     ks::AbstractVector, cs::AbstractVector, 
     scs::AbstractVector, cas::AbstractVector, sts::AbstractVector,
-    bns::AbstractVector)
+    bns::AbstractVector; outbatchnorm=false)
     conv_layers = Flux.Chain(map(x->convmaxpool(x[1],x[2],x[3];activation=x[4],stride=x[5],batchnorm=x[6])
         ,zip(ks,cs,scs,cas,sts,bns))...)
     # there is a problem with automatic determination of the input size of the last dense layer
@@ -345,8 +346,14 @@ function convencoder(ins,ds::AbstractVector, das::AbstractVector,
     ds = vcat([convoutdim], ds)
     ndl = length(ds)-1 # no of dense layers
     # and also the previous ones if needed
-    dense_layers = Flux.Chain(
-            map(i->Flux.Dense(ds[i],ds[i+1],((i==ndl) ? identity : das[i])),1:ndl)...)
+    if outbatchnorm
+        dense_layers = Flux.Chain(
+                map(i->Flux.Dense(ds[i],ds[i+1],((i==ndl) ? identity : das[i])),1:ndl)...,
+                BatchNorm(ds[end]))
+    else
+        dense_layers = Flux.Chain(
+                map(i->Flux.Dense(ds[i],ds[i+1],((i==ndl) ? identity : das[i])),1:ndl)...)
+    end
     # finally put it all into one chain
     Flux.Chain(conv_layers,
         x->reshape(x,:,size(x,4)),
@@ -355,7 +362,7 @@ function convencoder(ins,ds::AbstractVector, das::AbstractVector,
 end
 """
     convencoder(insize, latentdim, nconv, kernelsize, channels, scaling,
-        [ndense, dsizes, activation, stride, batchnorm])
+        [ndense, dsizes, activation, stride, batchnorm, outbatchnorm])
 
 Create a convolutional encoder.
 
@@ -370,9 +377,11 @@ dsizes = if ndense > 1, specify a list of latent layer widths of length = ndense
 activation = default relu
 lstride = length of stride, default 1, can be a scalar or a list of scalars
 batchnorm = boolean
+outbatchnorm = boolean - should batchnorm be used after the output layer?
 """
 function convencoder(insize, latentdim::Int, nconv::Int, kernelsize, channels, 
-    scaling; ndense::Int=1, dsizes=nothing, activation=relu, lstride=1, batchnorm=false)
+    scaling; ndense::Int=1, dsizes=nothing, activation=relu, lstride=1, batchnorm=false,
+    outbatchnorm=false)
     # construct ds - vector of widths of dense layers
     if ndense>1
         (dsizes==nothing) ? error("If more than one Dense layer is require, specify their widths in dsizes.") : nothing 
@@ -417,7 +426,7 @@ function convencoder(insize, latentdim::Int, nconv::Int, kernelsize, channels,
         bns = fill(batchnorm,nconv)
     end
     
-    return convencoder(insize, ds, das, ks, cs, scs, cas, sts, bns) 
+    return convencoder(insize, ds, das, ks, cs, scs, cas, sts, bns; outbatchnorm=outbatchnorm) 
 end
 
 """

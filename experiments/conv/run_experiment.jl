@@ -2,6 +2,9 @@ using AlfvenDetectors
 using Flux
 using ValueHistories
 using ArgParse
+using DelimitedFiles
+using Random
+using StatsBase
 
 # use argparse to extract the command line arguments
 # name of algorithm, usegpu, latentdim, no of layers, coils?
@@ -39,9 +42,12 @@ s = ArgParseSettings()
     	arg_type = Int
     	nargs = '+'
     "--nshots"
-    	default = 6
+    	default = 10
     	arg_type = Int
     	help = "number of shots used"
+    "--no-alfven"
+    	action = :store_true
+    	help = "dont use alfven data for training"
     "--measurement"
     	default = "uprobe"
     	help = "one of [mscamp, mscphase, mscampphase or uprobe]"
@@ -60,6 +66,12 @@ s = ArgParseSettings()
 	"--batchnorm"
 		action = :store_true
 		help = "use batchnorm in convolutional layers"
+	"--outbatchnorm"
+		action = :store_true
+		help = "use batchnorm in the last output layer of the decoder"
+	"--resblock"
+		action = :store_true
+		help = "use ResNet blocks for convolutional layers"
 	"--eta"
 		default = Float32(0.001)
 		arg_type = Float32
@@ -106,11 +118,14 @@ length(kernelsize) == 1 ? kernelsize = kernelsize[1] : nothing
 scaling = parsed_args["scaling"]
 length(scaling) == 1 ? scaling = scaling[1] : nothing
 nshots = parsed_args["nshots"]
+noalfven = parsed_args["no-alfven"]
 measurement_type = parsed_args["measurement"]
 usegpu = parsed_args["gpu"]
 coils = parsed_args["coils"]
 batchsize = parsed_args["batchsize"]
 batchnorm = parsed_args["batchnorm"]
+outbatchnorm = parsed_args["outbatchnorm"]
+resblock = parsed_args["resblock"]
 eta = parsed_args["eta"]
 beta = parsed_args["beta"]
 optimiser = parsed_args["optimiser"]
@@ -132,20 +147,20 @@ elseif measurement_type == "uprobe"
 	readfun = AlfvenDetectors.readnormlogupsd
 end
 ### set the rest of the stuff
-
 if usegpu
 	using CuArrays
 end
 
 hostname = gethostname()
 if hostname == "vit-ThinkPad-E470"
-	datapath = "/home/vit/vyzkum/alfven/cdb_data/data_sample"
+	datapath = "/home/vit/vyzkum/alfven/cdb_data/uprobe_data"
 	savepath = "/home/vit/vyzkum/alfven/experiments/conv/$measurement_type"
 elseif hostname == "tarbik.utia.cas.cz"
-	datapath = "/home/skvara/work/alfven/cdb_data/data_sample"
+	datapath = "/home/skvara/work/alfven/cdb_data/uprobe_data"
 	savepath = "/home/skvara/work/alfven/experiments/conv/$measurement_type"
 elseif hostname == "soroban-node-03"
-	datapath = "/compass/Shared/Exchange/Havranek/Link to Alfven"
+#	datapath = "/compass/Shared/Exchange/Havranek/Link to Alfven"
+	datapath = "/compass/home/skvara/no-backup/uprobe_data"
 	savepath = "/compass/home/skvara/alfven/experiments/conv/$measurement_type"
 end
 if test
@@ -161,16 +176,22 @@ end
 mkpath(savepath)
 
 shots = readdir(datapath)
-# select only some shots
-if nshots <= 6
-	shots = filter(x-> any(map(y -> occursin(y,x), 
-		["10370", "10514", "10800", "10866", "10870", "10893"][1:nshots])), 
-		shots)
+labels_shots = readdlm(joinpath(dirname(@__FILE__), "data/labeled_shots.csv"), ',', Int32)
+label = Int(!noalfven)
+labels = labels_shots[:,2]
+labeled_shots = labels_shots[:,1] 
+# select only some shots, first 10 are pseudorandomly selected from a labeled subset
+# original training subset ["10370", "10514", "10800", "10866", "10870", "10893"]
+Random.seed!(12345)
+train_inds = sample(1:length(labels[labels.==label]), 10, replace=false)
+train_shots = labeled_shots[labels.==label][train_inds]
+println(train_shots)
+if nshots <= 10
+	shots = filter(x-> any(map(y -> occursin(y,x), string.(train_shots)[1:nshots])), shots)
 else
-	shots = vcat(shots[1:(nshots-6)], filter(x-> any(map(y -> occursin(y,x), 
-		["10370", "10514", "10800", "10866", "10870", "10893"])), 
-		shots))
+	shots = unique(vcat(shots[sample(1:length(shots), nshots-10, replace=false)], filter(x-> any(map(y -> occursin(y,x), string.(train_shots))), shots)))
 end
+println("using $(shots)")
 shots = joinpath.(datapath, shots)
 
 if test
@@ -199,7 +220,8 @@ model_args = [
 		:scaling => scaling
 	]
 model_kwargs = Dict{Symbol, Any}(
-	:batchnorm => batchnorm
+	:batchnorm => batchnorm,
+	:outbatchnorm => outbatchnorm
 	)
 fit_kwargs = Dict(
 		:usegpu => usegpu,

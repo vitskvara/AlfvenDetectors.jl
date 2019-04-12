@@ -306,6 +306,14 @@ paramchange(frozen_params, params) =
 	@test size(model(X)) == (latentdim,3)
 	@test size(model.layers[1](X)) == (2,1,16,3) 
 	@test length(model.layers[1].layers[1].layers) == 3
+	# outbatchnorm
+	scaling = 2
+	model = AlfvenDetectors.convencoder(insize, latentdim, nconv, kernelsize, channels, scaling;
+		outbatchnorm=true)
+	@test size(model(X)) == (latentdim,3)
+	@test size(model.layers[1](X)) == (2,1,16,3) 
+	@test length(model.layers[3].layers) == 2
+	@test size(model(X)) == (latentdim,3)
 
 	# upscaleconv
 	X = randn(2,4,4,10)
