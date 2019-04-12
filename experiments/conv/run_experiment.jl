@@ -66,7 +66,7 @@ s = ArgParseSettings()
 	"--batchnorm"
 		action = :store_true
 		help = "use batchnorm in convolutional layers"
-	"--outbatchnorm"
+	"--no-outbatchnorm"
 		action = :store_true
 		help = "use batchnorm in the last output layer of the decoder"
 	"--resblock"
@@ -124,7 +124,7 @@ usegpu = parsed_args["gpu"]
 coils = parsed_args["coils"]
 batchsize = parsed_args["batchsize"]
 batchnorm = parsed_args["batchnorm"]
-outbatchnorm = parsed_args["outbatchnorm"]
+outbatchnorm = !(parsed_args["no-outbatchnorm"])
 resblock = parsed_args["resblock"]
 eta = parsed_args["eta"]
 beta = parsed_args["beta"]
