@@ -159,6 +159,36 @@ Normalize values of x so that that lie in the interval [0,1].
 normalize(x) = (x .- minimum(x))/(maximum(x) - minimum(x))
 
 """
+	readtcoh(filepath::String; warns=true)
+"""
+readtcoh(filepath::String; warns=true) = readsignal(filepath, "t_cohere"; warns=warns)
+
+"""
+	readfcoh(filepath::String; warns=true)
+"""
+readfcoh(filepath::String; warns=true) = readsignal(filepath, "f_cohere"; warns=warns)
+
+"""
+	readtupsd(filepath::String; warns=true)
+"""
+readtupsd(filepath::String; warns=true) = readsignal(filepath, "t_Uprobe"; warns=warns)
+
+"""
+	readfupsd(filepath::String; warns=true)
+"""
+readfupsd(filepath::String; warns=true) = readsignal(filepath, "f_Uprobe"; warns=warns)
+
+"""
+	readfnoscale(filepath::String; warns=true)
+"""
+readfnoscale(filepath::String; warns=true) = readsignal(filepath, "fnoscale"; warns=warns)
+
+"""
+	readtfnoscale(filepath::String; warns=true)
+"""
+readtfnoscale(filepath::String; warns=true) = readsignal(filepath, "t_fnoscale"; warns=warns)
+
+"""
 	readmscamp(filepath::String, coil; warns=true)
 """
 readmscamp(filepath::String, coil; warns=true) = readsignal(filepath, "Mirnov_coil_A&C_theta_$(coil)_coherems"; warns=warns)
@@ -201,7 +231,7 @@ readnormlogupsd(filepath::String; warns=true) = normalize(readlogupsd(filepath; 
 """
 	getcoillist(keynames)
 
-Extract all availabel Mirnov coils from a list of strings (keys of a hdf5 file).
+Extract all available Mirnov coils from a list of strings (keys of a hdf5 file).
 """
 function getcoillist(keynames)
 	ks = filter(x->occursin("Mirnov",x), keynames)

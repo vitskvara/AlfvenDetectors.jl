@@ -54,6 +54,20 @@ if isdir(datapath)
 	@test alldata[heigth+1:2*heigth,1:width] == convdata[:,:,1,2]
 	@test floor(Int,size(alldata,1)/heigth)*size(alldata,2) == size(convdata,2)*size(convdata,4)
 
+	# get the labeled data information
+	shotnos, labels = AlfvenDetectors.labeled_data()
+	@test length(shotnos) == length(labels) == 40
+	shotnos, labels, tstarts, fstarts = AlfvenDetectors.labeled_patches()
+	@test length(shotnos) == length(labels) == length(tstarts) == length(fstarts) == 302
+	
+	# get a patch
+	ipatch = 10
+	patch, t, f = AlfvenDetectors.get_patch(datapath, shotnos[ipatch], tstarts[ipatch],
+		fstarts[ipatch], 128, AlfvenDetectors.readnormlogupsd)
+	@test size(patch) == (128,128)
+	@test length(t) == 128
+	@test length(f) == 128
+
 	# msc amplitude + AE
 	rawdata = hcat(AlfvenDetectors.collect_signals(shots, AlfvenDetectors.readmscampphase, coils; type="flattop")...)
 	data = rawdata |> gpu
@@ -76,7 +90,7 @@ if isdir(datapath)
 		model, history, t = AlfvenDetectors.fitsave_unsupervised(data, modelname, batchsize, 
 			outer_nepochs, inner_nepochs,
 			model_args, model_kwargs, fit_kwargs, 
-			savepath; filename = "ae_test", verb = verb)
+			savepath; filename = "ae_test.bson", verb = verb)
 		@test isfile(joinpath(savepath,"ae_test.bson"))
 	end
 
@@ -103,7 +117,7 @@ if isdir(datapath)
 		model, history, t = AlfvenDetectors.fitsave_unsupervised(data, modelname, batchsize, 
 			outer_nepochs, inner_nepochs,
 			model_args, model_kwargs, fit_kwargs, 
-			savepath; optname = "NADAM", eta=0.0005, filename = "vae_test", verb = verb)
+			savepath; optname = "NADAM", eta=0.0005, filename = "vae_test.bson", verb = verb)
 		@test isfile(joinpath(savepath,"vae_test.bson"))
 	end
 
@@ -129,7 +143,7 @@ if isdir(datapath)
 		model, history, t = AlfvenDetectors.fitsave_unsupervised(data, modelname, batchsize, 
 			outer_nepochs, inner_nepochs,
 			model_args, model_kwargs, fit_kwargs, 
-			savepath; filename = "tsvae_test", verb = verb)
+			savepath; filename = "tsvae_test.bson", verb = verb)
 		@test isfile(joinpath(savepath,"tsvae_test.bson"))
 	end
 	
@@ -164,9 +178,11 @@ if isdir(datapath)
 		model, history, t = AlfvenDetectors.fitsave_unsupervised(convdata, modelname, batchsize, 
 			outer_nepochs, inner_nepochs,
 			model_args, model_kwargs, fit_kwargs, 
-			savepath; usegpu=usegpu, filename = "convtsvae_test", verb = verb)
+			savepath; usegpu=usegpu, filename = "convtsvae_test.bson", verb = verb)
 		@test isfile(joinpath(savepath,"convtsvae_test.bson"))
 	end
 	
 	rm(savepath, recursive = true)
+
+
 end

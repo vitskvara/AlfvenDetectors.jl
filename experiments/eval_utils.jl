@@ -103,16 +103,3 @@ function pretty_params(params)
     end
     return s
 end
-
-"""
-    labeled_data()
-
-Get the information ión the few hand-labeled shots.
-"""
-function labeled_data()
-    f = joinpath(dirname(@__FILE__), "conv/data/labeled_shots.csv")
-    labels_shots = readdlm(f, ',', Int32)
-    labels = labels_shots[:,2]
-    labeled_shots = labels_shots[:,1] 
-    return labeled_shots, labels
-end

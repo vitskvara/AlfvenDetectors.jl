@@ -156,6 +156,26 @@ function basic_callback(hist,verb::Bool,eta::Real,show_it::Int;
     basic_callback(hist,eta,0,p,Array{Any,1}(),verb,epoch_size,show_it)
 end
 
+##### ResNet module ####
+
+struct ResBlock
+    main_conv
+    channel_conv
+end
+
+function ResBlock(ks::Tuple,cs::Pair,a=identity;kwargs...)
+    # compute the padding margins so that the size of the image does not change
+    map(s-> (s%2==0) ? throw(DomainError(s,"ResBlock is only available for odd kernel sizes")) : nothing,ks)
+    pad = map(x->floor(Int,x/2),ks)
+    main_conv = Flux.Conv(ks,cs,a;pad=pad,kwargs...)
+    channel_conv = Flux.Conv((1,1),cs)
+    return ResBlock(main_conv,channel_conv)
+end
+
+(rb::ResBlock)(X::AbstractArray{T,4}) where T = rb.main_conv(X) + rb.channel_conv(X)
+
+Flux.@treelike ResBlock
+
 ######################################################
 ### functions for convolutional networks upscaling ###
 ######################################################
@@ -281,6 +301,11 @@ function zeropad(x::AbstractArray{T,4},widths) where T
     return Tracker.collect(res)
 end
 
+function SameConv(ks, channels, activation=identity; kwargs...)
+    map(s-> (s%2==0) ? throw(DomainError(s,"SameConv is only available for odd kernel sizes")) : nothing,ks)
+    conv = Flux.Conv(ks,channels,activation;pad=map(x->floor(Int,x/2),ks),kwargs...)
+end
+
 """
     convmaxpool(ks, channels, scales; [activation, stride, batchnorm])
 
@@ -293,25 +318,17 @@ This will have convolutional kernel of size (3,3), produce 16 channels out of 8 
 downscale 4 time in each dimension. If batchnorm is true, batch normalisation is going to be used.
 """
 function convmaxpool(ks::Int, channels::Pair, scales::Union{Tuple,Int}; 
-    activation = relu, stride::Int=1, batchnorm = false)
+    activation = relu, stride::Int=1, batchnorm = false, resblock=false)
     if !(typeof(scales) <: Tuple)   
         scales = (scales,scales)
     end
-    padwidth = floor(Int,ks/2)
-    if batchnorm
-        return Flux.Chain(
-                    Flux.Conv((ks,ks), channels, activation, pad=(padwidth,padwidth),
-                        stride = (stride,stride)),
+    layer = (resblock) ? ResBlock : SameConv
+    return batchnorm ? 
+        Flux.Chain(layer((ks,ks), channels, activation, stride = (stride,stride)),
                     x->maxpool(x,scales),
-                    BatchNorm(channels[2])
-                )
-    else
-        return Flux.Chain(
-                    Flux.Conv((ks,ks), channels, activation, pad=(padwidth,padwidth),
-                        stride = (stride,stride)),
-                    x->maxpool(x,scales)
-                )
-    end
+                    BatchNorm(channels[2])) : 
+        Flux.Chain(layer((ks,ks), channels, activation, stride = (stride,stride)),
+                    x->maxpool(x,scales))
 end
 
 """
@@ -328,14 +345,16 @@ scs = vector of scale factors
 cas = vector of convolutional activations
 sts = vector of strides
 bns = binary vector of batchnorm usage
+rbs = binary vector of resblock usage
 outbatchnorm [false] = boolean - should batchnorm be used after the output layer?
 """
 function convencoder(ins,ds::AbstractVector, das::AbstractVector,
     ks::AbstractVector, cs::AbstractVector, 
     scs::AbstractVector, cas::AbstractVector, sts::AbstractVector,
-    bns::AbstractVector; outbatchnorm=false)
-    conv_layers = Flux.Chain(map(x->convmaxpool(x[1],x[2],x[3];activation=x[4],stride=x[5],batchnorm=x[6])
-        ,zip(ks,cs,scs,cas,sts,bns))...)
+    bns::AbstractVector, rbs::AbstractVector; outbatchnorm=false)
+    conv_layers = Flux.Chain(map(x->convmaxpool(x[1],x[2],x[3];
+        activation=x[4],stride=x[5],batchnorm=x[6],resblock=x[7])
+        ,zip(ks,cs,scs,cas,sts,bns,rbs))...)
     # there is a problem with automatic determination of the input size of the last dense layer
     # it can be computed from the indims and the size, padding, stride and scale of the convmaxpool layer
     # however that is quit complicated so lets use a trick - we initialize a random array of indim size,
@@ -362,7 +381,7 @@ function convencoder(ins,ds::AbstractVector, das::AbstractVector,
 end
 """
     convencoder(insize, latentdim, nconv, kernelsize, channels, scaling,
-        [ndense, dsizes, activation, stride, batchnorm, outbatchnorm])
+        [ndense, dsizes, activation, stride, batchnorm, outbatchnorm, resblock])
 
 Create a convolutional encoder.
 
@@ -378,10 +397,11 @@ activation = default relu
 lstride = length of stride, default 1, can be a scalar or a list of scalars
 batchnorm = boolean
 outbatchnorm = boolean - should batchnorm be used after the output layer?
+resblock = boolean - should resnet blocks be used?
 """
 function convencoder(insize, latentdim::Int, nconv::Int, kernelsize, channels, 
     scaling; ndense::Int=1, dsizes=nothing, activation=relu, lstride=1, batchnorm=false,
-    outbatchnorm=false)
+    outbatchnorm=false, resblock=false)
     # construct ds - vector of widths of dense layers
     if ndense>1
         (dsizes==nothing) ? error("If more than one Dense layer is require, specify their widths in dsizes.") : nothing 
@@ -425,12 +445,20 @@ function convencoder(insize, latentdim::Int, nconv::Int, kernelsize, channels,
     else
         bns = fill(batchnorm,nconv)
     end
+    # rbs - vector of resnet block usage
+    if typeof(resblock) <: AbstractVector
+        @assert length(resblock) == nconv
+        rbs = resblock
+    else
+        rbs = fill(resblock,nconv)
+    end
     
-    return convencoder(insize, ds, das, ks, cs, scs, cas, sts, bns; outbatchnorm=outbatchnorm) 
+    
+    return convencoder(insize, ds, das, ks, cs, scs, cas, sts, bns, rbs; outbatchnorm=outbatchnorm) 
 end
 
 """
-    upscaleconv(ks, channels, scales [,activation, stride, batchnorm]
+    upscaleconv(ks, channels, scales [,activation, stride, batchnorm, resblock]
 
 Upscaling coupled with convolution.
 
@@ -440,29 +468,21 @@ This will upscale the input in x and y two times and then apply
 a kernel of size 5 to reduce the number of channels from 4 to 2.
 """
 function upscaleconv(ks::Int, channels::Pair, scales::Union{Tuple,Int};
-    activation = relu, stride::Int=1, batchnorm = false)
+    activation = relu, stride::Int=1, batchnorm = false, resblock=false)
     if !(typeof(scales) <: Tuple)   
         scales = (scales,scales)
     end
-    padwidth = floor(Int,ks/2)
-    if batchnorm
-        return Flux.Chain(
-                BatchNorm(channels[1]),
+    layer = resblock ? ResBlock : SameConv
+    return batchnorm ?
+        Flux.Chain(BatchNorm(channels[1]),
                 x -> upscale(x,scales),
-                Flux.Conv((ks,ks), channels, activation; pad=(padwidth,padwidth),
-                    stride = (stride,stride))
-        )
-    else
-        return Flux.Chain(
-                    x -> upscale(x,scales),
-                    Flux.Conv((ks,ks), channels, activation; pad=(padwidth,padwidth),
-                        stride = (stride,stride))
-            )
-    end
+                layer((ks,ks), channels, activation; stride = (stride,stride))) :
+        Flux.Chain(x -> upscale(x,scales),
+                layer((ks,ks), channels, activation; stride = (stride,stride)))
 end
 
 """
-    convtransposeconv(ks, channels, scales [,activation, stride, batchnorm]
+    convtransposeconv(ks, channels, scales [,activation, stride, batchnorm,resblock]
 
 Transposed convolution followed by convolution for upscaling.
 
@@ -472,25 +492,17 @@ This will upscale the input in x and y two times and then apply
 a kernel of size 5 to reduce the number of channels from 4 to 2.
 """
 function convtransposeconv(ks::Int, channels::Pair, scales::Union{Tuple,Int};
-    activation = relu, stride::Int=1, batchnorm=false)
+    activation = relu, stride::Int=1, batchnorm=false, resblock=false)
     if !(typeof(scales) <: Tuple)   
         scales = (scales,scales)
     end
-    padwidth = floor(Int,ks/2)
-    if batchnorm
-        return Flux.Chain(
-                BatchNorm(channels[1]),
+    layer = resblock ? ResBlock : SameConv
+    return batchnorm ?
+        Flux.Chain(BatchNorm(channels[1]),
                 Flux.ConvTranspose(scales, channels[1]=>channels[1], stride=scales),
-                Flux.Conv((ks,ks), channels, activation; pad=(padwidth,padwidth),
-                    stride = (stride,stride))
-        )
-    else
-        return Flux.Chain(
-                    Flux.ConvTranspose(scales, channels[1]=>channels[1], stride=scales),
-                    Flux.Conv((ks,ks), channels, activation; pad=(padwidth,padwidth),
-                        stride = (stride,stride))
-            )
-    end
+                layer((ks,ks), channels, activation, stride = (stride,stride))) :
+        Flux.Chain(Flux.ConvTranspose(scales, channels[1]=>channels[1], stride=scales),
+                    layer((ks,ks), channels, activation; stride = (stride,stride)))
 end
 
 """
@@ -507,11 +519,12 @@ scs = vector of scale factors
 cas = vector of convolutional activations one shorter than the rest (last activation is always identity)
 sts = vector of strides
 bns = boolean vector of batch normalization switches
+rbs = boolean vector of resnet block switches
 layertype = one of ["transpose", "upscale"]
 """
 function convdecoder(outs, ds::AbstractVector, das::AbstractVector, ks::AbstractVector, 
     cs::AbstractVector, scs::AbstractVector, cas::AbstractVector, sts::AbstractVector,
-    bns::AbstractVector; layertype = "transpose")
+    bns::AbstractVector, rbs::AbstractVector; layertype = "transpose")
     # the second one should be basically just a reversed first one
     conv_layers = Flux.Chain(map(x->convmaxpool(x[1],x[2],x[3];activation=x[4],stride=x[5]),
         zip(reverse(ks),map(x->x[2]=>x[1],reverse(cs)),
@@ -525,8 +538,9 @@ function convdecoder(outs, ds::AbstractVector, das::AbstractVector, ks::Abstract
     elseif layertype == "upscale"
         uplayer = upscaleconv
     end
-    upscaleconv_layers = Flux.Chain(map(x->uplayer(x[1],x[2],x[3].*x[5];activation=x[4],stride=x[5],batchnorm=x[6]),
-        zip(ks,cs,scs,cas,sts,bns))...)
+    upscaleconv_layers = Flux.Chain(map(x->uplayer(x[1],x[2],x[3].*x[5];
+        activation=x[4],stride=x[5],batchnorm=x[6],resblock=x[7]),
+        zip(ks,cs,scs,cas,sts,bns,rbs))...)
     # there is a problem with automatic determination of the reshape dims
     # it can be computed from the indims and the size, padding, stride and scale of the upscaleconv
     # however that is quite complicated so lets use a trick - we initialize a random array of indim size,
@@ -548,7 +562,7 @@ function convdecoder(outs, ds::AbstractVector, das::AbstractVector, ks::Abstract
 end
 """
     convdecoder(insize, latentdim, nconv, kernelsize, channels, scaling,
-        [ndense, dsizes, activation, stride, layertype, batchnorm])
+        [ndense, dsizes, activation, stride, layertype, batchnorm,resblock])
 
 Create a convolutional decoder.
 
@@ -564,10 +578,11 @@ activation = default relu
 lstride = length of stride, default 1, can be a scalar or a list of scalars
 layertype = one of ["transpose", "upscale"]
 batchnorm = boolean
+resblock = boolean
 """
 function convdecoder(outsize, latentdim::Int, nconv::Int, kernelsize, channels, 
     scaling; ndense::Int=1, dsizes=nothing, activation=relu, lstride=1, 
-    layertype="transpose", batchnorm = false)
+    layertype="transpose", batchnorm = false, resblock=false)
     # construct ds - vector of widths of dense layers
     if ndense>1
         (dsizes==nothing) ? error("If more than one Dense layer is require, specify their widths in dsizes.") : nothing 
@@ -604,30 +619,20 @@ function convdecoder(outsize, latentdim::Int, nconv::Int, kernelsize, channels,
     else
         sts = fill(lstride,nconv)
     end
-    # bns - vector of batchnorm swithes
+    # bns - vector of batchnorm switches
     if typeof(batchnorm) <: AbstractVector
         @assert length(batchnorm) == nconv
         bns = batchnorm
     else
         bns = fill(batchnorm,nconv)
     end
+    # rbs - vector of resblock switches
+    if typeof(resblock) <: AbstractVector
+        @assert length(resblock) == nconv
+        rbs = resblock
+    else
+        rbs = fill(resblock,nconv)
+    end
     
-    return convdecoder(outsize, ds, das, ks, cs, scs, cas, sts, bns; layertype=layertype) 
+    return convdecoder(outsize, ds, das, ks, cs, scs, cas, sts, bns, rbs; layertype=layertype) 
 end
-
-##### ResNet module ####
-
-struct ResBlock
-    conv
-end
-
-function ResBlock(ks,cs,a=identity;kwargs...)
-    # compute the padding margins so that the size of the image does not change
-    pad = map(x->floor(Int,x/2),ks)
-    conv = Flux.Conv(ks,cs,a;pad=pad,kwargs...)
-    return ResBlock(conv)
-end
-
-(rb::ResBlock)(X::Array{T,4}) where T = rb.conv(X) .+ X
-
-Flux.@treelike ResBlock

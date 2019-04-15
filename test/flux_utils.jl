@@ -97,6 +97,31 @@ paramchange(frozen_params, params) =
 	cb=AlfvenDetectors.basic_callback(hist,true,0.0001,100; train_length=10,epoch_size=5)
 	@assert typeof(cb) == AlfvenDetectors.basic_callback
 
+	# resnet module
+	X = randn(5,4,2,5)
+	layer = AlfvenDetectors.ResBlock((3,3),2=>4)
+	@test size(X) != size(layer(X)) == (5,4,4,5)
+	try 
+		layer = AlfvenDetectors.ResBlock((4,3),2=>4)
+	catch e
+		@test isa(e, DomainError)
+	end
+	m,n,c,k = (9,6,1,2)
+	X = randn(Float32,m,n,c,k)
+	model = AlfvenDetectors.ResBlock((3,3), 1=>2, relu)
+	y = model(X)
+	@test size(y) == (m,n,2,k)
+	loss(x) = Flux.mse(model(x), x)
+	opt = ADAM()
+	L = loss(X)
+	l = Flux.Tracker.data(L)
+	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
+	#update!
+	Flux.back!(L)
+	AlfvenDetectors.update!(model,opt)
+	@test all(paramchange(frozen_params, collect(params(model))))
+	@test loss(X) < l
+
 	# upscaling stuff
 	# oneszeros
 	x = AlfvenDetectors.oneszeros(2,3,2)
@@ -213,7 +238,24 @@ paramchange(frozen_params, params) =
 	Flux.back!(L)
 	AlfvenDetectors.update!(model, opt)
 	@test all(paramchange(frozen_params, collect(params(model))))
-	
+
+	# same conv
+	X = randn(Float32, 5,6,2,5)
+	layer = AlfvenDetectors.SameConv((3,3),2=>2)
+	@test size(X) == size(layer(X))
+	try
+		layer = AlfvenDetectors.SameConv((4,4),2=>2)
+	catch e
+		@test isa(e, DomainError)
+	end
+	layer = AlfvenDetectors.SameConv((5,5),2=>2)
+	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(layer)))
+	loss(x) = Flux.mse(x,layer(x))
+	L = loss(X)
+	Flux.back!(L)
+	AlfvenDetectors.update!(layer, opt)
+	@test all(paramchange(frozen_params, collect(params(layer))))
+
 	# convmaxpool
 	X = randn(12,6,2,5)
 	layer = AlfvenDetectors.convmaxpool(3,2=>4,2)
@@ -230,6 +272,10 @@ paramchange(frozen_params, params) =
 	@test size(layer(X)) == (4,3,8,5)
 	layer = AlfvenDetectors.convmaxpool(3,2=>8,2;stride=3,batchnorm=true)
 	@test size(layer(X)) == (2,1,8,5)
+	layer = AlfvenDetectors.convmaxpool(3,2=>8,2;resblock=true)
+	@test size(layer(X)) == (6,3,8,5)
+	layer = AlfvenDetectors.convmaxpool(3,2=>8,2;resblock=true)
+	@test size(layer(X)) == (6,3,8,5)
 		
 	# convencoder
 	L = 2
@@ -243,7 +289,8 @@ paramchange(frozen_params, params) =
     cas = fill(relu,L)
     sts = fill(1,L)
     bns = fill(true,L)
-	model = AlfvenDetectors.convencoder(ins,ds,das,ks,cs,scs,cas,sts,bns)
+    rbs = fill(true,L)
+	model = AlfvenDetectors.convencoder(ins,ds,das,ks,cs,scs,cas,sts,bns,rbs)
 	@test size(model(X)) == (2,3)
 
 	# lightweight convencoder constructor
@@ -255,7 +302,8 @@ paramchange(frozen_params, params) =
 	kernelsize = 3
 	channels = [4,8,16]
 	scaling = 2
-	model = AlfvenDetectors.convencoder(insize, latentdim, nconv, kernelsize, channels, scaling)
+	model = AlfvenDetectors.convencoder(insize, latentdim, nconv, kernelsize, channels, scaling,
+		resblock=true)
 	@test size(model(X)) == (latentdim,3)
 	@test size(model.layers[1](X)) == (2,1,16,3) 
 	# more dense layers
@@ -331,6 +379,8 @@ paramchange(frozen_params, params) =
 	@test size(layer(X)) == (8,12,1,10)
 	layer = AlfvenDetectors.upscaleconv(3,4=>2,2;stride=2,batchnorm=true)
 	@test size(layer(X)) == (2,4,2,10)
+	layer = AlfvenDetectors.upscaleconv(3,4=>2,2;resblock=true)
+	@test size(layer(X)) == (4,8,2,10)
 
 	# convtransposeconv
 	X = randn(2,4,4,10)
@@ -348,6 +398,8 @@ paramchange(frozen_params, params) =
 	@test size(layer(X)) == (8,12,1,10)
 	layer = AlfvenDetectors.convtransposeconv(3,4=>2,2;stride=2,batchnorm=true)
 	@test size(layer(X)) == (2,4,2,10)
+	layer = AlfvenDetectors.convtransposeconv(3,4=>2,2;resblock=true)
+	@test size(layer(X)) == (4,8,2,10)
 
 	# convdecoder
 	L = 2
@@ -362,7 +414,8 @@ paramchange(frozen_params, params) =
     cas = fill(relu,L-1)
     sts = fill(1,L)
     bns = fill(true, L)
-	model = AlfvenDetectors.convdecoder(outs,ds,das,ks,cs,scs,cas,sts,bns)
+    rbs = fill(true, L)
+	model = AlfvenDetectors.convdecoder(outs,ds,das,ks,cs,scs,cas,sts,bns,rbs)
 	@test size(model(y)) == size(X)
 
 	# lightweight convdecoder constructor
@@ -425,21 +478,11 @@ paramchange(frozen_params, params) =
 		batchnorm = true)
 	@test length(model.layers[3].layers[1].layers) == 3
 	@test size(model(y)) == size(X)
-
-	# res block
-	m,n,c,k = (9,6,1,2)
-	X = randn(Float32,m,n,c,k)
-	model = AlfvenDetectors.ResBlock((3,3), 1=>2, relu)
-	y = model(X)
-	@test size(y) == (m,n,2,k)
-	loss(x) = Flux.mse(model(x), x)
-	opt = ADAM()
-	L = loss(X)
-	l = Flux.Tracker.data(L)
-	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
-	#update!
-	Flux.back!(L)
-	AlfvenDetectors.update!(model,opt)
-	@test all(paramchange(frozen_params, collect(params(model))))
-	@test loss(X) < l
+	# resblock
+	scaling = 2
+	model = AlfvenDetectors.convdecoder(outsize, latentdim, nconv, kernelsize, channels, scaling;
+		resblock = true)
+	@test length(model.layers[3].layers[1].layers) == 2
+	@test size(model(y)) == size(X)
+	
 end

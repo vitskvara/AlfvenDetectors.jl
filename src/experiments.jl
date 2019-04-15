@@ -148,9 +148,11 @@ function fitsave_unsupervised(data, modelname, batchsize, outer_nepochs, inner_n
 		# to load this, you need to load Flux, AlfvenDetectors and ValueHistories
 		if epoch%savepoint==0
 			# replace the number of epochs in the filename string with the current number of epochs
-			fs = split(filename, "_")
-			fs[collect(1:length(fs))[map(x->occursin("nepochs",x), fs)][1]] = "nepochs-$epoch"
-			filename = join(fs, "_")
+			if occursin("nepochs",filename)
+				fs = split(filename, "_")
+				fs[collect(1:length(fs))[map(x->occursin("nepochs",x), fs)][1]] = "nepochs-$epoch"
+				filename = join(fs, "_")
+			end
 			cpumodel = model |> cpu
 			bson(joinpath(savepath, filename), model = cpumodel, history = history, time = t)
 		end
@@ -160,7 +162,7 @@ function fitsave_unsupervised(data, modelname, batchsize, outer_nepochs, inner_n
 	cpumodel = model |> cpu
 	bson(joinpath(savepath, filename), model = cpumodel, history = history, time = t, timeall=tall[2])
 	
-	println("model and timing saved to $filename")
+	println("model and timing saved to $(joinpath(savepath, filename))")
 
 	return cpumodel, history, t
 end
@@ -214,3 +216,59 @@ end
 collect_conv_signals(shots,readfun,s::Int; warns=true, type="valid") = 
 	collect_conv_signals(shots,readfun,s,s; warns=warns, type=type)
 
+### functions for working with labeled data ###
+"""
+    labeled_data()
+
+Get the information on the few hand-labeled shots.
+"""
+function labeled_data()
+    f = joinpath(dirname(pathof(AlfvenDetectors)), "../experiments/conv/data/labeled_shots.csv")
+    labels_shots = readdlm(f, ',', Int32)
+    labels = labels_shots[:,2]
+    labeled_shots = labels_shots[:,1] 
+    return labeled_shots, labels
+end
+
+"""
+    labeled_patches()
+
+Get the information on the few hand-labeled shots.
+"""
+function labeled_patches()
+    f = joinpath(dirname(pathof(AlfvenDetectors)), "../experiments/conv/data/labeled_patches.csv")
+    data,header = readdlm(f, ',', Float32, header=true)
+    shots = Int.(data[:,1])
+    labels = Int.(data[:,4])
+	tstarts = data[:,2]
+    fstarts = data[:,3]
+    return shots, labels, tstarts, fstarts
+end
+
+
+"""
+	get_patch(datapath, shot, tstart, fstart, patchsize, readfun, coil=nothing [,getkwargs...])
+
+Get a patch of given size starting at fstart and tstart coordinates.
+"""
+function get_patch(datapath, shot, tstart, fstart, patchsize, readfun, coil=nothing; getkwargs...)
+	file = joinpath(datapath, filter(x->occursin(string(shot), x), readdir(datapath))[1])
+	if coil == nothing
+		data = get_signal(file, readfun; getkwargs...)
+	else
+		data = get_signal(file, readfun, coil; getkwargs...)
+	end
+	if readfun == AlfvenDetectors.readnormlogupsd
+		t = get_signal(file, AlfvenDetectors.readtupsd; getkwargs...)
+		f = AlfvenDetectors.readfupsd(file)
+	else
+		t = get_signal(file, AlfvenDetectors.readtcoh; getkwargs...)
+		f = AlfvenDetectors.readfcoh(file)
+	end
+	tinds = tstart .< t
+	finds = fstart .< f
+	tpatch = t[tinds][1:patchsize]
+	fpatch = f[finds][1:patchsize]
+	patch = data[finds,tinds][1:patchsize,1:patchsize]
+	return patch, tpatch, fpatch
+end

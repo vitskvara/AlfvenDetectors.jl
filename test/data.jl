@@ -42,6 +42,12 @@ fpath = joinpath(dirname(@__FILE__),"data/testdata.h5")
 	x = randn(10,5)
 	nx = AlfvenDetectors.normalize(x)
 	@test 0.0 <= minimum(nx) <= maximum(nx) <= 1.0
+	@test length(AlfvenDetectors.readtcoh(fpath)) == 3
+	@test length(AlfvenDetectors.readfcoh(fpath)) == 3
+	@test length(AlfvenDetectors.readtupsd(fpath)) == 3
+	@test length(AlfvenDetectors.readfupsd(fpath)) == 3
+	@test length(AlfvenDetectors.readfnoscale(fpath)) == 3
+	@test length(AlfvenDetectors.readtfnoscale(fpath)) == 3
 	@test size(AlfvenDetectors.readmscamp(fpath, 12),2) == 3
 	@test size(AlfvenDetectors.readmscphase(fpath, 12),2) == 3
 	@test size(AlfvenDetectors.readnormmscphase(fpath, 12),2) == 3
