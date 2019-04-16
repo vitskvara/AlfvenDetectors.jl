@@ -243,10 +243,10 @@ filename_kwargs = Dict(
 	:nepochs => outer_nepochs*inner_nepochs,
 	:opt => optimiser,
 	:eta => eta,
-	:nshots => nshots,
-	:noalfven => noalfven
+	:nshots => nshots
+#	:noalfven => noalfven
 )
-filename = AlfvenDetectors.create_filename(modelname, model_args, model_kwargs, fit_kwargs, 
+filename = AlfvenDetectors.create_filename(modelname, model_args, Dict(), fit_kwargs, 
 	filename_kwargs...)
 model, history, t = AlfvenDetectors.fitsave_unsupervised(data, modelname, batchsize, 
 	outer_nepochs, inner_nepochs, model_args, model_kwargs, fit_kwargs, savepath; 
