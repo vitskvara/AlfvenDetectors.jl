@@ -245,7 +245,6 @@ function labeled_patches()
     return shots, labels, tstarts, fstarts
 end
 
-
 """
 	get_patch(datapath, shot, tstart, fstart, patchsize, readfun, coil=nothing [,getkwargs...])
 
@@ -272,3 +271,15 @@ function get_patch(datapath, shot, tstart, fstart, patchsize, readfun, coil=noth
 	patch = data[finds,tinds][1:patchsize,1:patchsize]
 	return patch, tpatch, fpatch
 end
+
+"""
+	get_patch_from_csv(datapath, shot, tstart, fstart, label[,getkwargs...])
+
+Get a patch of given size starting at fstart and tstart coordinates saved in a csv file.
+"""
+function get_patch_from_csv(datapath, shot, label, tstart, fstart; getkwargs...)
+	file = joinpath(datapath, "$shot-$label-$tstart-$fstart.csv")
+	patch = readdlm(file, ',', Float32)
+	return patch
+end
+
