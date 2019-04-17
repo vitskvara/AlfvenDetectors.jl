@@ -110,6 +110,9 @@ s = ArgParseSettings()
 		default = 100
 		arg_type = Int
 		help = "how often should an intermediate state of the model be saved"
+	"--memorysafe"
+		action = :store_true
+		help = "if set, use a memory safe loading of hdf5 file which is slower but enables loading of larger datasets (requires h5py Python library)"
 end
 parsed_args = parse_args(ARGS, s)
 modelname = "Conv"*parsed_args["modelname"]
@@ -142,6 +145,7 @@ test = parsed_args["test"]
 iptrunc = parsed_args["ip-trunc"]
 svpth = parsed_args["savepath"]
 savepoint = parsed_args["savepoint"]
+memorysafe = parsed_args["memorysafe"]
 if measurement_type == "mscamp"
 	readfun = AlfvenDetectors.readmscamp
 elseif measurement_type == "mscphase"
@@ -205,10 +209,10 @@ end
 
 if measurement_type == "uprobe"
 	data = AlfvenDetectors.collect_conv_signals(shots, readfun, patchsize; 
-		warns=warnings, type=iptrunc)
+		warns=warnings, type=iptrunc, memorysafe=memorysafe)
 else
 	data = AlfvenDetectors.collect_conv_signals(shots, readfun, patchsize, coils; 
-		warns=warnings, type=iptrunc)
+		warns=warnings, type=iptrunc, memorysafe=memorysafe)
 end
 # put all data into gpu only if you want to be fast and not care about memory clogging
 # otherwise that is done in the train function now per batch

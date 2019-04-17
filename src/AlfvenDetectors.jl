@@ -11,6 +11,18 @@ using Dates # for experiments
 using BSON
 using SparseArrays
 using DelimitedFiles
+# for alternative .h5 file loading
+using PyCall
+# PyCall modules are pointers
+const h5py = PyNULL()
+# used in the get_signal() function
+function _init_h5py(warns=true)
+	try
+		copy!(h5py, pyimport("h5py"))
+	catch e
+		warns ? @warn("h5py Python library was not loaded and memory safe .h5 loading is therefore not available") : nothing
+	end
+end
 
 const Float = Float32
 

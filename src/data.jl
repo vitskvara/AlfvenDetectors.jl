@@ -131,9 +131,11 @@ function readmsc!(alfvendata::BaseAlfvenData, filepath::String; coillist=nothing
 end
 
 """
-	readsignal(filepath::String, signal::String; warns=true)
+	readsignal_jl(filepath::String, signal::String; warns=true)
+
+Read a signal from .h5 file using native Julia library. Contains a known memory leak so use with caution.
 """
-function readsignal(filepath::String, signal::String; warns=true)
+function readsignal_jl(filepath::String, signal::String; warns=true)
 	try 
 		@suppress_err begin
 			x = h5open(filepath, "r") do file
@@ -152,6 +154,37 @@ function readsignal(filepath::String, signal::String; warns=true)
 end
 
 """
+	readsignal_py(filepath::String, signal::String; warns=true)
+
+Read a signal from .h5 file using Python h5py library. Is memory safe but slower than the Julia counterpart.
+"""
+function readsignal_py(filepath::String, signal::String; warns=true)
+	# first init the h5py pointer if possible
+	_init_h5py()
+	(h5py == PyNULL()) ? (return NaN) : nothing # this should happen if h5py is not available
+	try
+		file = h5py.File(filepath,"r")
+		x = Float.(get(file, signal).value)
+		file.close()
+		if ndims(x) == 2
+			return Array(x')
+		else
+			return x
+		end
+	catch e
+		if isa(e, ErrorException) # signal or file not found
+			warns ? @warn("$(filepath): $signal data not found") : nothing
+			return NaN
+		else
+			rethrow(e)
+		end
+	end
+end
+
+readsignal(args...; memorysafe=false, kwargs...) = 
+	memorysafe ? readsignal_py(args...; kwargs...) : readsignal_jl(args...; kwargs...)
+
+"""
 	normalize(x)
 
 Normalize values of x so that that lie in the interval [0,1].
@@ -159,74 +192,74 @@ Normalize values of x so that that lie in the interval [0,1].
 normalize(x) = (x .- minimum(x))/(maximum(x) - minimum(x))
 
 """
-	readtcoh(filepath::String; warns=true)
+	readtcoh(filepath::String; warns=true, memorysafe=false)
 """
-readtcoh(filepath::String; warns=true) = readsignal(filepath, "t_cohere"; warns=warns)
+readtcoh(filepath::String; kwargs...) = readsignal(filepath, "t_cohere";  kwargs...)
 
 """
-	readfcoh(filepath::String; warns=true)
+	readfcoh(filepath::String; warns=true, memorysafe=false)
 """
-readfcoh(filepath::String; warns=true) = readsignal(filepath, "f_cohere"; warns=warns)
+readfcoh(filepath::String;  kwargs...) = readsignal(filepath, "f_cohere"; kwargs...)
 
 """
-	readtupsd(filepath::String; warns=true)
+	readtupsd(filepath::String; warns=true, memorysafe=false)
 """
-readtupsd(filepath::String; warns=true) = readsignal(filepath, "t_Uprobe"; warns=warns)
+readtupsd(filepath::String;  kwargs...) = readsignal(filepath, "t_Uprobe"; kwargs...)
 
 """
-	readfupsd(filepath::String; warns=true)
+	readfupsd(filepath::String; warns=true, memorysafe=false)
 """
-readfupsd(filepath::String; warns=true) = readsignal(filepath, "f_Uprobe"; warns=warns)
+readfupsd(filepath::String;  kwargs...) = readsignal(filepath, "f_Uprobe";  kwargs...)
 
 """
-	readfnoscale(filepath::String; warns=true)
+	readfnoscale(filepath::String; warns=true, memorysafe=false)
 """
-readfnoscale(filepath::String; warns=true) = readsignal(filepath, "fnoscale"; warns=warns)
+readfnoscale(filepath::String;  kwargs...) = readsignal(filepath, "fnoscale";  kwargs...)
 
 """
-	readtfnoscale(filepath::String; warns=true)
+	readtfnoscale(filepath::String; warns=true, memorysafe=false)
 """
-readtfnoscale(filepath::String; warns=true) = readsignal(filepath, "t_fnoscale"; warns=warns)
+readtfnoscale(filepath::String;  kwargs...) = readsignal(filepath, "t_fnoscale";  kwargs...)
 
 """
-	readmscamp(filepath::String, coil; warns=true)
+	readmscamp(filepath::String, coil; warns=true, memorysafe=false)
 """
-readmscamp(filepath::String, coil; warns=true) = readsignal(filepath, "Mirnov_coil_A&C_theta_$(coil)_coherems"; warns=warns)
+readmscamp(filepath::String, coil;  kwargs...) = readsignal(filepath, "Mirnov_coil_A&C_theta_$(coil)_coherems";  kwargs...)
 
 """
-	readmscphase(filepath::String, coil; warns=true)
+	readmscphase(filepath::String, coil; warns=true, memorysafe=false)
 """
-readmscphase(filepath::String, coil; warns=true) = readsignal(filepath, "Mirnov_coil_A&C_theta_$(coil)_cpsdphase"; warns=warns)
+readmscphase(filepath::String, coil;  kwargs...) = readsignal(filepath, "Mirnov_coil_A&C_theta_$(coil)_cpsdphase";  kwargs...)
 
 """
-	readnormmscphase(filepath::String, coil; warns=true)
+	readnormmscphase(filepath::String, coil; warns=true, memorysafe=false)
 """
-readnormmscphase(filepath::String, coil; warns=true) = normalize(readmscphase(filepath, coil; warns=warns))
+readnormmscphase(filepath::String, coil;  kwargs...) = normalize(readmscphase(filepath, coil;  kwargs...))
 
 """
-	readmsc(filepath::String, coil; warns=true)
+	readmsc(filepath::String, coil; warns=true, memorysafe=false)
 """
-readmscampphase(filepath::String, coil; warns=true) = vcat(readmscamp(filepath, coil; warns=warns), readnormmscphase(filepath, coil; warns=warns))
+readmscampphase(filepath::String, coil; kwargs...) = vcat(readmscamp(filepath, coil; kwargs...), readnormmscphase(filepath, coil; kwargs...))
 
 """
-	readip(filepath::String; warns=true)
+	readip(filepath::String; warns=true, memorysafe=false)
 """
-readip(filepath::String; warns=true) = readsignal(filepath, "I_plasma"; warns=warns)
+readip(filepath::String;  kwargs...) = readsignal(filepath, "I_plasma";  kwargs...)
 
 """
-	readupsd(filepath::String; warns=true)
+	readupsd(filepath::String; warns=true, memorysafe=false)
 """
-readupsd(filepath::String; warns=true) = readsignal(filepath, "Uprobe_coil_A1pol_psd"; warns=warns)
+readupsd(filepath::String;  kwargs...) = readsignal(filepath, "Uprobe_coil_A1pol_psd";  kwargs...)
 
 """
-	readlogupsd(filepath::String; warns=true)
+	readlogupsd(filepath::String; warns=true, memorysafe=false)
 """
-readlogupsd(filepath::String; warns=true) = Float(20.0)*log10.(readupsd(filepath; warns=warns) .+ Float(1e-10))
+readlogupsd(filepath::String;  kwargs...) = Float(20.0)*log10.(readupsd(filepath;  kwargs...) .+ Float(1e-10))
 
 """
-	readnormlogupsd(filepath::String; warns=true)
+	readnormlogupsd(filepath::String; warns=true, memorysafe=false)
 """
-readnormlogupsd(filepath::String; warns=true) = normalize(readlogupsd(filepath; warns=warns))
+readnormlogupsd(filepath::String;  kwargs...) = normalize(readlogupsd(filepath;  kwargs...))
 
 """
 	getcoillist(keynames)

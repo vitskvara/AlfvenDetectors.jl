@@ -3,6 +3,7 @@ using AlfvenDetectors
 using Random
 using HDF5
 using StatsBase
+using PyCall
 
 fpath = joinpath(dirname(@__FILE__),"data/testdata.h5")
 
@@ -56,6 +57,21 @@ fpath = joinpath(dirname(@__FILE__),"data/testdata.h5")
 	@test size(AlfvenDetectors.readupsd(fpath),2) == 3
 	@test size(AlfvenDetectors.readlogupsd(fpath),2) == 3
 	@test size(AlfvenDetectors.readnormlogupsd(fpath),2) == 3
+
+	# also test the python hdf5 reading
+	try
+		h5py = pyimport("h5py")
+		global h5present = true
+	catch e
+		global h5present = false
+	end
+	if h5present
+		@test length(AlfvenDetectors.readip(fpath,memorysafe=true)) == 3
+		@test size(AlfvenDetectors.readupsd(fpath,memorysafe=true),2) == 3
+	else
+		@test isnan(AlfvenDetectors.readip(fpath,memorysafe=true))
+		@test isnan(AlfvenDetectors.readupsd(fpath,memorysafe=true))
+	end
 
 	##########################
 	### flat-top detection ###

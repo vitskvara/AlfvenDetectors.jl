@@ -29,36 +29,36 @@ function return_signal(signal,ip,type)
 end
 
 """
-	get_signal(filename, readfun, coil; warns=true, type="valid")
+	get_signal(filename, readfun, coil; [warns, memorysafe, type])
 
 Returns flattop portion of signal extracted by readfun and coil.
 """
-function get_signal(filename, readfun, coil; warns=true, type="valid")
-	signal = readfun(filename,coil; warns=warns)
-	ip = readip(filename; warns=warns)
+function get_signal(filename, readfun, coil; type="valid", readkwargs...)
+	signal = readfun(filename,coil; readkwargs...)
+	ip = readip(filename; readkwargs...)
 	return_signal(signal,ip,type)
 end
 
 """
-	get_signal(filename, readfun; warns=true, type="valid")
+	get_signal(filename, readfun; [warns, memorysafe, type])
 
 Returns flattop portion of signal extracted by readfun.
 """
-function get_signal(filename, readfun; warns=true, type="valid")
-	signal = readfun(filename; warns=warns)
-	ip = readip(filename; warns=warns)
+function get_signal(filename, readfun; type="valid", readkwargs...)
+	signal = readfun(filename; readkwargs...)
+	ip = readip(filename; readkwargs...)
 	return_signal(signal,ip,type)
 end
 
 """
-	get_signals(filename, readfun, coils; warns=true, type="valid")
+	get_signals(filename, readfun, coils; [warns, memorysafe, type])
 
 Colelct signals from all coils.
 """
-function get_signals(filename, readfun, coils; warns=true, type="valid")
+function get_signals(filename, readfun, coils; kwargs...)
 	signals = []
 	for coil in coils
-		x = get_signal(filename, readfun, coil; warns=warns, type=type)
+		x = get_signal(filename, readfun, coil; kwargs...)
 		if !any(isnan,x)
 			push!(signals, x)
 		end
@@ -67,20 +67,20 @@ function get_signals(filename, readfun, coils; warns=true, type="valid")
 end
 
 """
-	collect_signals(shots,readfun,coils; warns=true, type="valid")
+	collect_signals(shots,readfun,coils; [warns, memorysafe, type])
 
 Collect signals from multiple files.
 """
-collect_signals(shots,readfun,coils; warns=true, type="valid") = 
-	filter(x->x!=[], map(x->get_signals(x,readfun,coils; warns=warns, type=type), shots))
+collect_signals(shots,readfun,coils; kwargs...) = 
+	filter(x->x!=[], map(x->get_signals(x,readfun,coils; kwargs...), shots))
 
 """
-	collect_signals(shots,readfun; warns=true)
+	collect_signals(shots,readfun; [warns, memorysafe, type])
 
 Collect signals from multiple files.
 """
-collect_signals(shots,readfun; warns=true, type="valid") = 
-	filter(x->!any(isnan,x), map(x->get_signal(x,readfun; warns=warns, type=type), shots))
+collect_signals(shots,readfun; kwargs...) = 
+	filter(x->!any(isnan,x), map(x->get_signal(x,readfun; kwargs...), shots))
 
 """
 	create_filename(modelname, model_args, model_kwargs, fit_kwargs, kwargs...)
@@ -193,28 +193,28 @@ cat_split_reshape(data,s::Int) = cat_split_reshape(data,s,s)
 
 
 """
-	collect_conv_signals(shots,readfun,heigth,width,coils [,warns, type])
+	collect_conv_signals(shots,readfun,heigth,width,coils [,warns, type, memorysafe])
 
 Returns a 4D array consisting of blocks of given width, extracted by readfun.
 """
-function collect_conv_signals(shots,readfun,heigth::Int,width::Int,coils::AbstractVector; warns=true, type="valid")
-	data = collect_signals(shots, readfun, coils; warns=warns, type=type)
+function collect_conv_signals(shots,readfun,heigth::Int,width::Int,coils::AbstractVector; kwargs...)
+	data = collect_signals(shots, readfun, coils; kwargs...)
 	cat_split_reshape(data, heigth, width)
 end
-collect_conv_signals(shots,readfun,s::Int,coils::AbstractVector; warns=true, type="valid") = 
-	collect_conv_signals(shots,readfun,s,s,coils; warns=warns, type=type)
+collect_conv_signals(shots,readfun,s::Int,coils::AbstractVector; kwargs...) = 
+	collect_conv_signals(shots,readfun,s,s,coils; kwargs...)
 
 """
-	collect_conv_signals(shots,readfun,heigth,width [,warns, type])
+	collect_conv_signals(shots,readfun,heigth,width [,warns, type, memorysafe])
 
 Returns a 4D array consisting of blocks of given width, extracted by readfun.
 """
-function collect_conv_signals(shots,readfun,heigth::Int,width::Int; warns=true, type="valid")
-	data = collect_signals(shots, readfun; warns=warns, type=type)
+function collect_conv_signals(shots,readfun,heigth::Int,width::Int; kwargs...)
+	data = collect_signals(shots, readfun; kwargs...)
 	cat_split_reshape(data, heigth, width)
 end
-collect_conv_signals(shots,readfun,s::Int; warns=true, type="valid") = 
-	collect_conv_signals(shots,readfun,s,s; warns=warns, type=type)
+collect_conv_signals(shots,readfun,s::Int; kwargs...) = 
+	collect_conv_signals(shots,readfun,s,s; kwargs...)
 
 ### functions for working with labeled data ###
 """
@@ -246,22 +246,22 @@ function labeled_patches()
 end
 
 """
-	get_patch(datapath, shot, tstart, fstart, patchsize, readfun, coil=nothing [,getkwargs...])
+	get_patch(datapath, shot, tstart, fstart, patchsize, readfun, coil=nothing [, warns, memorysafe, type])
 
 Get a patch of given size starting at fstart and tstart coordinates.
 """
-function get_patch(datapath, shot, tstart, fstart, patchsize, readfun, coil=nothing; getkwargs...)
+function get_patch(datapath, shot, tstart, fstart, patchsize, readfun, coil=nothing; kwargs...)
 	file = joinpath(datapath, filter(x->occursin(string(shot), x), readdir(datapath))[1])
 	if coil == nothing
-		data = get_signal(file, readfun; getkwargs...)
+		data = get_signal(file, readfun; kwargs...)
 	else
-		data = get_signal(file, readfun, coil; getkwargs...)
+		data = get_signal(file, readfun, coil; kwargs...)
 	end
 	if readfun == AlfvenDetectors.readnormlogupsd
-		t = get_signal(file, AlfvenDetectors.readtupsd; getkwargs...)
+		t = get_signal(file, AlfvenDetectors.readtupsd; kwargs...)
 		f = AlfvenDetectors.readfupsd(file)
 	else
-		t = get_signal(file, AlfvenDetectors.readtcoh; getkwargs...)
+		t = get_signal(file, AlfvenDetectors.readtcoh; kwargs...)
 		f = AlfvenDetectors.readfcoh(file)
 	end
 	tinds = tstart .< t
@@ -273,11 +273,11 @@ function get_patch(datapath, shot, tstart, fstart, patchsize, readfun, coil=noth
 end
 
 """
-	get_patch_from_csv(datapath, shot, tstart, fstart, label[,getkwargs...])
+	get_patch_from_csv(datapath, shot, label, tstart, fstart)
 
 Get a patch of given size starting at fstart and tstart coordinates saved in a csv file.
 """
-function get_patch_from_csv(datapath, shot, label, tstart, fstart; getkwargs...)
+function get_patch_from_csv(datapath, shot, label, tstart, fstart)
 	file = joinpath(datapath, "$shot-$label-$tstart-$fstart.csv")
 	patch = readdlm(file, ',', Float32)
 	return patch
