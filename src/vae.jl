@@ -254,7 +254,8 @@ memoryefficient - calls gc after every batch, again saving some memory but prolo
 """
 function fit!(vae::VAE, X, batchsize::Int, nepochs::Int; 
 	L=1, beta::Real= Float(1.0), cbit::Int=200, history = nothing, opt=nothing,
-	verb::Bool = true, η = 0.001, runtype = "experimental", trainkwargs...)
+	verb::Bool = true, η = 0.001, runtype = "experimental", prealloc_eps=false, 
+	trainkwargs...)
 	@assert runtype in ["experimental", "fast"]
 	# sampler
 	sampler = EpochSampler(X,nepochs,batchsize)
@@ -281,10 +282,12 @@ function fit!(vae::VAE, X, batchsize::Int, nepochs::Int;
 	end
 
 	# allocate an array to be used for randn generation and replace the old sampler
-	# global const ϵ_prealloc = (get(trainkwargs, :usegpu, false)) ? gpu(Array{Float,2}(undef, getlsize(vae), batchsize)) : Array{Float,2}(undef, getlsize(vae), batchsize)
-	# orig_sampler = vae.sampler
-	# new_sampler(x) = samplenormal!(x,ϵ_prealloc) 
-	#vae.sampler = new_sampler
+	if prealloc_eps
+		ϵ_prealloc = (get(trainkwargs, :usegpu, false)) ? gpu(Array{Float,2}(undef, getlsize(vae), batchsize)) : Array{Float,2}(undef, getlsize(vae), batchsize)
+		orig_sampler = vae.sampler
+		new_sampler(x) = samplenormal!(x,ϵ_prealloc) 
+		vae.sampler = new_sampler
+	end
 
 	# train
 	train!(
@@ -297,8 +300,10 @@ function fit!(vae::VAE, X, batchsize::Int, nepochs::Int;
 		)
 
 	# retrieve back the normal sampler
-	# vae.sampler = orig_sampler
-
+	if prealloc_eps
+		vae.sampler = orig_sampler
+	end
+	
 	return opt
 end
 
