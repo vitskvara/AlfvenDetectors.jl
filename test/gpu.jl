@@ -4,15 +4,11 @@ using CuArrays
 using Test
 using Random
 using AlfvenDetectors
+include(joinpath(dirname(pathof(AlfvenDetectors)), "../test/test_utils.jl"))
 
 xdim = 5
 ldim = 1
 N = 10
-
-sim(x,y) = abs(x-y) < 1e-6
-
-paramchange(frozen_params, params) = 
-	map(x-> x[1] != x[2], zip(frozen_params, params))
 
 @testset "flux utils" begin
 	# iscuarray
@@ -43,6 +39,7 @@ end
 	_x = model(gx)
 	# for training check
 	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
+	@test !all(paramchange(frozen_params, collect(params(model)))) 
 
 	@test typeof(gx) == CuArray{AlfvenDetectors.Float,2}
 	@test typeof(_x) <: TrackedArray{AlfvenDetectors.Float,2}    
@@ -65,6 +62,7 @@ end
 	_x = model(gx)
 	# for training check
 	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
+	@test !all(paramchange(frozen_params, collect(params(model)))) 
 	@test typeof(gx) == CuArray{AlfvenDetectors.Float,2}
 	@test typeof(_x) <: TrackedArray{AlfvenDetectors.Float,2}    
 	hist = MVHistory()

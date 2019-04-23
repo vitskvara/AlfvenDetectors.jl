@@ -3,13 +3,11 @@ using Flux
 using ValueHistories
 using Test
 using Random
+include(joinpath(dirname(pathof(AlfvenDetectors)), "../test/test_utils.jl"))
 
 xdim = 5
 ldim = 1
 N = 10
-
-paramchange(frozen_params, params) = 
-	map(x-> x[1] != x[2], zip(frozen_params, params))
 
 @testset "AE" begin
 	println("           autoencoder")
@@ -20,6 +18,7 @@ paramchange(frozen_params, params) =
 	_x = model(x)
 	# for training check
 	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
+	@test !all(paramchange(frozen_params, collect(params(model)))) 
 
 	# test correct construction
 	@test size(model.encoder.layers,1) == 2

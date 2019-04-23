@@ -2,8 +2,8 @@ using AlfvenDetectors
 using Test
 using Random
 using StatsBase
+include(joinpath(dirname(pathof(AlfvenDetectors)), "../test/test_utils.jl"))
 
-sim(x,y,δ=1e-6) = abs(x-y) < δ
 Random.seed!(12345)
 
 @testset "model utils" begin

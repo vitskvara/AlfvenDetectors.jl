@@ -2,14 +2,12 @@ using Test
 using AlfvenDetectors
 using Flux
 using ValueHistories
+include(joinpath(dirname(pathof(AlfvenDetectors)), "../test/test_utils.jl"))
 
 xdim = 3
 ldim = 1
 N = 10
 model = Flux.Chain(Flux.Dense(xdim, ldim), Flux.Dense(ldim, xdim))
-
-paramchange(frozen_params, params) = 
-	map(x-> x[1] != x[2], zip(frozen_params, params))
 
 @testset "flux utils" begin 
 	# adapt

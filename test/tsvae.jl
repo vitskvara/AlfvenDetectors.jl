@@ -4,13 +4,11 @@ using ValueHistories
 using Flux
 using Random
 using StatsBase
+include(joinpath(dirname(pathof(AlfvenDetectors)), "../test/test_utils.jl"))
 
 xdim = 5
 ldim = 1
 N = 100
-
-paramchange(frozen_params, params) = 
-  map(x-> x[1] != x[2], zip(frozen_params, params))
 
 @testset "TSVAE" begin
     println("           two-stage VAE")
@@ -42,6 +40,7 @@ paramchange(frozen_params, params) =
 
    	# fit!
     frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
+    @test !all(paramchange(frozen_params, collect(params(model)))) 
     @test length(frozen_params) == 20
    	history = (MVHistory(),MVHistory())
    	m1ls, m2ls = AlfvenDetectors.getlosses(model,x,10,1.0)
