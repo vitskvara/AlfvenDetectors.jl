@@ -11,6 +11,7 @@ using Dates # for experiments
 using BSON
 using SparseArrays
 using DelimitedFiles
+using Random
 # for alternative .h5 file loading
 using PyCall
 # PyCall modules are pointers

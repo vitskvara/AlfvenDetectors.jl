@@ -93,7 +93,7 @@ sigma2_scalarvar(X::AbstractArray{T,4}) where T = StatsBase.mean(softplus.(X[:,:
 Sample  a normal distribution with given mean and standard deviation.
 """
 function samplenormal(μ, σ2)
-    ϵ = randn(Float, size(μ))
+    ϵ = randn(Float, size(μ))    
     # if cuarrays are loaded and X is on GPU, convert eps to GPU as well
     if iscuarray(μ)
         ϵ = ϵ |> gpu
@@ -108,6 +108,11 @@ function samplenormal(μ::AbstractMatrix, σ2::AbstractVector)
     end
     return μ +  sqrt.(σ2)' .* ϵ  
 end
+# version for preallocated ϵ
+function samplenormal!(μ, σ2, ϵ)
+    randn!(ϵ)
+    return μ +  ϵ .* sqrt.(σ2)
+end
 
 """
     samplenormal(X)
@@ -118,6 +123,11 @@ function samplenormal(X)
     μ, σ2 = mu(X), sigma2(X)
     return samplenormal(μ, σ2)
 end
+function samplenormal!(X, ϵ)
+    μ, σ2 = mu(X), sigma2(X)
+    return samplenormal!(μ, σ2,ϵ)
+end
+
 
 """
    samplenormal_scalarvar(X)

@@ -3,7 +3,7 @@
 
 Flux-like structure for the variational autoencoder.
 """
-struct VAE <: FluxModel
+mutable struct VAE <: FluxModel
 	encoder
 	sampler
 	decoder
@@ -280,6 +280,12 @@ function fit!(vae::VAE, X, batchsize::Int, nepochs::Int;
 		_cb = fast_callback 
 	end
 
+	# allocate an array to be used for randn generation and replace the old sampler
+	# global const ϵ_prealloc = (get(trainkwargs, :usegpu, false)) ? gpu(Array{Float,2}(undef, getlsize(vae), batchsize)) : Array{Float,2}(undef, getlsize(vae), batchsize)
+	# orig_sampler = vae.sampler
+	# new_sampler(x) = samplenormal!(x,ϵ_prealloc) 
+	#vae.sampler = new_sampler
+
 	# train
 	train!(
 		vae,
@@ -290,10 +296,13 @@ function fit!(vae::VAE, X, batchsize::Int, nepochs::Int;
 		trainkwargs...
 		)
 
+	# retrieve back the normal sampler
+	# vae.sampler = orig_sampler
+
 	return opt
 end
 
-##### auxiliarry functions #####
+##### auxiliary functions #####
 """
 	isconvvae(model)
 

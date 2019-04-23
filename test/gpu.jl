@@ -1,9 +1,9 @@
-using AlfvenDetectors
 using Flux
 using ValueHistories
 using CuArrays
 using Test
 using Random
+using AlfvenDetectors
 
 xdim = 5
 ldim = 1
@@ -47,7 +47,7 @@ end
 	@test typeof(gx) == CuArray{AlfvenDetectors.Float,2}
 	@test typeof(_x) <: TrackedArray{AlfvenDetectors.Float,2}    
 	hist = MVHistory()
-	AlfvenDetectors.fit!(model, x, 5, 1000, cbit=100, history = hist, verb=false,
+	@time	AlfvenDetectors.fit!(model, x, 5, 1000, cbit=100, history = hist, verb=false,
 		usegpu = true, memoryefficient = false)
 	is, ls = get(hist, :loss)
 	@test ls[1] > ls[end] 
@@ -68,12 +68,15 @@ end
 	@test typeof(gx) == CuArray{AlfvenDetectors.Float,2}
 	@test typeof(_x) <: TrackedArray{AlfvenDetectors.Float,2}    
 	hist = MVHistory()
-	AlfvenDetectors.fit!(model, x, 5, 50, beta =0.1, cbit=5, history = hist, verb = false,
+	@time AlfvenDetectors.fit!(model, x, 10, 50, beta =0.1, cbit=5, history = hist, verb = false,
 		usegpu = true, memoryefficient = false)
 	is, ls = get(hist, :loss)
 	@test ls[1] > ls[end] 
 	# were the layers realy trained?
 	@test all(paramchange(frozen_params, collect(params(model)))) 
+
+#  18.641642 seconds (51.66 M allocations: 2.646 GiB, 7.15% gc time)
+
 
 	# diag VAE
 	Random.seed!(12345)
@@ -84,7 +87,7 @@ end
 	@test typeof(gx) == CuArray{AlfvenDetectors.Float,2}
 	@test typeof(_x) <: TrackedArray{AlfvenDetectors.Float,2}    
 	hist = MVHistory()
-	AlfvenDetectors.fit!(model, x, 5, 50, beta =0.1, cbit=5, history = hist, verb = false,
+	@time AlfvenDetectors.fit!(model, x, 5, 50, beta =0.1, cbit=5, history = hist, verb = false,
 		usegpu = true)
 	is, ls = get(hist, :loss)
 	@test ls[1] > ls[end] 
