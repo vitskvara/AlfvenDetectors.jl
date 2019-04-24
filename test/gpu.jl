@@ -38,8 +38,8 @@ end
 	model = AlfvenDetectors.AE([xdim,2,ldim], [ldim,2,xdim]) |> gpu
 	_x = model(gx)
 	# for training check
-	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
-	@test !all(paramchange(frozen_params, collect(params(model)))) 
+	frozen_params = getparams(model)
+	@test !all(paramchange(frozen_params, model))
 
 	@test typeof(gx) == CuArray{AlfvenDetectors.Float,2}
 	@test typeof(_x) <: TrackedArray{AlfvenDetectors.Float,2}    
@@ -50,7 +50,7 @@ end
 	@test ls[1] > ls[end] 
 	@test ls[end] < 1e-4
 	# were the layers realy trained?
-	@test all(paramchange(frozen_params, collect(params(model)))) 
+	@test all(paramchange(frozen_params, model)) 
 end
 
 @testset "VAE-GPU" begin
@@ -61,8 +61,8 @@ end
     model = AlfvenDetectors.VAE([xdim,2,2*ldim], [ldim,2,xdim]) |> gpu
 	_x = model(gx)
 	# for training check
-	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
-	@test !all(paramchange(frozen_params, collect(params(model)))) 
+	frozen_params = getparams(model)
+	@test !all(paramchange(frozen_params, model)) 
 	@test typeof(gx) == CuArray{AlfvenDetectors.Float,2}
 	@test typeof(_x) <: TrackedArray{AlfvenDetectors.Float,2}    
 	hist = MVHistory()
@@ -71,14 +71,14 @@ end
 	is, ls = get(hist, :loss)
 	@test ls[1] > ls[end] 
 	# were the layers realy trained?
-	@test all(paramchange(frozen_params, collect(params(model)))) 
+	@test all(paramchange(frozen_params, model)) 
 
 	# diag VAE
 	Random.seed!(12345)
     model = AlfvenDetectors.VAE([xdim,2,2*ldim], [ldim,2,xdim*2], variant = :diag) |> gpu
 	_x = model(gx)
 	# for training check
-	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
+	frozen_params = getparams(model)
 	@test typeof(gx) == CuArray{AlfvenDetectors.Float,2}
 	@test typeof(_x) <: TrackedArray{AlfvenDetectors.Float,2}    
 	hist = MVHistory()
@@ -87,7 +87,7 @@ end
 	is, ls = get(hist, :loss)
 	@test ls[1] > ls[end] 
 	# were the layers realy trained?
-	@test all(paramchange(frozen_params, collect(params(model)))) 
+	@test all(paramchange(frozen_params, model)) 
 end
 
 @testset "ConvVAE - GPU" begin
@@ -103,7 +103,7 @@ end
     model = AlfvenDetectors.ConvVAE((m,n,c), ldim, nconv, kernelsize, channels, scaling) |> gpu
     _X = model(gX)
 	# for training check
-	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
+	frozen_params = getparams(model)
 	@test typeof(_X) <: TrackedArray{AlfvenDetectors.Float,4}    
 	@test typeof(_X.data) == CuArray{AlfvenDetectors.Float, 4}
 	@test AlfvenDetectors.iscuarray(_X)
@@ -113,14 +113,14 @@ end
 	is, ls = get(hist, :loss)
 	@test ls[1] > ls[end] 
 	# were the layers realy trained?
-	@test all(paramchange(frozen_params, collect(params(model)))) 
+	@test all(paramchange(frozen_params, model)) 
 
     # scalar model
     model = AlfvenDetectors.ConvVAE((m,n,c), ldim, nconv, kernelsize, channels, scaling; 
     	variant = :scalar) |> gpu
     _X = model(gX)
 	# for training check
-	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
+	frozen_params = getparams(model)
 	@test typeof(_X) <: TrackedArray{AlfvenDetectors.Float,4}    
 	@test typeof(_X.data) == CuArray{AlfvenDetectors.Float, 4}
 	@test AlfvenDetectors.iscuarray(_X)
@@ -130,14 +130,14 @@ end
 	is, ls = get(hist, :loss)
 	@test ls[1] > ls[end] 
 	# were the layers realy trained?
-	@test all(paramchange(frozen_params, collect(params(model)))) 
+	@test all(paramchange(frozen_params, model)) 
 
     # diag model
     model = AlfvenDetectors.ConvVAE((m,n,c), ldim, nconv, kernelsize, channels, scaling; 
     	variant = :diag) |> gpu
     _X = model(gX)
 	# for training check
-	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
+	frozen_params = getparams(model)
 	@test typeof(_X) <: TrackedArray{AlfvenDetectors.Float,4}    
 	@test typeof(_X.data) == CuArray{AlfvenDetectors.Float, 4}
 	@test AlfvenDetectors.iscuarray(_X)
@@ -147,7 +147,7 @@ end
 	is, ls = get(hist, :loss)
 	@test ls[1] > ls[end] 
 	# were the layers realy trained?
-	@test all(paramchange(frozen_params, collect(params(model))))
+	@test all(paramchange(frozen_params, model))
 
 end
 
@@ -158,7 +158,7 @@ end
     model = AlfvenDetectors.TSVAE(xdim, ldim, 2) |> gpu
 	_x = model(gx)
 	# for training check
-	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
+	frozen_params = getparams(model)
 
 	@test typeof(gx) == CuArray{AlfvenDetectors.Float,2}
 	@test typeof(_x) <: TrackedArray{AlfvenDetectors.Float,2}    
@@ -168,7 +168,7 @@ end
     _,ls = get(history[1],:loss)
 	@test ls[1] > ls[end] 
 	# were the layers realy trained?
-	@test all(paramchange(frozen_params, collect(params(model)))) 
+	@test all(paramchange(frozen_params, model)) 
 end
 
 @testset "ConvTSVAE-GPU" begin
@@ -184,7 +184,7 @@ end
     model = AlfvenDetectors.ConvTSVAE((m,n,c), ldim, nlayers, kernelsize, channels, scaling) |> gpu
     _X = model(gX)
 	# for training check
-	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
+	frozen_params = getparams(model)
 	@test typeof(_X) <: TrackedArray{AlfvenDetectors.Float,4}    
 	@test typeof(_X.data) == CuArray{AlfvenDetectors.Float, 4}
 	@test AlfvenDetectors.iscuarray(_X)
@@ -196,5 +196,5 @@ end
 		@test ls[1] > ls[end] 
 	end
 	# were the layers realy trained?
-	@test all(paramchange(frozen_params, collect(params(model)))) 
+	@test all(paramchange(frozen_params, model))
 end

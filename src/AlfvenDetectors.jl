@@ -35,5 +35,6 @@ include("ae.jl")
 include("vae.jl")
 include("tsvae.jl")
 include("experiments.jl")
+include("aae.jl")
 
 end # module

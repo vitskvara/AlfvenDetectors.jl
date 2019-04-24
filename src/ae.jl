@@ -3,7 +3,7 @@
 ##########################
 
 """
-	AE{encoder, sampler, decoder}
+	AE{encoder, decoder}
 
 Flux-like structure for the basic autoencoder.
 """

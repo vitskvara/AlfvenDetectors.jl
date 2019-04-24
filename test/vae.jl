@@ -20,8 +20,8 @@ N = 10
     @test !AlfvenDetectors.isconvvae(model)
     @test AlfvenDetectors.getlsize(model) == ldim
 	# for training check
-	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
-	@test !all(paramchange(frozen_params, collect(params(model)))) 
+	frozen_params = getparams(model)
+	@test !all(paramchange(frozen_params, model)) 
 	_x = model(x)
 	# test correct construction
 	@test size(model.encoder.layers,1) == 2
@@ -56,7 +56,7 @@ N = 10
 	is, ls = get(hist, :loss)
 	@test ls[1] > ls[end] 
 	# were the layers realy trained?
-	@test all(paramchange(frozen_params, collect(params(model))))	
+	@test all(paramchange(frozen_params, model))	
 	# sample
 	gx = AlfvenDetectors.sample(model)
 	@test typeof(gx) <: Flux.TrackedArray{AlfvenDetectors.Float,1}
@@ -147,11 +147,11 @@ N = 10
 	@test AlfvenDetectors.isconvvae(model)
     @test AlfvenDetectors.getlsize(model) == latentdim
 	hist = MVHistory()
-	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
+	frozen_params = getparams(model)
 	@test size(model(data)) == size(data)
 	@test size(model.encoder(data)) == (latentdim*2,k)
 	AlfvenDetectors.fit!(model, data, 4, 10, cbit=1, history=hist, verb=false);
-	@test all(paramchange(frozen_params, collect(params(model))))	
+	@test all(paramchange(frozen_params, model))	
 	(i,ls) = get(hist,:loss)
 	@test ls[end] < ls[1]
 	gx = AlfvenDetectors.sample(model)
@@ -166,11 +166,11 @@ N = 10
 	@test AlfvenDetectors.isconvvae(model)
     @test AlfvenDetectors.getlsize(model) == latentdim
 	hist = MVHistory()
-	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
+	frozen_params = getparams(model)
 	@test size(model(data)) == (m,n,c*2,k)
 	@test size(model.encoder(data)) == (latentdim*2,k)
 	AlfvenDetectors.fit!(model, data, 4, 10, cbit=1, history=hist, verb=false);
-	@test all(paramchange(frozen_params, collect(params(model))))	
+	@test all(paramchange(frozen_params, model))	
 	(i,ls) = get(hist,:loss)
 	@test ls[end] < ls[1]
 	gx = AlfvenDetectors.sample(model)
@@ -185,11 +185,11 @@ N = 10
 	@test AlfvenDetectors.isconvvae(model)
     @test AlfvenDetectors.getlsize(model) == latentdim
 	hist = MVHistory()
-	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
+	frozen_params = getparams(model)
 	@test size(model(data)) == (m,n,c*2,k)
 	@test size(model.encoder(data)) == (latentdim*2,k)
 	AlfvenDetectors.fit!(model, data, 4, 10, cbit=1, history=hist, verb=false);
-	@test all(paramchange(frozen_params, collect(params(model))))	
+	@test all(paramchange(frozen_params, model))	
 	(i,ls) = get(hist,:loss)
 	@test ls[end] < ls[1]
 	gx = AlfvenDetectors.sample(model)
@@ -197,5 +197,4 @@ N = 10
 	gx = AlfvenDetectors.sample(model,5)
 	@test typeof(gx) <: Flux.TrackedArray{AlfvenDetectors.Float,4}
 	@test size(gx) == (m,n,c,5)
-
 end

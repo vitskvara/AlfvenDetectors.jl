@@ -18,6 +18,7 @@ end
 	include("ae.jl")
 	include("vae.jl")
 	include("tsvae.jl")
+	include("aae.jl")
 end
 
 @testset "Experiments" begin

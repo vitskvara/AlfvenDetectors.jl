@@ -39,8 +39,8 @@ N = 100
    	@test length(model.m2.decoder.layers) == 2
 
    	# fit!
-    frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
-    @test !all(paramchange(frozen_params, collect(params(model)))) 
+    frozen_params = getparams(model)
+    @test !all(paramchange(frozen_params, model)) 
     @test length(frozen_params) == 20
    	history = (MVHistory(),MVHistory())
    	m1ls, m2ls = AlfvenDetectors.getlosses(model,x,10,1.0)
@@ -51,7 +51,7 @@ N = 100
   @test any(x->x[1]>x[2], zip(m1ls, post_m1ls))
   @test any(x->x[1]>x[2], zip(m2ls, post_m2ls))
   # were the layers realy trained?
-  @test all(paramchange(frozen_params, collect(params(model)))) 
+  @test all(paramchange(frozen_params, model)) 
   _,l1h = get(history[1],:loss)
   _,l2h = get(history[2],:loss)
   @test length(l1h) == 10000
@@ -78,7 +78,7 @@ N = 100
   batchnorm = true
   model = AlfvenDetectors.ConvTSVAE((m,n,c),latentdim, nlayers, 3, (2,4), 2; 
     batchnorm = batchnorm)
-  frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
+  frozen_params = getparams(model)
   _X = model(X)
   @test size(_X) == (m,n,2*c,k)
   z = model.m1.sampler(model.m1.encoder(X))
@@ -93,6 +93,6 @@ N = 100
     (is,ls) = get(h,:loss)
     @test ls[1] > ls[end]
   end
-  @test all(paramchange(frozen_params, collect(params(model)))) 
+  @test all(paramchange(frozen_params, model)) 
   
 end

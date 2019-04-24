@@ -73,17 +73,17 @@ model = Flux.Chain(Flux.Dense(xdim, ldim), Flux.Dense(ldim, xdim))
 	data = fill(X,100)
 	L = loss(X)
 	l = Flux.Tracker.data(L)
-	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
+	frozen_params = getparams(model)
 	#update!
 	Flux.back!(L)
 	AlfvenDetectors.update!(model,opt)
-	@test all(paramchange(frozen_params, collect(params(model))))
+	@test all(paramchange(frozen_params, model))
 	# train!
 	AlfvenDetectors.train!(model, data, loss, opt, cb)
 	_l = Flux.Tracker.data(loss(X))
 	@test _l < l
 	# were the layers realy trained?
-	@test all(paramchange(frozen_params, collect(params(model))))
+	@test all(paramchange(frozen_params, model))
 
 	# fast callback
 	@test AlfvenDetectors.fast_callback(AlfvenDetectors.AE(4,3,2), 1, 2, 3) == nothing
@@ -113,11 +113,11 @@ model = Flux.Chain(Flux.Dense(xdim, ldim), Flux.Dense(ldim, xdim))
 	opt = ADAM()
 	L = loss(X)
 	l = Flux.Tracker.data(L)
-	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
+	frozen_params = getparams(model)
 	#update!
 	Flux.back!(L)
 	AlfvenDetectors.update!(model,opt)
-	@test all(paramchange(frozen_params, collect(params(model))))
+	@test all(paramchange(frozen_params, model))
 	@test loss(X) < l
 
 	# upscaling stuff
@@ -190,7 +190,7 @@ model = Flux.Chain(Flux.Dense(xdim, ldim), Flux.Dense(ldim, xdim))
 	    # 24x24x4x1
 	    Flux.Conv((3,3), 4=>1, pad=(1,1))
 	)
-	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
+	frozen_params = getparams(model)
 	Y = model(X)
 	@test size(Y) == size(X)
 	loss(x) = Flux.mse(x,model(x))
@@ -198,7 +198,7 @@ model = Flux.Chain(Flux.Dense(xdim, ldim), Flux.Dense(ldim, xdim))
 	L = loss(X)
 	Flux.back!(L)
 	AlfvenDetectors.update!(model, opt)
-	@test all(paramchange(frozen_params, collect(params(model))))
+	@test all(paramchange(frozen_params, model))
 
 	# padding
 	a = Tracker.collect(Flux.Tracker.TrackedReal.(Float32.([1.0 2.0; 3.0 4.0])))
@@ -227,7 +227,7 @@ model = Flux.Chain(Flux.Dense(xdim, ldim), Flux.Dense(ldim, xdim))
 	    # 4x4x4x1
 	    Flux.Conv((3,3), 4=>1, pad=(1,1))
 	)
-	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
+	frozen_params = getparams(model)
 	Y = model(X)
 	@test size(Y) == size(X)
 	loss(x) = Flux.mse(x,model(x))
@@ -235,7 +235,7 @@ model = Flux.Chain(Flux.Dense(xdim, ldim), Flux.Dense(ldim, xdim))
 	L = loss(X)
 	Flux.back!(L)
 	AlfvenDetectors.update!(model, opt)
-	@test all(paramchange(frozen_params, collect(params(model))))
+	@test all(paramchange(frozen_params, model))
 
 	# same conv
 	X = randn(Float32, 5,6,2,5)
@@ -247,12 +247,12 @@ model = Flux.Chain(Flux.Dense(xdim, ldim), Flux.Dense(ldim, xdim))
 		@test isa(e, DomainError)
 	end
 	layer = AlfvenDetectors.SameConv((5,5),2=>2)
-	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(layer)))
+	frozen_params = getparams(layer)
 	loss(x) = Flux.mse(x,layer(x))
 	L = loss(X)
 	Flux.back!(L)
 	AlfvenDetectors.update!(layer, opt)
-	@test all(paramchange(frozen_params, collect(params(layer))))
+	@test all(paramchange(frozen_params, layer))
 
 	# convmaxpool
 	X = randn(12,6,2,5)

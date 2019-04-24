@@ -17,8 +17,8 @@ N = 10
 	model = AlfvenDetectors.AE([xdim,2,ldim], [ldim,2,xdim])
 	_x = model(x)
 	# for training check
-	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
-	@test !all(paramchange(frozen_params, collect(params(model)))) 
+	frozen_params = getparams(model)
+	@test !all(paramchange(frozen_params, model))
 
 	# test correct construction
 	@test size(model.encoder.layers,1) == 2
@@ -46,7 +46,7 @@ N = 10
 	@test ls[1] > ls[end] 
 	@test ls[end] < 2e-5
 	# were the layers realy trained?
-	@test all(paramchange(frozen_params, collect(params(model))))	
+	@test all(paramchange(frozen_params, model))	
 	# test fast training
 	AlfvenDetectors.fit!(model, x, 5, 1000, cbit=100, history = hist, verb = false, runtype = "fast")
 
@@ -71,11 +71,11 @@ N = 10
 	model = AlfvenDetectors.ConvAE(insize, latentdim, nconv, kernelsize, channels, scaling;
 		batchnorm = batchnorm)
 	hist = MVHistory()
-	frozen_params = map(x->copy(Flux.Tracker.data(x)), collect(params(model)))
+	frozen_params = getparams(model)
 	@test size(model(data)) == size(data)
 	@test size(model.encoder(data)) == (latentdim,k)
 	AlfvenDetectors.fit!(model, data, 4, 10, cbit=1, history=hist, verb=false)
-	@test all(paramchange(frozen_params, collect(params(model))))	
+	@test all(paramchange(frozen_params, model))	
 	(i,ls) = get(hist,:loss)
 	@test ls[end] < ls[1]
 end
