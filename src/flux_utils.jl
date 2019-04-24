@@ -99,6 +99,25 @@ function update!(model, optimiser)
 end
 
 """
+    loss_back_update!(model, data, loss, opt)
+
+Basic training step - computation of the loss, backpropagation of gradients and optimisation 
+of weights. The loss and opt arguments can be arrays/lists/tuples.
+"""
+function loss_back_update!(model, data, loss, opt)
+    l = loss(data)
+    Flux.Tracker.back!(l)
+    update!(model, opt)
+end 
+function loss_back_update!(model, data, loss::Union{AbstractVector, Tuple}, 
+    opt::Union{AbstractVector, Tuple})
+    for (_loss, _opt) in zip(loss, opt)
+        loss_back_update!(model, data, _loss, _opt)
+    end
+end 
+
+
+"""
     train!(model, data, loss, optimiser, callback; [usegpu])
 
 Basics taken from the Flux train! function. Callback is any function
@@ -112,9 +131,7 @@ function train!(model, data, loss, optimiser, callback;
             if usegpu
              _data = _data |> gpu
             end
-            l = loss(_data)
-            Flux.Tracker.back!(l)
-            update!(model, optimiser)
+            loss_back_update!(model, _data, loss, optimiser)
             # now call the callback function
             # can be an object so it can store some values between individual calls
             callback(model, _data, loss, optimiser)

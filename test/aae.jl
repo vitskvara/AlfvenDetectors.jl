@@ -62,6 +62,7 @@ N = 10
 	@test all(paramchange(eparams, model.encoder))
 	@test all(paramchange(decparams, model.decoder))
 	@test !any(paramchange(disparams, model.discriminator))
+	@test all(model.encoder.layers[end].W.data .== model.f_encoder.layers[end].W)
 
 	# test proper updating of discriminator
 	eparams = getparams(model.encoder)
@@ -75,6 +76,7 @@ N = 10
 	@test !any(paramchange(eparams, model.encoder))
 	@test !any(paramchange(decparams, model.decoder))
 	@test all(paramchange(disparams, model.discriminator))
+	@test all(model.discriminator.layers[end].W.data .== model.f_discriminator.layers[end].W)
 
 	# test proper updating of encoder with gloss
 	eparams = getparams(model.encoder)
@@ -88,4 +90,11 @@ N = 10
 	@test all(paramchange(eparams, model.encoder))
 	@test !any(paramchange(decparams, model.decoder))
 	@test !any(paramchange(disparams, model.discriminator))
+
+	# test the fit function
+	hist = MVHistory()
+	AlfvenDetectors.fit!(model, x, 5, 1000, cbit=5, history = hist, verb = true)
+	is, ls = get(hist, :aeloss)
+	@test ls[1] > ls[end] 
+
 end

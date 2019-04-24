@@ -179,7 +179,7 @@ end
 Callback for the train! function.
 TODO: stopping condition, change learning rate.
 """
-function (cb::basic_callback)(m::VAE, d, l, opt)
+function (cb::basic_callback)(m::AAE, d, l, opt)
 	# update iteration count
 	cb.iter_counter += 1
 	# save training progress to a MVHistory
@@ -210,3 +210,75 @@ function (cb::basic_callback)(m::VAE, d, l, opt)
 	end
 end
 
+"""
+	fit!(AAE, X, batchsize, nepochs[, cbit, history, opt, verb, η, 
+		runtype, usegpu, memoryefficient])
+
+Trains the VAE neural net.
+
+vae - a VAE object
+X - data array with instances as columns
+batchsize - batchsize
+nepochs - number of epochs
+cbit [200] - after this # of iterations, progress is updated
+history [nothing] - a dictionary for training progress control
+opt [nothing] - provide a tuple of 3 optimizers
+verb [true] - if output should be produced
+η [0.001] - learning rate
+runtype ["experimental"] - if fast is selected, no output and no history is written
+usegpu - if X is not already on gpu, this will put the inidvidual batches into gpu memory rather 
+		than all data at once
+memoryefficient - calls gc after every batch, again saving some memory but prolonging computation
+"""
+function fit!(aae::AAE, X, batchsize::Int, nepochs::Int; 
+	cbit::Int=200, history = nothing, opt=nothing,
+	verb::Bool = true, η = 0.001, runtype = "experimental", 
+	prealloc_eps=false, trainkwargs...)
+	@assert runtype in ["experimental", "fast"]
+	# sampler
+	sampler = EpochSampler(X,nepochs,batchsize)
+	epochsize = sampler.epochsize
+	# it might be smaller than the original one if there is not enough data
+	batchsize = sampler.batchsize 
+
+	# loss
+	ael(x) = aeloss(aae,x)
+	dl(x) = dloss(aae,x)
+	gl(x) = gloss(aae,x)
+
+	# optimizer
+	if opt == nothing
+		aeopt, dopt, gopt = fill(ADAM(η), 3)
+	else
+		@assert length(opt) == 3
+		aeopt, dopt, gopt = opt
+	end
+	
+	# callback
+	if runtype == "experimental"
+		cb = basic_callback(history,verb,η,cbit; 
+			train_length = nepochs*epochsize,
+			epoch_size = epochsize)
+		_cb = cb
+	elseif runtype == "fast"
+		_cb = fast_callback 
+	end
+
+	# preallocation could be possibly added
+
+
+	# train
+	train!(
+		aae,
+		collect(sampler),
+		(ael, dl, gl),
+	#	(x->aeloss(aae,x), x->dloss(aae,x),x->gloss(aae,x)),
+		(aeopt, dopt, gopt),
+	#	x->aeloss(aae,x),
+	#	aeopt,
+		_cb;
+		trainkwargs...
+		)
+	
+	return aeopt, dopt, gopt
+end
