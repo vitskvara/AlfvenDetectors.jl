@@ -19,8 +19,6 @@ AAE(e, de, ds, pz) = AAE(e, freeze(e), de, ds, freeze(ds), pz) # default constru
 # and make it trainable
 Flux.@treelike AAE
 
-AAE
-
 """
 	AAE(esize, decsize, dissize; [activation, layer])
 
@@ -58,16 +56,16 @@ function AAE(esize::Array{Int64,1}, decsize::Array{Int64,1}, dissize::Array{Int6
 end
 
 """
-	AAE(xdim, zdim, ae_nlayers, disc_nlayers; [activation, layer])
+	AAE(xdim, zdim, ae_nlayers, disc_nlayers; [hdim, activation, layer])
 
 Initialize an adversarial autoencoder given input and latent dimension 
-and number of layers. The width of layers is linearly interpolated 
-between xdim and zdim.
+and number of layers.
 
 	xdim = input size
 	zdim = code size
 	ae_nlayers = number of layers of the autoencoder
 	disc_nlayers = number of layers of the discriminator
+	hdim = width of layers, if not specified, it is linearly interpolated
 	activation [Flux.relu] = arbitrary activation function
 	layer [Flux.Dense] = layer type
 """
@@ -221,19 +219,19 @@ end
 
 Trains the AAE neural net.
 
-AAE - an AAE object
-X - data array with instances as columns
-batchsize - batchsize
-nepochs - number of epochs
-cbit [200] - after this # of iterations, progress is updated
-history [nothing] - a dictionary for training progress control
-opt [nothing] - provide a tuple of 3 optimizers
-verb [true] - if output should be produced
-η [0.001] - learning rate
-runtype ["experimental"] - if fast is selected, no output and no history is written
-usegpu - if X is not already on gpu, this will put the inidvidual batches into gpu memory rather 
-		than all data at once
-memoryefficient - calls gc after every batch, again saving some memory but prolonging computation
+	AAE - an AAE object
+	X - data array with instances as columns
+	batchsize - batchsize
+	nepochs - number of epochs
+	cbit [200] - after this # of iterations, progress is updated
+	history [nothing] - a dictionary for training progress control
+	opt [nothing] - provide a tuple of 3 optimizers
+	verb [true] - if output should be produced
+	η [0.001] - learning rate
+	runtype ["experimental"] - if fast is selected, no output and no history is written
+	usegpu - if X is not already on gpu, this will put the inidvidual batches into gpu memory rather 
+			than all data at once
+	memoryefficient - calls gc after every batch, again saving some memory but prolonging computation
 """
 function fit!(aae::AAE, X, batchsize::Int, nepochs::Int; 
 	cbit::Int=200, history = nothing, opt=nothing,

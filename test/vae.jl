@@ -113,13 +113,15 @@ N = 10
 	@test size(gx) == (xdim,5)
 
 	# alternative constructor test
-	model = AlfvenDetectors.VAE(xdim, ldim, 4)
+	model = AlfvenDetectors.VAE(xdim, ldim, 4, hdim=10)
 	@test !AlfvenDetectors.isconvvae(model)
     @test AlfvenDetectors.getlsize(model) == ldim
 	@test length(model.encoder.layers) == 4
 	@test length(model.decoder.layers) == 4
 	@test size(model.encoder(x)) == (ldim*2, N)
 	@test size(model(x)) == (xdim, N)
+	@test size(model.encoder.layers[1].W,1) == 10
+	@test size(model.encoder.layers[end].W,2) == 10
 
 	model = AlfvenDetectors.VAE(xdim, ldim, 4, variant = :scalar)
 	@test !AlfvenDetectors.isconvvae(model)

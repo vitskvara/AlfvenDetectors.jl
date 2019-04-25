@@ -364,17 +364,17 @@ end
 
 Create a convolutional encoder with dense output layer(s).
 
-ins = (height,width,no channels) of input
-ds = vector of widths of dense layers    
-das = vector of activations of dense layers - 1 element shorter then ds (last is always unit)
-ks = vector of kernel sizes
-cs = vector of channel pairs
-scs = vector of scale factors
-cas = vector of convolutional activations
-sts = vector of strides
-bns = binary vector of batchnorm usage
-rbs = binary vector of resblock usage
-outbatchnorm [false] = boolean - should batchnorm be used after the output layer?
+    ins = (height,width,no channels) of input
+    ds = vector of widths of dense layers    
+    das = vector of activations of dense layers - 1 element shorter then ds (last is always unit)
+    ks = vector of kernel sizes
+    cs = vector of channel pairs
+    scs = vector of scale factors
+    cas = vector of convolutional activations
+    sts = vector of strides
+    bns = binary vector of batchnorm usage
+    rbs = binary vector of resblock usage
+    outbatchnorm [false] = boolean - should batchnorm be used after the output layer?
 """
 function convencoder(ins,ds::AbstractVector, das::AbstractVector,
     ks::AbstractVector, cs::AbstractVector, 
@@ -413,19 +413,19 @@ end
 
 Create a convolutional encoder.
 
-insize = (height,width,no channels) of input
-latentdim = size of latent space
-nconv = number of conv layers
-kernelsize = scalar, tuple or a list of those
-channels = a list of channel numbers, same length as nconv
-scaling = scalar, tuple or a list of those
-ndense = number of dense layers (default 1)
-dsizes = if ndense > 1, specify a list of latent layer widths of length = ndense - 1
-activation = default relu
-lstride = length of stride, default 1, can be a scalar or a list of scalars
-batchnorm = boolean
-outbatchnorm = boolean - should batchnorm be used after the output layer?
-resblock = boolean - should resnet blocks be used?
+    insize = (height,width,no channels) of input
+    latentdim = size of latent space
+    nconv = number of conv layers
+    kernelsize = scalar, tuple or a list of those
+    channels = a list of channel numbers, same length as nconv
+    scaling = scalar, tuple or a list of those
+    ndense = number of dense layers (default 1)
+    dsizes = if ndense > 1, specify a list of latent layer widths of length = ndense - 1
+    activation = default relu
+    lstride = length of stride, default 1, can be a scalar or a list of scalars
+    batchnorm = boolean
+    outbatchnorm = boolean - should batchnorm be used after the output layer?
+    resblock = boolean - should resnet blocks be used?
 """
 function convencoder(insize, latentdim::Int, nconv::Int, kernelsize, channels, 
     scaling; ndense::Int=1, dsizes=nothing, activation=relu, lstride=1, batchnorm=false,
@@ -538,17 +538,17 @@ end
 
 Create a convolutional decoder with dense input layer(s).
 
-outs = (height,width,no channels) of output
-ds = vector of widths of dense layers    
-das = vector of activations of dense layers
-ks = vector of kernel sizes
-cs = vector of channel pairs
-scs = vector of scale factors
-cas = vector of convolutional activations one shorter than the rest (last activation is always identity)
-sts = vector of strides
-bns = boolean vector of batch normalization switches
-rbs = boolean vector of resnet block switches
-layertype = one of ["transpose", "upscale"]
+    outs = (height,width,no channels) of output
+    ds = vector of widths of dense layers    
+    das = vector of activations of dense layers
+    ks = vector of kernel sizes
+    cs = vector of channel pairs
+    scs = vector of scale factors
+    cas = vector of convolutional activations one shorter than the rest (last activation is always identity)
+    sts = vector of strides
+    bns = boolean vector of batch normalization switches
+    rbs = boolean vector of resnet block switches
+    layertype = one of ["transpose", "upscale"]
 """
 function convdecoder(outs, ds::AbstractVector, das::AbstractVector, ks::AbstractVector, 
     cs::AbstractVector, scs::AbstractVector, cas::AbstractVector, sts::AbstractVector,
@@ -594,19 +594,19 @@ end
 
 Create a convolutional decoder.
 
-outsize = (height,width,no channels) of output
-latentdim = size of latent space
-nconv = number of conv layers
-kernelsize = scalar, tuple or a list of those
-channels = a list of channel numbers, same length as nconv
-scaling = scalar, tuple or a list of those
-ndense = number of dense layers (default 1)
-dsizes = if ndense > 1, specify a list of latent layer widths of length = ndense
-activation = default relu
-lstride = length of stride, default 1, can be a scalar or a list of scalars
-layertype = one of ["transpose", "upscale"]
-batchnorm = boolean
-resblock = boolean
+    outsize = (height,width,no channels) of output
+    latentdim = size of latent space
+    nconv = number of conv layers
+    kernelsize = scalar, tuple or a list of those
+    channels = a list of channel numbers, same length as nconv
+    scaling = scalar, tuple or a list of those
+    ndense = number of dense layers (default 1)
+    dsizes = if ndense > 1, specify a list of latent layer widths of length = ndense
+    activation = default relu
+    lstride = length of stride, default 1, can be a scalar or a list of scalars
+    layertype = one of ["transpose", "upscale"]
+    batchnorm = boolean
+    resblock = boolean
 """
 function convdecoder(outsize, latentdim::Int, nconv::Int, kernelsize, channels, 
     scaling; ndense::Int=1, dsizes=nothing, activation=relu, lstride=1, 

@@ -23,14 +23,14 @@ Flux.@treelike VAE #encoder, decoder
 
 Initialize a variational autoencoder with given encoder size and decoder size.
 
-esize - vector of ints specifying the width anf number of layers of the encoder
-dsize - size of decoder
-activation [Flux.relu] - arbitrary activation function
-layer [Flux.Dense] - type of layer
-variant [:unit] 
-	:unit - output has unit variance
-	:scalar - a scalar variance of the output is estimated
-	:diag - the diagonal of covariance of the output is estimated
+	esize - vector of ints specifying the width anf number of layers of the encoder
+	dsize - size of decoder
+	activation [Flux.relu] - arbitrary activation function
+	layer [Flux.Dense] - type of layer
+	variant [:unit] 
+		:unit - output has unit variance
+		:scalar - a scalar variance of the output is estimated
+		:diag - the diagonal of covariance of the output is estimated
 """
 function VAE(esize::Array{Int64,1}, dsize::Array{Int64,1}; activation = Flux.relu,
 		layer = Flux.Dense, variant = :unit)
@@ -55,7 +55,7 @@ function VAE(esize::Array{Int64,1}, dsize::Array{Int64,1}; activation = Flux.rel
 end
 
 """
-	VAE(xdim, zdim, nlayers; [activation, layer, variant])
+	VAE(xdim, zdim, nlayers; [hdim, activation, layer, variant])
 
 Initialize a variational autoencoder given input and latent dimension 
 and numberof layers. The width of layers is linearly interpolated 
@@ -64,6 +64,7 @@ between xdim and zdim.
 	xdim = input size
 	zdim = code size
 	nlayers = number of layers
+	hdim = width of layers, if not specified, it is linearly interpolated
 	activation [Flux.relu] = arbitrary activation function
 	layer [Flux.Dense] = layer type
 	variant [:unit] 
@@ -72,10 +73,14 @@ between xdim and zdim.
 		:diag - the diagonal of covariance of the output is estimated
 """
 function VAE(xdim::Int, zdim::Int, nlayers::Int; activation = Flux.relu,
-		layer = Flux.Dense, variant = :unit)
+		hdim = nothing, layer = Flux.Dense, variant = :unit)
 	@assert nlayers >= 2
 
-	esize = ceil.(Int, range(xdim, zdim, length=nlayers+1))
+	if hdim == nothing
+		esize = ceil.(Int, range(xdim, zdim, length=nlayers+1))
+	else
+		esize = vcat([xdim], fill(hdim, nlayers-1), [zdim])
+	end
 	dsize = reverse(esize)
 	esize[end] = esize[end]*2
 	if variant == :scalar
@@ -89,7 +94,7 @@ end
 
 """
 	ConvVAE(insize, latentdim, nconv, kernelsize, channels, scaling; 
-		[variant, ndense, dsizes, activation, stride, batchnorm])
+		[hdim, variant, ndense, dsizes, activation, stride, batchnorm])
 
 Initializes a convolutional autoencoder.
 """
@@ -237,20 +242,20 @@ end
 
 Trains the VAE neural net.
 
-vae - a VAE object
-X - data array with instances as columns
-batchsize - batchsize
-nepochs - number of epochs
-L [1] - number of samples for likelihood
-beta [1.0] - scaling for the KLD loss
-cbit [200] - after this # of iterations, progress is updated
-history [nothing] - a dictionary for training progress control
-verb [true] - if output should be produced
-η [0.001] - learning rate
-runtype ["experimental"] - if fast is selected, no output and no history is written
-usegpu - if X is not already on gpu, this will put the inidvidual batches into gpu memory rather 
-		than all data at once
-memoryefficient - calls gc after every batch, again saving some memory but prolonging computation
+	vae - a VAE object
+	X - data array with instances as columns
+	batchsize - batchsize
+	nepochs - number of epochs
+	L [1] - number of samples for likelihood
+	beta [1.0] - scaling for the KLD loss
+	cbit [200] - after this # of iterations, progress is updated
+	history [nothing] - a dictionary for training progress control
+	verb [true] - if output should be produced
+	η [0.001] - learning rate
+	runtype ["experimental"] - if fast is selected, no output and no history is written
+	usegpu - if X is not already on gpu, this will put the inidvidual batches into gpu memory rather 
+			than all data at once
+	memoryefficient - calls gc after every batch, again saving some memory but prolonging computation
 """
 function fit!(vae::VAE, X, batchsize::Int, nepochs::Int; 
 	L=1, beta::Real= Float(1.0), cbit::Int=200, history = nothing, opt=nothing,

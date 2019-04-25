@@ -57,6 +57,15 @@ N = 10
 	@test size(model.encoder(x)) == (ldim, N)
 	@test size(model(x)) == (xdim, N)
 
+	# hdim 
+	model = AlfvenDetectors.AE(xdim, ldim, 4, hdim = 10)
+	@test length(model.encoder.layers) == 4
+	@test length(model.decoder.layers) == 4
+	@test size(model.encoder(x)) == (ldim, N)
+	@test size(model(x)) == (xdim, N)
+	@test size(model.encoder.layers[1].W,1) == 10
+	@test size(model.encoder.layers[end].W,2) == 10
+
 	# convolutional AE
 	data = randn(Float32,32,16,1,8);
 	m,n,c,k = size(data)

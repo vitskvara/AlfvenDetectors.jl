@@ -48,7 +48,7 @@ function AE(esize::Array{Int64,1}, dsize::Array{Int64,1}; activation = Flux.relu
 end
 
 """
-	AE(xdim, zdim, nlayers; [activation, layer])
+	AE(xdim, zdim, nlayers; [hdim, activation, layer])
 
 Initialize an autoencoder given input and latent dimension and number
 of layers. The width of layers is linearly interpolated between
@@ -57,14 +57,19 @@ xdim and zdim.
 	xdim = input size
 	zdim = code size
 	nlayers = number of layers
+	hdim = width of the network - if not specified, it will be linearly interpolated
 	activation [Flux.relu] = arbitrary activation function
 	layer [Flux.Dense] = layer type
 """
-function AE(xdim::Int, zdim::Int, nlayers::Int; activation = Flux.relu,
+function AE(xdim::Int, zdim::Int, nlayers::Int; hdim=nothing, activation = Flux.relu,
 		layer = Flux.Dense)
 	@assert nlayers >= 2
 
-	esize = ceil.(Int, range(xdim, zdim, length=nlayers+1))
+	if hdim == nothing
+		esize = ceil.(Int, range(xdim, zdim, length=nlayers+1))
+	else
+		esize = vcat([xdim], fill(hdim, nlayers-1), [zdim])
+	end
 	dsize = reverse(esize)
 
 	AE(esize,dsize; activation=activation, layer=layer)
@@ -72,7 +77,7 @@ end
 
 """
 	ConvAE(insize, latentdim, nconv, kernelsize, channels, scaling; 
-		[ndense, dsizes, activation, stride, batchnorm, outbatchnorm])
+		[hdim, ndense, dsizes, activation, stride, batchnorm, outbatchnorm])
 
 Initializes a convolutional autoencoder.
 """

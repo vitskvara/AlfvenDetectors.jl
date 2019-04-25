@@ -18,10 +18,10 @@ Flux.@treelike TSVAE #encoder, decoder
 
 Initialize a variational autoencoder with given encoder size and decoder size.
 
-m1size - a tuple of two vectors specifying the size of model 1
-m2size - a tuple of two vectors specifying the size of model 2
-activation [Flux.relu] - arbitrary activation function
-layer [Flux.Dense] - type of layer
+	m1size - a tuple of two vectors specifying the size of model 1
+	m2size - a tuple of two vectors specifying the size of model 2
+	activation [Flux.relu] - arbitrary activation function
+	layer [Flux.Dense] - type of layer
 """
 function TSVAE(m1size::AbstractVector, m2size::AbstractVector; 
 	variant = :scalar, activation = Flux.relu,	layer = Flux.Dense)

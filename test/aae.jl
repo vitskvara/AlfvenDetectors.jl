@@ -34,7 +34,9 @@ N = 10
 	@test length(model.encoder.layers) == 3
 	@test length(model.decoder.layers) == 3
 	@test length(model.discriminator.layers) == 2
-	@test 
+	@test size(model.encoder.layers[1].W,1) == 10
+	@test size(model.encoder.layers[end].W,2) == 10
+	@test size(model.discriminator.layers[1].W,1) == 10
 
 	# loss functions
 	ael = AlfvenDetectors.aeloss(model,x)
@@ -102,7 +104,7 @@ N = 10
 
 	# test the fit function
 	hist = MVHistory()
-	AlfvenDetectors.fit!(model, x, 5, 1000, cbit=5, history = hist, verb = true)
+	AlfvenDetectors.fit!(model, x, 5, 1000, cbit=5, history = hist, verb = false)
 	is, ls = get(hist, :aeloss)
 	@test ls[1] > ls[end] 
 
