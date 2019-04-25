@@ -27,6 +27,15 @@ N = 10
 	@test length(model.decoder.layers) == 3
 	@test length(model.discriminator.layers) == 2
 
+	# constructor with specified hdim
+	model = AlfvenDetectors.AAE(xdim, ldim, 3, 2, hdim=10)
+	# for training check
+	frozen_params = getparams(model)
+	@test length(model.encoder.layers) == 3
+	@test length(model.decoder.layers) == 3
+	@test length(model.discriminator.layers) == 2
+	@test 
+
 	# loss functions
 	ael = AlfvenDetectors.aeloss(model,x)
 	dl = AlfvenDetectors.dloss(model,x)

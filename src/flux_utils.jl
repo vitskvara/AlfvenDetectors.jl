@@ -94,7 +94,7 @@ function update!(model, optimiser)
     for p in params(model)
         Δ = Flux.Optimise.apply!(optimiser, p.data, p.grad)
         p.data .-= Δ
-        Δ .= 0
+        p.grad .= 0
     end
 end
 

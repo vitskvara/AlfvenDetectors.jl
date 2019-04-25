@@ -78,6 +78,7 @@ model = Flux.Chain(Flux.Dense(xdim, ldim), Flux.Dense(ldim, xdim))
 	Flux.back!(L)
 	AlfvenDetectors.update!(model,opt)
 	@test all(paramchange(frozen_params, model))
+	@test all(model.layers[1].W.grad .== 0.0)
 	# train!
 	AlfvenDetectors.train!(model, data, loss, opt, cb)
 	_l = Flux.Tracker.data(loss(X))

@@ -1,7 +1,7 @@
 """
 	AAE{encoder, decoder, discirminator, pz}
 
-Flux-like structure for the basic autoencoder.
+Flux-like structure of the adversarial autoencoder.
 """
 struct AAE{E, FE, DE, DS, FDS, PZ} <: FluxModel
 	encoder::E 
@@ -32,8 +32,8 @@ Initialize an adversarial autoencoder.
 	activation [Flux.relu] = arbitrary activation function
 	layer [Flux.Dense] = layer type
 """
-function AAE(esize::Array{Int64,1}, decsize::Array{Int64,1}, dissize::Array{Int64,1}; 
-	pz = randn, activation = Flux.relu,	layer = Flux.Dense)
+function AAE(esize::Array{Int64,1}, decsize::Array{Int64,1}, dissize::Array{Int64,1}, 
+	pz = randn; activation = Flux.relu,	layer = Flux.Dense)
 	@assert size(esize, 1) >= 3
 	@assert size(decsize, 1) >= 3
 	@assert size(dissize, 1) >= 3
@@ -71,18 +71,23 @@ between xdim and zdim.
 	activation [Flux.relu] = arbitrary activation function
 	layer [Flux.Dense] = layer type
 """
-function AAE(xdim::Int, zdim::Int, ae_nlayers::Int, disc_nlayers::Int; 
-	pz = randn, activation = Flux.relu, layer = Flux.Dense)
+function AAE(xdim::Int, zdim::Int, ae_nlayers::Int, disc_nlayers::Int, 
+	pz = randn; hdim = nothing, activation = Flux.relu, layer = Flux.Dense)
 	@assert ae_nlayers >= 2
 	@assert disc_nlayers >= 2
 
 	# this will create the integer array specifying the width of individual layers using linear interpolations
-	esize = ceil.(Int, range(xdim, zdim, length=ae_nlayers+1))
+	if hdim == nothing
+		esize = ceil.(Int, range(xdim, zdim, length=ae_nlayers+1))
+		dissize = ceil.(Int, range(zdim, 1, length=disc_nlayers+1))
+	else
+		esize = vcat([xdim], fill(hdim, ae_nlayers-1), [zdim])
+		dissize = vcat([zdim], fill(hdim, disc_nlayers-1), [1])
+	end
 	decsize = reverse(esize)
-	dissize = ceil.(Int, range(zdim, 1, length=disc_nlayers+1))
-
+	
 	# finally return the structure
-	AAE(esize,decsize, dissize; pz=pz, activation=activation, layer=layer)
+	AAE(esize,decsize, dissize, pz; activation=activation, layer=layer)
 end
 
 ################
@@ -214,9 +219,9 @@ end
 	fit!(AAE, X, batchsize, nepochs[, cbit, history, opt, verb, η, 
 		runtype, usegpu, memoryefficient])
 
-Trains the VAE neural net.
+Trains the AAE neural net.
 
-vae - a VAE object
+AAE - an AAE object
 X - data array with instances as columns
 batchsize - batchsize
 nepochs - number of epochs
@@ -266,16 +271,12 @@ function fit!(aae::AAE, X, batchsize::Int, nepochs::Int;
 
 	# preallocation could be possibly added
 
-
 	# train
 	train!(
 		aae,
 		collect(sampler),
 		(ael, dl, gl),
-	#	(x->aeloss(aae,x), x->dloss(aae,x),x->gloss(aae,x)),
 		(aeopt, dopt, gopt),
-	#	x->aeloss(aae,x),
-	#	aeopt,
 		_cb;
 		trainkwargs...
 		)
