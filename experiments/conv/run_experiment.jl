@@ -113,6 +113,10 @@ s = ArgParseSettings()
 	"--memorysafe"
 		action = :store_true
 		help = "if set, use a memory safe loading of hdf5 file which is slower but enables loading of larger datasets (requires h5py Python library)"
+	"--positive-patch-ratio"
+		type = Float32
+		default = 0f0
+		help = "the ratio of positively labeled patches to the rest of the data"	
 end
 parsed_args = parse_args(ARGS, s)
 modelname = "Conv"*parsed_args["modelname"]
@@ -184,27 +188,15 @@ if svpth != ""
 end 
 mkpath(savepath)
 
-shots = readdir(datapath)
-labels_shots = readdlm(joinpath(dirname(@__FILE__), "data/labeled_shots.csv"), ',', Int32)
-label = Int(!noalfven)
-labels = labels_shots[:,2]
-labeled_shots = labels_shots[:,1] 
-# select only some shots, first 10 are pseudorandomly selected from a labeled subset
-# original training subset ["10370", "10514", "10800", "10866", "10870", "10893"]
-Random.seed!(12345)
-train_inds = sample(1:length(labels[labels.==label]), 10, replace=false)
-train_shots = labeled_shots[labels.==label][train_inds]
-if nshots <= 10
-	shots = filter(x-> any(map(y -> occursin(y,x), string.(train_shots)[1:nshots])), shots)
-else
-	shots = unique(vcat(shots[sample(1:length(shots), nshots-10, replace=false)], 
-		filter(x-> any(map(y -> occursin(y,x), string.(train_shots))), shots)))
-end
-println("using $(shots)")
-shots = joinpath.(datapath, shots)
+# get the list of training shots
+available_shots = readdir(datapath)
+training_shots = AlfvenDetectors.select_training_shots(nshots, available_shots; seed=1,use_alfven_shots=!noalfven)
+println("using $(training_shots)")
+shots = joinpath.(datapath, training_shots)
 
+# if test token is given, only run with a limited number of shots
 if test
-	shots = shots[1:min(nshots,10)]
+	shots = shots[1:min(nshots,2)]
 end
 
 if measurement_type == "uprobe"
@@ -217,6 +209,16 @@ end
 # put all data into gpu only if you want to be fast and not care about memory clogging
 # otherwise that is done in the train function now per batch
 # data = data |> gpu
+
+# load the labeled patches
+shotnos, patch_labels, tstarts, fstarts = AlfvenDetectors.labeled_patches()
+shotnos = shotnos[patch_labels.==1]
+tstarts = tstarts[patch_labels.==1]
+fstarts = fstarts[patch_labels.==1]
+patch_labels = patch_labels[patch_labels.==1]
+npatches = length(shotnos)
+Random.seed!(12345)
+used_inds = sample(1:npatches, npatches)
 
 ### setup args
 xdim = size(data)
@@ -255,3 +257,5 @@ filename = AlfvenDetectors.create_filename(modelname, model_args, Dict(), fit_kw
 model, history, t = AlfvenDetectors.fitsave_unsupervised(data, modelname, batchsize, 
 	outer_nepochs, inner_nepochs, model_args, model_kwargs, fit_kwargs, savepath; 
 	optname=optimiser, eta=eta, usegpu=usegpu, savepoint=savepoint, filename=filename)
+
+

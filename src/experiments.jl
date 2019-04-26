@@ -283,3 +283,60 @@ function get_patch_from_csv(datapath, shot, label, tstart, fstart)
 	return patch
 end
 
+"""
+	add_noise(patch, δ)
+
+Adds a gaussion noise of selected level δ to the original patch.
+"""
+add_noise(patch, δ) = patch + randn(Float, size(patch))*Float(δ).*patch
+
+"""
+	select_training_shots(nshots, available_shots[, seed, use_alfven_shots])
+
+Select a list of training shots.
+"""
+function select_training_shots(nshots::Int, available_shots::AbstractVector; 
+	seed = nothing, use_alfven_shots=true)
+	# get the list of labeled shots
+	labels_shots = readdlm(joinpath(dirname(pathof(AlfvenDetectors)), "../experiments/conv/data/labeled_shots.csv"), ',', Int32)
+	labels = labels_shots[:,2]
+	labeled_shots = labels_shots[:,1]
+	# decide whether to use shots with alfven modes or not
+	label = Int(use_alfven_shots)
+	labeled_shots = labeled_shots[labels.==label] 
+	labels = labels[labels.==label]
+	Nlabeled = length(labels)
+	Nlabeledout = floor(Int, Nlabeled/2)
+	# original training subset ["10370", "10514", "10800", "10866", "10870", "10893"]
+	# initialize the pseudorandom generator so that the training set is fixed
+	# and select half of the set at most, then add the remaining 
+	(seed != nothing) ? Random.seed!(seed) : nothing
+	train_inds = sample(1:Nlabeled, Nlabeledout, replace=false)
+	train_shots = labeled_shots[train_inds]
+	Navailable = length(available_shots)
+	# now check if the labeled shots are actually avaiable and then select the requested amount
+	if nshots <= Nlabeledout
+		return filter(x-> any(map(y -> occursin(y,x), string.(train_shots)[1:nshots])), available_shots)
+	else 
+		# if more than the half of labeled shots are requested, select the rest from the available shots
+		# but discard those that are labeled
+		filtered_shots = filter(x-> all(map(y -> !occursin(y,x), string.(labels_shots[:,1]))), available_shots)
+		Nfiltered = length(filtered_shots)
+		(seed != nothing) ? Random.seed!(seed) : nothing
+		return vcat(
+			filter(x-> any(map(y -> occursin(y,x), string.(train_shots))), available_shots),
+			filtered_shots[sample(1:Nfiltered, nshots-Nlabeledout, replace=false)]
+			)
+	end
+end
+
+function select_training_patches(seed = nothing)
+	shotnos, patch_labels, tstarts, fstarts = AlfvenDetectors.labeled_patches()
+	shotnos = shotnos[patch_labels.==1]
+	tstarts = tstarts[patch_labels.==1]
+	fstarts = fstarts[patch_labels.==1]
+	patch_labels = patch_labels[patch_labels.==1]
+	npatches = length(shotnos)
+	Random.seed!(12345)
+	used_inds = sample(1:npatches, npatches)
+end
