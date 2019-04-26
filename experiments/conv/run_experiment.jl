@@ -114,9 +114,13 @@ s = ArgParseSettings()
 		action = :store_true
 		help = "if set, use a memory safe loading of hdf5 file which is slower but enables loading of larger datasets (requires h5py Python library)"
 	"--positive-patch-ratio"
-		type = Float32
+		arg_type = Float32
 		default = 0f0
 		help = "the ratio of positively labeled patches to the rest of the data"	
+	"--seed"
+		arg_type = Int
+		default = 1
+		help = "random seed for data preparation stochastics"
 end
 parsed_args = parse_args(ARGS, s)
 modelname = "Conv"*parsed_args["modelname"]
@@ -150,6 +154,8 @@ iptrunc = parsed_args["ip-trunc"]
 svpth = parsed_args["savepath"]
 savepoint = parsed_args["savepoint"]
 memorysafe = parsed_args["memorysafe"]
+positive_patch_ratio = parsed_args["positive-patch-ratio"]
+seed = parsed_args["seed"]
 if measurement_type == "mscamp"
 	readfun = AlfvenDetectors.readmscamp
 elseif measurement_type == "mscphase"
@@ -189,9 +195,10 @@ end
 mkpath(savepath)
 
 # get the list of training shots
+println("Loading basic training data...\n")
 available_shots = readdir(datapath)
-training_shots = AlfvenDetectors.select_training_shots(nshots, available_shots; seed=1,use_alfven_shots=!noalfven)
-println("using $(training_shots)")
+training_shots = AlfvenDetectors.select_training_shots(nshots, available_shots; seed=seed, use_alfven_shots=!noalfven)
+println("Using $(training_shots)\n")
 shots = joinpath.(datapath, training_shots)
 
 # if test token is given, only run with a limited number of shots
@@ -206,22 +213,28 @@ else
 	data = AlfvenDetectors.collect_conv_signals(shots, readfun, patchsize, coils; 
 		warns=warnings, type=iptrunc, memorysafe=memorysafe)
 end
+xdim = size(data)
+println(xdim)
+
 # put all data into gpu only if you want to be fast and not care about memory clogging
 # otherwise that is done in the train function now per batch
 # data = data |> gpu
 
 # load the labeled patches
-shotnos, patch_labels, tstarts, fstarts = AlfvenDetectors.labeled_patches()
-shotnos = shotnos[patch_labels.==1]
-tstarts = tstarts[patch_labels.==1]
-fstarts = fstarts[patch_labels.==1]
-patch_labels = patch_labels[patch_labels.==1]
-npatches = length(shotnos)
-Random.seed!(12345)
-used_inds = sample(1:npatches, npatches)
+if positive_patch_ratio > 0
+	println("Loading labeled patch data...")
+	shotnos, patch_labels, tstarts, fstarts = AlfvenDetectors.select_training_patches(0.5, seed=seed)
+	Nadded = floor(Int, xdim[4]*positive_patch_ratio/(1-positive_patch_ratio))
+	# now that we know how many samples to add, we can sample the appropriate number of them with some added noise
+	added_patches = AlfvenDetectors.collect_training_patches(datapath, shotnos, tstarts, fstarts,
+		Nadded, readfun, patchsize; δ = 0.02, seed=seed, memorysafe = true)
+	println("Done, loaded additional $(size(added_patches,4)) positively labeled patches.")
+	data = cat(data, added_patches, dims=4)
+	xdim = size(data)
+end
+println(xdim)
 
 ### setup args
-xdim = size(data)
 model_args = [
 		:xdim => xdim[1:3],
 		:ldim => ldim, 
@@ -257,5 +270,3 @@ filename = AlfvenDetectors.create_filename(modelname, model_args, Dict(), fit_kw
 model, history, t = AlfvenDetectors.fitsave_unsupervised(data, modelname, batchsize, 
 	outer_nepochs, inner_nepochs, model_args, model_kwargs, fit_kwargs, savepath; 
 	optname=optimiser, eta=eta, usegpu=usegpu, savepoint=savepoint, filename=filename)
-
-

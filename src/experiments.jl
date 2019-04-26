@@ -288,7 +288,7 @@ end
 
 Adds a gaussion noise of selected level δ to the original patch.
 """
-add_noise(patch, δ) = patch + randn(Float, size(patch))*Float(δ).*patch
+add_noise(patch::AbstractArray, δ::Real) = patch + randn(Float, size(patch))*Float(δ).*patch
 
 """
 	select_training_shots(nshots, available_shots[, seed, use_alfven_shots])
@@ -303,9 +303,12 @@ function select_training_shots(nshots::Int, available_shots::AbstractVector;
 	labeled_shots = labels_shots[:,1]
 	# decide whether to use shots with alfven modes or not
 	label = Int(use_alfven_shots)
-	labeled_shots = labeled_shots[labels.==label] 
+	labeled_shots = labeled_shots[labels.==label]
 	labels = labels[labels.==label]
-	Nlabeled = length(labels)
+	# also, filter the two lists so there is no intersection
+	labeled_shots = filter(x->any(map(y->occursin(string(y), x),labeled_shots)), available_shots)
+	available_shots = filter(x->!any(map(y->occursin(string(y),x),labeled_shots)), available_shots)
+	Nlabeled = length(labeled_shots)
 	Nlabeledout = floor(Int, Nlabeled/2)
 	# original training subset ["10370", "10514", "10800", "10866", "10870", "10893"]
 	# initialize the pseudorandom generator so that the training set is fixed
@@ -316,27 +319,65 @@ function select_training_shots(nshots::Int, available_shots::AbstractVector;
 	Navailable = length(available_shots)
 	# now check if the labeled shots are actually avaiable and then select the requested amount
 	if nshots <= Nlabeledout
-		return filter(x-> any(map(y -> occursin(y,x), string.(train_shots)[1:nshots])), available_shots)
+		outshots = train_shots[1:nshots]
 	else 
 		# if more than the half of labeled shots are requested, select the rest from the available shots
 		# but discard those that are labeled
-		filtered_shots = filter(x-> all(map(y -> !occursin(y,x), string.(labels_shots[:,1]))), available_shots)
-		Nfiltered = length(filtered_shots)
 		(seed != nothing) ? Random.seed!(seed) : nothing
-		return vcat(
-			filter(x-> any(map(y -> occursin(y,x), string.(train_shots))), available_shots),
-			filtered_shots[sample(1:Nfiltered, nshots-Nlabeledout, replace=false)]
+		outshots = vcat(
+			train_shots,
+			available_shots[sample(1:Navailable, nshots-Nlabeledout, replace=false)]
 			)
 	end
+	# restart the seed
+	Random.seed!()
+	return outshots
 end
 
-function select_training_patches(seed = nothing)
+"""
+	select_training_patches(α[, seed])
+
+Return the info on α ratio of labeled patches.
+"""
+function select_training_patches(α::Real; seed = nothing)
+	@assert 0 <=  α <= 1
+	# get the information on the patches
 	shotnos, patch_labels, tstarts, fstarts = AlfvenDetectors.labeled_patches()
 	shotnos = shotnos[patch_labels.==1]
 	tstarts = tstarts[patch_labels.==1]
 	fstarts = fstarts[patch_labels.==1]
 	patch_labels = patch_labels[patch_labels.==1]
-	npatches = length(shotnos)
-	Random.seed!(12345)
-	used_inds = sample(1:npatches, npatches)
+	Npatches = length(shotnos)
+	# set the seed and shuffle the data
+	(seed != nothing) ? Random.seed!(seed) : nothing
+	used_inds = sample(1:Npatches, Npatches)
+	shotnos, tstarts, fstarts, patch_lables =
+		shotnos[used_inds], tstarts[used_inds], fstarts[used_inds], patch_labels[used_inds]
+	# now return the data using given α
+	Nused = floor(Int, Npatches*α)
+	# restart the seed
+	Random.seed!()
+	if Nused > 0
+		return shotnos[1:Nused], patch_lables[1:Nused], tstarts[1:Nused], fstarts[1:Nused]
+	else
+		return nothing, nothing, nothing, nothing
+	end
 end
+
+function collect_training_patches(datapath, shotnos, tstarts, fstarts, N, readfun, patchsize; 
+	δ = 0.02, seed = nothing, kwargs...)
+	# collect all the patch data
+	patchdata = map(x->get_patch(datapath, x[1], x[2], x[3], patchsize, readfun; 
+		kwargs...)[1], zip(shotnos, tstarts, fstarts))
+	# sample patches to be added
+	Npatches = length(patchdata)
+	(seed != nothing) ? Random.seed!(seed) : nothing
+	patches = patchdata[sample(1:Npatches, N)]
+	# finally, add some noise to them
+	patches = add_noise.(patches,δ)
+	# and return them as a 4D tensor
+	patches = cat(patches...,dims=4)
+	Random.seed!()
+	return patches
+end
+

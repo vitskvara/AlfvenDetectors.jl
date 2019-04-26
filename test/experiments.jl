@@ -68,6 +68,23 @@ if isdir(datapath)
 	@test length(t) == 128
 	@test length(f) == 128
 
+	# test the data preparation functions
+	available_shots = readdir(datapath)
+	shotlist = AlfvenDetectors.select_training_shots(5, available_shots; seed = 1)
+	@test length(shotlist) == 5
+	shotlist2 = AlfvenDetectors.select_training_shots(11, available_shots; seed = 1)
+	@test length(shotlist2) == 11
+	@test shotlist == shotlist2[1:5]
+	shotlist3 = AlfvenDetectors.select_training_shots(11, available_shots; seed = 2)
+	@test length(shotlist3) == 11
+	@test shotlist2 != shotlist3
+
+	# select_training_patches(α::Real; seed = nothing)
+	@test AlfvenDetectors.select_training_patches(0.0) == (nothing, nothing, nothing, nothing)
+	patchdata = AlfvenDetectors.select_training_patches(0.1)
+	@test length(patchdata) == 4
+	@test length(patchdata[1]) == length(patchdata[2]) == length(patchdata[3]) == length(patchdata[4]) != 0
+
 	# msc amplitude + AE
 	rawdata = hcat(AlfvenDetectors.collect_signals(shots, AlfvenDetectors.readmscampphase, coils; type="flattop")...)
 	data = rawdata |> gpu
