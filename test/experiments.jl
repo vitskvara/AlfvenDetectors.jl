@@ -1,8 +1,8 @@
 using AlfvenDetectors
 using Test
-using Flux
 using ValueHistories
 using Pkg
+using Flux
 
 verb = false
 
@@ -31,7 +31,7 @@ if isdir(datapath)
 
 	ldim = 2
 	nlayers = 2
-	coils = [12,13,14]	
+	coils = [12,13,14]
 	shots = readdir(datapath)[1:2]
 	shots = joinpath.(datapath, shots)
 

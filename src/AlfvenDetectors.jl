@@ -1,17 +1,15 @@
 module AlfvenDetectors
 
-using Flux
 using HDF5
 using Suppressor
 using ValueHistories
-using Adapt
+using Flux
 using StatsBase # for samplers
-using ProgressMeter
 using Dates # for experiments
 using BSON
-using SparseArrays
 using DelimitedFiles
 using Random
+using GenerativeModels
 # for alternative .h5 file loading
 using PyCall
 # PyCall modules are pointers
@@ -26,17 +24,9 @@ function _init_h5py(warns=true)
 end
 import Base.collect
 
-
 const Float = Float32
 
 include("data.jl")
-include("samplers.jl")
-include("flux_utils.jl")
-include("model_utils.jl")
-include("ae.jl")
-include("vae.jl")
-include("tsvae.jl")
 include("experiments.jl")
-include("aae.jl")
 
 end # module
