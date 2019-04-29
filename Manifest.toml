@@ -150,6 +150,14 @@ git-tree-sha1 = "4c4d727f1b7e0092134fabfab6396b8945c1ea5b"
 uuid = "f6369f11-7733-5829-9624-2563aa707210"
 version = "0.10.3"
 
+[[GenerativeModels]]
+deps = ["Adapt", "Flux", "ProgressMeter", "Random", "SparseArrays", "StatsBase", "ValueHistories"]
+git-tree-sha1 = "5fe42678c90051efff5b0708815491755a895f39"
+repo-rev = "master"
+repo-url = "https://github.com/vitskvara/GenerativeModels.jl.git"
+uuid = "316c64c6-6a49-11e9-07fe-e73d6c9df589"
+version = "0.1.0"
+
 [[HDF5]]
 deps = ["BinDeps", "Blosc", "CRC32c", "Distributed", "Homebrew", "Libdl", "LinearAlgebra", "Mmap", "Pkg", "Test", "WinRPM"]
 git-tree-sha1 = "dd83e1e9c72e44e3a156438b552cf75dbdda722f"
@@ -275,6 +283,12 @@ uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 [[Profile]]
 deps = ["Printf"]
 uuid = "9abbd945-dff8-562f-b5e8-e1ebf5ef1b79"
+
+[[ProgressMeter]]
+deps = ["Distributed", "Printf", "Random", "Test"]
+git-tree-sha1 = "48058bc11607676e5bbc0b974af79106c6200787"
+uuid = "92933f4c-e287-5a05-a399-4b506db050ca"
+version = "0.9.0"
 
 [[PyCall]]
 deps = ["Conda", "Dates", "Libdl", "LinearAlgebra", "MacroTools", "Pkg", "Serialization", "Statistics", "Test", "VersionParsing"]
