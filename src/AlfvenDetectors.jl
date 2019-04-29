@@ -24,6 +24,8 @@ function _init_h5py(warns=true)
 		warns ? @warn("h5py Python library was not loaded and memory safe .h5 loading is therefore not available") : nothing
 	end
 end
+import Base.collect
+
 
 const Float = Float32
 

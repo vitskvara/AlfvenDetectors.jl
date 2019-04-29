@@ -1,5 +1,3 @@
-import Base.collect
-
 """
 	BaseAlfvenData
 
