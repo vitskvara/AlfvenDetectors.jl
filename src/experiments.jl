@@ -116,7 +116,7 @@ Create, fit and save a model.
 function fitsave_unsupervised(data, modelname, batchsize, outer_nepochs, inner_nepochs,
 	 model_args, model_kwargs, fit_kwargs, savepath;
 	 optname = "ADAM", eta = 0.001, usegpu = false, filename = "", verb = true,
-	 savepoint=1)
+	 savepoint=1, experiment_args=nothing)
 	# create the model
 	model = construct_model(modelname, [x[2] for x in model_args]...; model_kwargs...)
 	usegpu ? model = model |> gpu : nothing
@@ -160,7 +160,8 @@ function fitsave_unsupervised(data, modelname, batchsize, outer_nepochs, inner_n
 	end
 	# save the final version
 	cpumodel = model |> cpu
-	bson(joinpath(savepath, filename), model = cpumodel, history = history, time = t, timeall=tall[2])
+	bson(joinpath(savepath, filename), model = cpumodel, history = history, time = t, 
+		timeall=tall[2], model_args=model_args, model_kwargs=model_kwargs, experiment_args=experiment_args)
 	
 	println("model and timing saved to $(joinpath(savepath, filename))")
 
@@ -364,6 +365,12 @@ function select_training_patches(α::Real; seed = nothing)
 	end
 end
 
+"""
+	collect_training_patches(datapath, shotnos, tstarts, fstarts, N, readfun, patchsize[; 
+	δ, seed, kwargs...])
+
+This function will return the 4D tensor of N randomly selected patches with added noise of magnitude δ.
+"""
 function collect_training_patches(datapath, shotnos, tstarts, fstarts, N, readfun, patchsize; 
 	δ = 0.02, seed = nothing, kwargs...)
 	# collect all the patch data

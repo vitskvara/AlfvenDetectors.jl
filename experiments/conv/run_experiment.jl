@@ -81,7 +81,7 @@ s = ArgParseSettings()
 		arg_type = Float32
 		help = "value of beta for VAE loss"
 	"--optimiser"
-		default = "ADAM"
+		default = "RMSProp"
 		help = "optimiser type"
 	"--vae-variant"
 		default = "scalar"
@@ -90,6 +90,10 @@ s = ArgParseSettings()
 		default = 10
 		arg_type = Int
 		help = "number of outer epochs"
+	"--niepochs"
+		default = 1
+		arg_type = Int
+		help = "number of inner epochs"
 	"--no-warnings"
 		action = :store_true
 		help = "dont print warnings"
@@ -107,7 +111,7 @@ s = ArgParseSettings()
 		default = ""
 		help = "alternative saving path"
 	"--savepoint"
-		default = 100
+		default = 200
 		arg_type = Int
 		help = "how often should an intermediate state of the model be saved"
 	"--memorysafe"
@@ -146,7 +150,7 @@ beta = parsed_args["beta"]
 optimiser = parsed_args["optimiser"]
 vae_variant = Symbol(parsed_args["vae-variant"])
 outer_nepochs = parsed_args["nepochs"]
-inner_nepochs = 1
+inner_nepochs = parsed_args["niepochs"]
 warnings = !parsed_args["no-warnings"]
 memoryefficient = parsed_args["memory-efficient"]
 test = parsed_args["test"]
@@ -214,7 +218,6 @@ else
 		warns=warnings, type=iptrunc, memorysafe=memorysafe)
 end
 xdim = size(data)
-println(xdim)
 
 # put all data into gpu only if you want to be fast and not care about memory clogging
 # otherwise that is done in the train function now per batch
@@ -232,7 +235,6 @@ if positive_patch_ratio > 0
 	data = cat(data, added_patches, dims=4)
 	xdim = size(data)
 end
-println(xdim)
 
 ### setup args
 model_args = [
@@ -258,15 +260,13 @@ end
 
 ### run and save the model
 filename_kwargs = Dict(
-	:batchsize => batchsize,
-	:nepochs => outer_nepochs*inner_nepochs,
-	:opt => optimiser,
-	:eta => eta,
-	:nshots => nshots
-#	:noalfven => noalfven
-)
-filename = AlfvenDetectors.create_filename(modelname, model_args, Dict(), fit_kwargs, 
+	:patchsize => patchsize,
+	:channels => "["*reduce((x,y)->"$(x),$(y)",channels)*"]",
+	:nepochs => outer_nepochs*inner_nepochs
+	)
+filename = AlfvenDetectors.create_filename(modelname, [], Dict(), Dict(), 
 	filename_kwargs...)
 model, history, t = AlfvenDetectors.fitsave_unsupervised(data, modelname, batchsize, 
 	outer_nepochs, inner_nepochs, model_args, model_kwargs, fit_kwargs, savepath; 
-	optname=optimiser, eta=eta, usegpu=usegpu, savepoint=savepoint, filename=filename)
+	optname=optimiser, eta=eta, usegpu=usegpu, savepoint=savepoint, filename=filename,
+	experiment_args=parsed_args)
