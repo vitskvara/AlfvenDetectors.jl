@@ -1,0 +1,4 @@
+#!/bin/bash
+julia ../run_experiment.jl AE 64 4 8 16 32 64 --savepath=data_augmentation --eta=0.001 --scaling 1 2 1 2 --patchsize=128 --batchsize=128 --nepochs=1000 --gpu --memory-efficient --batchnorm --resblock --memorysafe --savepoint=250
+julia ../run_experiment.jl AE 64 4 8 16 32 64 --savepath=data_augmentation --eta=0.001 --scaling 1 2 1 2 --patchsize=128 --batchsize=128 --nepochs=1000 --gpu --memory-efficient --batchnorm --resblock --memorysafe --savepoint=250 --positive-patch-ratio=0.1
+julia ../run_experiment.jl AE 64 4 8 16 32 64 --savepath=data_augmentation --eta=0.001 --scaling 1 2 1 2 --patchsize=128 --batchsize=128 --nepochs=1000 --gpu --memory-efficient --batchnorm --resblock --memorysafe --savepoint=250 --positive-patch-ratio=0.5
