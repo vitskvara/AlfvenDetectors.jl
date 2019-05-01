@@ -287,7 +287,11 @@ fit_kwargs = Dict{Symbol, Any}(
 		:memoryefficient => memoryefficient
 	)
 if ndense>1
-	model_kwargs[:dsizes] = fill(ldim*2,ndense-1)
+	if hdim != nothing
+		model_kwargs[:dsizes] = fill(hdim,ndense-1)	
+	else
+		model_kwargs[:dsizes] = fill(ldim*2,ndense-1)
+	end
 end
 # model-specific arguments
 if occursin("VAE", modelname)
