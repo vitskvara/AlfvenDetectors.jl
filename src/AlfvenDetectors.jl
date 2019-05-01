@@ -10,7 +10,7 @@ using BSON
 using DelimitedFiles
 using Random
 using GenerativeModels
-using PyPlot
+#using PyPlot
 # for alternative .h5 file loading
 using PyCall
 # PyCall modules are pointers
