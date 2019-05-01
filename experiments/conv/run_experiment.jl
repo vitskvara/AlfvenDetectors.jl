@@ -5,6 +5,7 @@ using ArgParse
 using DelimitedFiles
 using Random
 using StatsBase
+using GenerativeModels
 
 # use argparse to extract the command line arguments
 # name of algorithm, usegpu, latentdim, no of layers, coils?
@@ -125,6 +126,23 @@ s = ArgParseSettings()
 		arg_type = Int
 		default = 1
 		help = "random seed for data preparation stochastics"
+	"--ndense"
+		arg_type = Int
+		default = 1
+		help = "number of dense layers"
+	"--hdim"
+		default = nothing
+		help = "size of hidden dimension, especially useful for AAE discriminator"
+	"--disc-nlayers"
+		default = nothing
+		help = "number of hidden layers of the AAE discriminator"
+	"--kernel"
+		default = "imq"
+		help = "kernel of the WAE model"
+	"--sigma"
+		arg_type = Float32
+		default = 0.1f0
+		help = "scaling parameter of the WAE kernel"
 end
 parsed_args = parse_args(ARGS, s)
 modelname = "Conv"*parsed_args["modelname"]
@@ -160,6 +178,13 @@ savepoint = parsed_args["savepoint"]
 memorysafe = parsed_args["memorysafe"]
 positive_patch_ratio = parsed_args["positive-patch-ratio"]
 seed = parsed_args["seed"]
+ndense = parsed_args["ndense"]
+hdim = parsed_args["hdim"]
+hdim = (hdim==nothing ? nothing : Meta.parse(hdim))
+disc_nlayers = parsed_args["disc-nlayers"]
+disc_nlayers = (disc_nlayers==nothing ? nlayers : Meta.parse(disc_nlayers))
+kernel = eval(Meta.parse("GenerativeModels."*parsed_args["kernel"]))
+sigma = parsed_args["sigma"]
 if measurement_type == "mscamp"
 	readfun = AlfvenDetectors.readmscamp
 elseif measurement_type == "mscphase"
@@ -236,6 +261,13 @@ if positive_patch_ratio > 0
 	xdim = size(data)
 end
 
+# pz
+#pz = randn
+#pz_gpu = GenerativeModels.randn_gpu
+pz = AlfvenDetectors.binormal
+pz_gpu = AlfvenDetectors.binormal_gpu
+
+
 ### setup args
 model_args = [
 		:xdim => xdim[1:3],
@@ -247,15 +279,30 @@ model_args = [
 	]
 model_kwargs = Dict{Symbol, Any}(
 	:batchnorm => batchnorm,
-	:outbatchnorm => outbatchnorm
+	:outbatchnorm => outbatchnorm,
+	:ndense => ndense
 	)
-fit_kwargs = Dict(
+fit_kwargs = Dict{Symbol, Any}(
 		:usegpu => usegpu,
 		:memoryefficient => memoryefficient
 	)
+if ndense>1
+	model_kwargs[:dsizes] = fill(ldim*2,ndense-1)
+end
+# model-specific arguments
 if occursin("VAE", modelname)
 	model_kwargs[:variant] = vae_variant
 	fit_kwargs[:beta] = beta
+end
+if occursin("AAE", modelname)
+	model_kwargs[:hdim] = hdim
+	insert!(model_args, 3, :disc_nlayers => disc_nlayers)
+	usegpu ? push!(model_args, :pz => pz_gpu) : nothing
+end
+if occursin("WAE", modelname)
+	model_kwargs[:kernel] = kernel
+	usegpu ? push!(model_args, :pz => pz_gpu) : nothing
+	fit_kwargs[:σ] = sigma
 end
 
 ### run and save the model

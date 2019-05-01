@@ -123,14 +123,18 @@ function fitsave_unsupervised(data, modelname, batchsize, outer_nepochs, inner_n
 	if occursin("TSVAE", "$modelname")
 		history = (MVHistory(), MVHistory())
 		opt = Array{Any,1}([eval(Meta.parse(optname))(eta), eval(Meta.parse(optname))(eta)])
+	elseif occursin("AAE", "$modelname")
+		history = MVHistory()
+		opt = Array{Any,1}([eval(Meta.parse(optname))(eta) for i in 1:3])
 	else
 		history = MVHistory()
 		opt = eval(Meta.parse(optname))(eta)
 	end
 
 	# append time and bson suffix to filename
+	tstart = now()
 	if filename == ""
-		filename *= "$(now()).bson"
+		filename *= "$tstart.bson"
 	end
 	
 	# fit the model
@@ -154,13 +158,14 @@ function fitsave_unsupervised(data, modelname, batchsize, outer_nepochs, inner_n
 				filename = join(fs, "_")
 			end
 			cpumodel = model |> cpu
-			bson(joinpath(savepath, filename), model = cpumodel, history = history, time = t)
+			bson(joinpath(savepath, filename), model = cpumodel, history = history, time = t, tstart = tstart, 
+				model_args=model_args, model_kwargs=model_kwargs, experiment_args=experiment_args)
 		end
 		GC.gc()
 	end
 	# save the final version
 	cpumodel = model |> cpu
-	bson(joinpath(savepath, filename), model = cpumodel, history = history, time = t, 
+	bson(joinpath(savepath, filename), model = cpumodel, history = history, time = t, tstart = tstart, 
 		timeall=tall[2], model_args=model_args, model_kwargs=model_kwargs, experiment_args=experiment_args)
 	
 	println("model and timing saved to $(joinpath(savepath, filename))")

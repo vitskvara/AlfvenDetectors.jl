@@ -10,6 +10,7 @@ using BSON
 using DelimitedFiles
 using Random
 using GenerativeModels
+using PyPlot
 # for alternative .h5 file loading
 using PyCall
 # PyCall modules are pointers
@@ -28,5 +29,7 @@ const Float = Float32
 
 include("data.jl")
 include("experiments.jl")
+include("distributions.jl")
+include("evaluation.jl")
 
 end # module

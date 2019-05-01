@@ -170,12 +170,8 @@ function readsignal_py(filepath::String, signal::String; warns=true)
 			return x
 		end
 	catch e
-		if isa(e, ErrorException) # signal or file not found
-			warns ? @warn("$(filepath): $signal data not found") : nothing
-			return NaN
-		else
-			rethrow(e)
-		end
+		warns ? @warn("$(filepath): $signal data not found") : nothing
+		return NaN
 	end
 end
 
