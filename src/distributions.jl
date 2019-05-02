@@ -13,5 +13,3 @@ binormal(m::Int) = binormal(Float32,m)
 binormal(T::DataType,m::Int,n::Int) = hcat(map(x->binormal(T,m),1:n)...)
 binormal(m::Int,n::Int) = binormal(Float32,m,n)
 binormal_gpu(T::DataType,m::Int,n::Int) = binormal(T,m,n) |> gpu
-
-

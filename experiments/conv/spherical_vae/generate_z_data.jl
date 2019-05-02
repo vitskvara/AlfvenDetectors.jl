@@ -32,7 +32,7 @@ tstarts = tstarts[labels.==1]
 fstarts = fstarts[labels.==1]
 labels = labels[labels.==1]
 patchdata = map(x->AlfvenDetectors.get_patch(datapath, x[1], x[2], x[3], patchsize,
-	readfun; memorysafe = true)[1], zip(shots, tstarts, fstarts))
+	readfun; memorysafe = true)[1], zip(shotnos, tstarts, fstarts))
 patchdata = cat(patchdata..., dims=4)
 #concat it all together
 data = cat(data, patchdata, dims=4)
