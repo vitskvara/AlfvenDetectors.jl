@@ -20,7 +20,7 @@ binormal_gpu(T::DataType,m::Int,n::Int) = binormal(T,m,n) |> gpu
 Generate n samples from four-component gaussian m-dimensional mixture.
 """
 function quadnormal(T::DataType,m::Int)
-	@assert m>2
+	@assert m>=2
 	i = rand(1:4)
 	μ = T.(hcat(fill(-1.0,m), fill(-1.0,m), fill(1.0,m), fill(1.0,m)))
 	μ[1,1] = 1.0
