@@ -266,7 +266,8 @@ end
 #pz_gpu = GenerativeModels.randn_gpu
 pz = AlfvenDetectors.binormal
 pz_gpu = AlfvenDetectors.binormal_gpu
-
+pz = AlfvenDetectors.quadnormal
+pz_gpu = AlfvenDetectors.quadnormal_gpu
 
 ### setup args
 model_args = [
