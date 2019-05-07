@@ -194,6 +194,7 @@ disc_nlayers = (disc_nlayers==nothing ? nlayers : Meta.parse(disc_nlayers))
 kernel = eval(Meta.parse("GenerativeModels."*parsed_args["kernel"]))
 sigma = parsed_args["sigma"]
 pz_components = parsed_args["pz-components"]
+lambda = parsed_args["lambda"]
 if measurement_type == "mscamp"
 	readfun = AlfvenDetectors.readmscamp
 elseif measurement_type == "mscphase"
