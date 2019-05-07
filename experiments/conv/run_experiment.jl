@@ -147,6 +147,10 @@ s = ArgParseSettings()
 		arg_type = Int
 		default = 1
 		help = "number of pz components"
+	"--lambda"
+		arg_type = Float32
+		default = 1.0f0
+		help = "scaling parameter of the WAE loss"
 end
 parsed_args = parse_args(ARGS, s)
 modelname = "Conv"*parsed_args["modelname"]
@@ -314,6 +318,7 @@ if occursin("WAE", modelname)
 	model_kwargs[:kernel] = kernel
 	push!(model_args, :pz => pz)
 	fit_kwargs[:σ] = sigma
+	fit_kwargs[:λ] = lambda
 end
 
 ### run and save the model
