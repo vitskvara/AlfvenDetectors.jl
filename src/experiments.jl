@@ -1,11 +1,3 @@
-"""
-	construct_model(modelname, modelargs...; modelkwargs...)
-
-Returns a model object given by modelname and arguments.
-"""
-construct_model(modelname, modelargs...; modelkwargs...) =
-	eval(Meta.parse("$modelname"))(modelargs...; modelkwargs...)
-
 ################################
 ### UNSUPERVISED EXPERIMENTs ###
 ################################
@@ -107,23 +99,21 @@ function create_filename(modelname, model_args, model_kwargs, fit_kwargs, kwargs
 end
 
 """
-	fitsave_unsupervised(modelname, batchsize, outer_nepochs, inner_nepochs,
+	fitsave_unsupervised(data, model, batchsize, outer_nepochs, inner_nepochs,
 	 model_args, model_kwargs, fit_kwargs, savepath[,optname, eta, usegpu,
-	 filename,verb,savepoint)
+	 filename,verb,savepoint,modelname])
 
 Create, fit and save a model.
 """
-function fitsave_unsupervised(data, modelname, batchsize, outer_nepochs, inner_nepochs,
+function fitsave_unsupervised(data, model, batchsize, outer_nepochs, inner_nepochs,
 	 model_args, model_kwargs, fit_kwargs, savepath;
 	 optname = "ADAM", eta = 0.001, usegpu = false, filename = "", verb = true,
-	 savepoint=1, experiment_args=nothing)
-	# create the model
-	model = construct_model(modelname, [x[2] for x in model_args]...; model_kwargs...)
+	 savepoint=1, experiment_args=nothing,modelname=nothing)
 	usegpu ? model = model |> gpu : nothing
-	if occursin("TSVAE", "$modelname")
+	if occursin("TSVAE", "$model")
 		history = (MVHistory(), MVHistory())
 		opt = Array{Any,1}([eval(Meta.parse(optname))(eta), eval(Meta.parse(optname))(eta)])
-	elseif occursin("AAE", "$modelname")
+	elseif occursin("AAE", "$model")
 		history = MVHistory()
 		opt = Array{Any,1}([eval(Meta.parse(optname))(eta) for i in 1:3])
 	else
@@ -158,15 +148,20 @@ function fitsave_unsupervised(data, modelname, batchsize, outer_nepochs, inner_n
 				filename = join(fs, "_")
 			end
 			cpumodel = model |> cpu
-			bson(joinpath(savepath, filename), model = cpumodel, history = history, time = t, tstart = tstart, 
-				model_args=model_args, model_kwargs=model_kwargs, experiment_args=experiment_args)
+			GenerativeModels.save_model(joinpath(savepath, filename), cpumodel, 
+				modelname=modelname, history = history, time = t, tstart = string(tstart), 
+				model_args=model_args, model_kwargs=model_kwargs, 
+				experiment_args=experiment_args)
+			println("model and timing saved to $(joinpath(savepath, filename))")
 		end
 		GC.gc()
 	end
 	# save the final version
 	cpumodel = model |> cpu
-	bson(joinpath(savepath, filename), model = cpumodel, history = history, time = t, tstart = tstart, 
-		timeall=tall[2], model_args=model_args, model_kwargs=model_kwargs, experiment_args=experiment_args)
+	GenerativeModels.save_model(joinpath(savepath, filename), cpumodel, 
+				modelname=modelname, history = history, time = t, tstart = string(tstart), 
+				model_args=model_args, model_kwargs=model_kwargs, 
+				experiment_args=experiment_args, timeall=tall[2])
 	
 	println("model and timing saved to $(joinpath(savepath, filename))")
 

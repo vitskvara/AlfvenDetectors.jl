@@ -6,6 +6,7 @@ using GenerativeModels
 using Dates
 using BSON
 using PyPlot
+using CuArrays
 
 # now get some data
 datapath = "/home/vit/vyzkum/alfven/cdb_data/uprobe_data"
@@ -21,15 +22,20 @@ modelpath = "/home/vit/vyzkum/alfven/experiments/conv/uprobe"
 subpath = "wae_binormal/"
 mpath = joinpath(modelpath, subpath) 
 models = readdir(mpath)
+imodel = 3
+mf = joinpath(mpath,models[imodel])
+
+# or load it directly
+mf = "/home/vit/.julia/environments/v1.1/dev/AlfvenDetectors/experiments/conv/ConvAAE_channels-[2,2]_patchsize-128_nepochs-10_2019-05-06T10:03:25.287.bson"
+mf = "./ConvWAE_channels-[2,2]_patchsize-128_nepochs-2_2019-05-07T09:16:59.027.bson"
 
 # 
-imodel = 3
-model_data = BSON.load(joinpath(mpath,models[imodel]))
-model = Flux.testmode!(model_data[:model])
+model_data = BSON.load(mf)
 exp_args = model_data[:experiment_args]
 model_args = model_data[:model_args]
 model_kwargs = model_data[:model_kwargs]
 history = model_data[:history]
+model = Flux.testmode!(GenerativeModels.construct_model(mf))
 
 # plot training history
 figure()

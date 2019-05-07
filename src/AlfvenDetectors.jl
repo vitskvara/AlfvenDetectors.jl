@@ -10,6 +10,7 @@ using BSON
 using DelimitedFiles
 using Random
 using GenerativeModels
+using Combinatorics
 #using PyPlot
 # for alternative .h5 file loading
 using PyCall
@@ -24,6 +25,7 @@ function _init_h5py(warns=true)
 	end
 end
 import Base.collect
+import StatsBase.sample
 
 const Float = Float32
 

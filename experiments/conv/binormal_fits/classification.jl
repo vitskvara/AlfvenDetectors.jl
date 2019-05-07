@@ -67,7 +67,7 @@ tstZt = Array(tstZ')
 llh = llpg(gmm_model,tstZt)
 as = llh[:,1]
 
-roc = EvalCurves.roccurve(as, tstY)
+roc = EvalCurves.roccurve(-as, tstY)
 auc = EvalCurves.auc(roc...)
 figure()
 title("AUC = $auc")

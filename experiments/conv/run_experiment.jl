@@ -143,6 +143,10 @@ s = ArgParseSettings()
 		arg_type = Float32
 		default = 0.1f0
 		help = "scaling parameter of the WAE kernel"
+	"--pz-components"
+		arg_type = Int
+		default = 1
+		help = "number of pz components"
 end
 parsed_args = parse_args(ARGS, s)
 modelname = "Conv"*parsed_args["modelname"]
@@ -185,6 +189,7 @@ disc_nlayers = parsed_args["disc-nlayers"]
 disc_nlayers = (disc_nlayers==nothing ? nlayers : Meta.parse(disc_nlayers))
 kernel = eval(Meta.parse("GenerativeModels."*parsed_args["kernel"]))
 sigma = parsed_args["sigma"]
+pz_components = parsed_args["pz-components"]
 if measurement_type == "mscamp"
 	readfun = AlfvenDetectors.readmscamp
 elseif measurement_type == "mscphase"
@@ -262,12 +267,13 @@ if positive_patch_ratio > 0
 end
 
 # pz
-#pz = randn
-#pz_gpu = GenerativeModels.randn_gpu
-pz = AlfvenDetectors.binormal
-pz_gpu = AlfvenDetectors.binormal_gpu
-pz = AlfvenDetectors.quadnormal
-pz_gpu = AlfvenDetectors.quadnormal_gpu
+seed = nothing
+if pz_components == 1
+	pz = (usegpu ? GenerativeModels.randn_gpu : randn)
+else
+	pz = AlfvenDetectors.cubeGM(ldim, pz_components; seed=seed, gpu=usegpu)
+end
+println(pz)
 
 ### setup args
 model_args = [
@@ -302,11 +308,11 @@ end
 if occursin("AAE", modelname)
 	model_kwargs[:hdim] = hdim
 	insert!(model_args, 3, :disc_nlayers => disc_nlayers)
-	usegpu ? push!(model_args, :pz => pz_gpu) : nothing
+	push!(model_args, :pz => pz)
 end
 if occursin("WAE", modelname)
 	model_kwargs[:kernel] = kernel
-	usegpu ? push!(model_args, :pz => pz_gpu) : nothing
+	push!(model_args, :pz => pz)
 	fit_kwargs[:σ] = sigma
 end
 
@@ -318,7 +324,9 @@ filename_kwargs = Dict(
 	)
 filename = AlfvenDetectors.create_filename(modelname, [], Dict(), Dict(), 
 	filename_kwargs...)
-model, history, t = AlfvenDetectors.fitsave_unsupervised(data, modelname, batchsize, 
+# create the model
+model = GenerativeModels.construct_model(modelname, [x[2] for x in model_args]...; model_kwargs...)
+model, history, t = AlfvenDetectors.fitsave_unsupervised(data, model, batchsize, 
 	outer_nepochs, inner_nepochs, model_args, model_kwargs, fit_kwargs, savepath; 
-	optname=optimiser, eta=eta, usegpu=usegpu, savepoint=savepoint, filename=filename,
-	experiment_args=parsed_args)
+	modelname = "GenerativeModels."*modelname, optname=optimiser, eta=eta, 
+	usegpu=usegpu, savepoint=savepoint, filename=filename, experiment_args=parsed_args)
