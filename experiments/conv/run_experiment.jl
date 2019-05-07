@@ -67,7 +67,7 @@ s = ArgParseSettings()
 	"--batchnorm"
 		action = :store_true
 		help = "use batchnorm in convolutional layers"
-	"--no-outbatchnorm"
+	"--outbatchnorm"
 		action = :store_true
 		help = "use batchnorm in the last output layer of the decoder"
 	"--resblock"
@@ -165,7 +165,7 @@ usegpu = parsed_args["gpu"]
 coils = parsed_args["coils"]
 batchsize = parsed_args["batchsize"]
 batchnorm = parsed_args["batchnorm"]
-outbatchnorm = !(parsed_args["no-outbatchnorm"])
+outbatchnorm = (parsed_args["outbatchnorm"])
 resblock = parsed_args["resblock"]
 eta = parsed_args["eta"]
 beta = parsed_args["beta"]
@@ -273,7 +273,7 @@ if pz_components == 1
 else
 	pz = AlfvenDetectors.cubeGM(ldim, pz_components; seed=seed, gpu=usegpu)
 end
-println(pz)
+println("")
 
 ### setup args
 model_args = [
