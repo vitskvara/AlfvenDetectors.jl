@@ -61,7 +61,7 @@ Sample from a Gaussian Mixture.
 """
 function sample(gm::GM,T::DataType)
 	i = sample(1:gm.n,gm.w,1)[1]
-	return randn(T,size(gm.μ[1],1))*T.(gm.σ[i]) + T.(gm.μ[i])
+	return T.(gm.σ[i])*randn(T,size(gm.μ[1],1)) + T.(gm.μ[i])
 end
 sample(gm::GM,T::DataType,n::Int) = hcat(map(x->sample(gm,T),1:n)...)
 sample(gm::GM,n::Int) = sample(gm,Float32,n)
@@ -127,3 +127,56 @@ cubeGM(m::Int,n::Int,σ::AbstractVector; kwargs...) = cubeGM(m,n,σ,fill(1/n,n);
 cubeGM(m::Int,n::Int,σ::Real,weights::AbstractVector; kwargs...) = cubeGM(m,n,fill(σ,n),weights;kwargs...)
 cubeGM(m::Int,n::Int,σ::Real; kwargs...) = cubeGM(m,n,σ,fill(1/n,n);kwargs...)
 cubeGM(m::Int,n::Int; kwargs...) = cubeGM(m,n,0.1f0;kwargs...)
+
+"""
+	flower_gauss_means_covars(m, n[; seed, σ])
+
+Compute the means and covariances for an n-component flower-like Gaussian mixture. Currently
+only works for dimension m = 2.
+"""
+function flower_gauss_means_covars(m::Int, n::Int; seed=nothing, σ=fill(1.0,n))
+	if m != n
+		error("Flower GM only implemented for 2D case!")
+	end
+	θ = collect(range(0, 2*pi*(n-1)/n, length=n))
+	μ = Array(hcat(cos.(θ), sin.(θ))')
+	s = [0.4 0; 0 0.05]
+	Σ = []
+	for i in 1:n
+		t = θ[i] + pi/2
+		R = [sin(t) cos(t); -cos(t) sin(t)]
+		push!(Σ, σ[i]*R*s)
+	end
+	return μ, Σ
+end
+
+"""
+	flowerGM(m, n[; seed, σ])
+
+Compute the means and covariances for an n-component flower-like Gaussian mixture. Currently
+only works for dimension m = 2.
+"""
+function flowerGM(m::Int, n::Int, σ::AbstractVector,weights::AbstractVector; gpu=false, seed=nothing)
+	μ, Σ = flower_gauss_means_covars(m,n; seed=seed, σ=σ)
+	μ = [μ[:,i] for i in 1:n]
+	return GM(μ, Σ, weights; gpu=gpu)
+end
+
+
+#X = []
+#for i in 1:n
+#	push!(X, Σ[i]*randn(2,100) .+ μ[i])
+#end
+#X = hcat(X...)
+
+#S = [0.4 0; 0 0.05]
+#	X = []
+#	for i in 1:n
+#		t = θ[i] + pi/2
+#		R = [sin(t) cos(t); -cos(t) sin(t)]
+#		push!(X, σ*R*S*randn(2,100) .+ μ[:,i])
+#	end
+#	X = hcat(X...)
+#	figure()
+#	scatter(X[1,:],X[2,:])
+#	scatter(μ[1,:],μ[2,:])

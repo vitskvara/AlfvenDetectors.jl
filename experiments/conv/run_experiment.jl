@@ -1,3 +1,4 @@
+using Profile
 using AlfvenDetectors
 using Flux
 using ValueHistories
@@ -14,7 +15,7 @@ s = ArgParseSettings()
 @add_arg_table s begin
     "modelname"
 		required = true
-        help = "one of [AE, VAE, TSVAE]"
+        help = "one of [AE, VAE, TSVAE, WAE, AAE]"
     "ldimsize"
     	required = true
     	arg_type = Int
@@ -150,7 +151,11 @@ s = ArgParseSettings()
 	"--lambda"
 		arg_type = Float32
 		default = 1.0f0
-		help = "scaling parameter of the WAE loss"
+		help = "scaling parameter of the MMD loss"
+	"--gamma"
+		arg_type = Float32
+		default = 1.0f0
+		help = "scaling parameter of the GAN loss in WAAE"
 end
 parsed_args = parse_args(ARGS, s)
 modelname = "Conv"*parsed_args["modelname"]
@@ -195,6 +200,7 @@ kernel = eval(Meta.parse("GenerativeModels."*parsed_args["kernel"]))
 sigma = parsed_args["sigma"]
 pz_components = parsed_args["pz-components"]
 lambda = parsed_args["lambda"]
+gamma = parsed_args["gamma"]
 if measurement_type == "mscamp"
 	readfun = AlfvenDetectors.readmscamp
 elseif measurement_type == "mscphase"
@@ -272,7 +278,6 @@ if positive_patch_ratio > 0
 end
 
 # pz
-seed = nothing
 if pz_components == 1
 	pz = (usegpu ? GenerativeModels.randn_gpu : randn)
 else
@@ -321,6 +326,12 @@ if occursin("WAE", modelname)
 	fit_kwargs[:σ] = sigma
 	fit_kwargs[:λ] = lambda
 end
+if occursin("WAAE", modelname)
+	model_kwargs[:kernel] = kernel
+	fit_kwargs[:σ] = sigma
+	fit_kwargs[:λ] = lambda
+	fit_kwargs[:γ] = gamma
+end
 
 ### run and save the model
 filename_kwargs = Dict(
@@ -332,7 +343,8 @@ filename = AlfvenDetectors.create_filename(modelname, [], Dict(), Dict(),
 	filename_kwargs...)
 # create the model
 model = GenerativeModels.construct_model(modelname, [x[2] for x in model_args]...; model_kwargs...)
-model, history, t = AlfvenDetectors.fitsave_unsupervised(data, model, batchsize, 
+model, history, t = @profile AlfvenDetectors.fitsave_unsupervised(data, model, batchsize, 
 	outer_nepochs, inner_nepochs, model_args, model_kwargs, fit_kwargs, savepath; 
 	modelname = "GenerativeModels."*modelname, optname=optimiser, eta=eta, 
 	usegpu=usegpu, savepoint=savepoint, filename=filename, experiment_args=parsed_args)
+Profile.print()

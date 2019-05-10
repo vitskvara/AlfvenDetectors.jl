@@ -5,29 +5,44 @@ using StatsBase
 using GenerativeModels
 using Dates
 using BSON
-using PyPlot
-using CuArrays
+#using PyPlot
+using Plots
+plotly()
+#using CuArrays
 
 # now get some data
 datapath = "/home/vit/vyzkum/alfven/cdb_data/uprobe_data"
 patchsize = 128
-readfun = AlfvenDetectors.readnormlogupsd
-shotnos, labels, tstarts, fstarts = AlfvenDetectors.labeled_patches()
-patchdata = map(x->AlfvenDetectors.get_patch(datapath,x[1], x[2], x[3], patchsize, readfun;
-	memorysafe = true)[1],	zip(shotnos, tstarts, fstarts))
-data = cat(patchdata..., dims=4)
+patch_f = joinpath(dirname(pathof(AlfvenDetectors)), "../experiments/conv/data/labeled_patches_$patchsize.bson")
+if isfile(patch_f)
+	patchdata = BSON.load(patch_f)
+	data = patchdata[:data];
+	shotnos = patchdata[:shotnos];
+	labels = patchdata[:labels];
+	tstarts = patchdata[:tstarts];
+	fstarts = patchdata[:fstarts];
+else
+	readfun = AlfvenDetectors.readnormlogupsd
+	shotnos, labels, tstarts, fstarts = AlfvenDetectors.labeled_patches()
+	patchdata = map(x->AlfvenDetectors.get_patch(datapath,x[1], x[2], x[3], patchsize, readfun;
+		memorysafe = true)[1],	zip(shotnos, tstarts, fstarts))
+	data = cat(patchdata..., dims=4)
+end
 
 #
 modelpath = "/home/vit/vyzkum/alfven/experiments/conv/uprobe"
-subpath = "wae_binormal/"
+subpath = "wae_binormal2"
+subpath = "test"
+#subpath = "aae_3d"
+subpath = "wae_3d_4"
 mpath = joinpath(modelpath, subpath) 
 models = readdir(mpath)
 imodel = 3
 mf = joinpath(mpath,models[imodel])
 
 # or load it directly
-mf = "/home/vit/.julia/environments/v1.1/dev/AlfvenDetectors/experiments/conv/ConvAAE_channels-[2,2]_patchsize-128_nepochs-10_2019-05-06T10:03:25.287.bson"
-mf = "./ConvWAE_channels-[2,2]_patchsize-128_nepochs-2_2019-05-07T09:16:59.027.bson"
+#mf = "/home/vit/.julia/environments/v1.1/dev/AlfvenDetectors/experiments/conv/ConvAAE_channels-[2,2]_patchsize-128_nepochs-10_2019-05-06T10:03:25.287.bson"
+#mf = "./ConvWAE_channels-[2,2]_patchsize-128_nepochs-2_2019-05-07T09:16:59.027.bson"
 
 # 
 model_data = BSON.load(mf)
@@ -35,19 +50,53 @@ exp_args = model_data[:experiment_args]
 model_args = model_data[:model_args]
 model_kwargs = model_data[:model_kwargs]
 history = model_data[:history]
-model = Flux.testmode!(GenerativeModels.construct_model(mf))
+if haskey(model_data, :model)
+	model = model_data[:model]
+else
+	model = Flux.testmode!(GenerativeModels.construct_model(mf))
+end
 
 # plot training history
-figure()
+plot()
 for key in keys(history)
 	is,ls = get(history, key)
-	plot(is,ls,label=string(key))
+	plot!(is,ls,label=string(key))
 end
-legend()
-show()
+plot!()
 
 # look at the Z space
+Z_pt = model.pz(1000)
 Z_g = model.encoder(data).data
+if size(Z_g,1) == 3
+	scatter(Z_pt[1,:],Z_pt[2,:],Z_pt[3,:], label="samples from pz")
+	scatter!(Z_g[1,:],Z_g[2,:],Z_g[3,:], label="encoded data")
+else
+	scatter(Z_pt[1,:],Z_pt[2,:], label="samples from pz")
+	scatter!(Z_g[1,:],Z_g[2,:], label="encoded data")
+end
+
+if size(Z_g,1) == 3
+	scatter(Z_g[1,labels.==1],Z_g[2,labels.==1],Z_g[3,labels.==1], label="alfven data")
+	scatter!(Z_g[1,labels.==0],Z_g[2,labels.==0],Z_g[3,labels.==0], label="no alfven data")
+else
+	scatter(Z_g[1,labels.==1],Z_g[2,labels.==1], label="alfven data")
+	scatter!(Z_g[1,labels.==0],Z_g[2,labels.==0], label="no alfven data")
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 figure(figsize=(10,10))
 subplot(221)
 title("histogram of z space")
