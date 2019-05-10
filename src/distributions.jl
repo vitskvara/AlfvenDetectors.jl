@@ -135,8 +135,8 @@ Compute the means and covariances for an n-component flower-like Gaussian mixtur
 only works for dimension m = 2.
 """
 function flower_gauss_means_covars(m::Int, n::Int; seed=nothing, σ=fill(1.0,n))
-	if m != n
-		error("Flower GM only implemented for 2D case!")
+	if m != 2
+		error("Flower GM only implemented for m=2!")
 	end
 	θ = collect(range(0, 2*pi*(n-1)/n, length=n))
 	μ = Array(hcat(cos.(θ), sin.(θ))')
@@ -157,26 +157,14 @@ Compute the means and covariances for an n-component flower-like Gaussian mixtur
 only works for dimension m = 2.
 """
 function flowerGM(m::Int, n::Int, σ::AbstractVector,weights::AbstractVector; gpu=false, seed=nothing)
+	if m != 2
+		error("Flower GM only implemented for m=2!")
+	end
 	μ, Σ = flower_gauss_means_covars(m,n; seed=seed, σ=σ)
 	μ = [μ[:,i] for i in 1:n]
 	return GM(μ, Σ, weights; gpu=gpu)
 end
-
-
-#X = []
-#for i in 1:n
-#	push!(X, Σ[i]*randn(2,100) .+ μ[i])
-#end
-#X = hcat(X...)
-
-#S = [0.4 0; 0 0.05]
-#	X = []
-#	for i in 1:n
-#		t = θ[i] + pi/2
-#		R = [sin(t) cos(t); -cos(t) sin(t)]
-#		push!(X, σ*R*S*randn(2,100) .+ μ[:,i])
-#	end
-#	X = hcat(X...)
-#	figure()
-#	scatter(X[1,:],X[2,:])
-#	scatter(μ[1,:],μ[2,:])
+flowerGM(m::Int,n::Int,σ::AbstractVector; kwargs...) = flowerGM(m,n,σ,fill(1/n,n);kwargs...)
+flowerGM(m::Int,n::Int,σ::Real,weights::AbstractVector; kwargs...) = flowerGM(m,n,fill(σ,n),weights;kwargs...)
+flowerGM(m::Int,n::Int,σ::Real; kwargs...) = flowerGM(m,n,σ,fill(1/n,n);kwargs...)
+flowerGM(m::Int,n::Int; kwargs...) = flowerGM(m,n,1.0f0;kwargs...)

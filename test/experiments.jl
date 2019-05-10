@@ -59,7 +59,7 @@ if isdir(datapath)
 	shotnos, labels = AlfvenDetectors.labeled_data()
 	@test length(shotnos) == length(labels) == 40
 	shotnos, labels, tstarts, fstarts = AlfvenDetectors.labeled_patches()
-	@test length(shotnos) == length(labels) == length(tstarts) == length(fstarts) == 302
+	@test length(shotnos) == length(labels) == length(tstarts) == length(fstarts) == 371
 	
 	# get a patch
 	ipatch = 10

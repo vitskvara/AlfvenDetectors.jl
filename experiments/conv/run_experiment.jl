@@ -148,6 +148,9 @@ s = ArgParseSettings()
 		arg_type = Int
 		default = 1
 		help = "number of pz components"
+	"--pz-type"
+		default = "cube"
+		help = "the type of predefined pz, one of [cube, flower]"
 	"--lambda"
 		arg_type = Float32
 		default = 1.0f0
@@ -156,6 +159,7 @@ s = ArgParseSettings()
 		arg_type = Float32
 		default = 1.0f0
 		help = "scaling parameter of the GAN loss in WAAE"
+
 end
 parsed_args = parse_args(ARGS, s)
 modelname = "Conv"*parsed_args["modelname"]
@@ -201,6 +205,7 @@ sigma = parsed_args["sigma"]
 pz_components = parsed_args["pz-components"]
 lambda = parsed_args["lambda"]
 gamma = parsed_args["gamma"]
+pz_type = "AlfvenDetectors."*parsed_args["pz-type"]*"GM"
 if measurement_type == "mscamp"
 	readfun = AlfvenDetectors.readmscamp
 elseif measurement_type == "mscphase"
@@ -281,7 +286,7 @@ end
 if pz_components == 1
 	pz = (usegpu ? GenerativeModels.randn_gpu : randn)
 else
-	pz = AlfvenDetectors.cubeGM(ldim, pz_components; seed=seed, gpu=usegpu)
+	pz = eval(Meta.parse(pz_type))(ldim, pz_components; seed=seed, gpu=usegpu)
 end
 println("")
 
