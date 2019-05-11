@@ -98,6 +98,15 @@ function create_filename(modelname, model_args, model_kwargs, fit_kwargs, kwargs
 	return filename
 end
 
+function prepend_zeros(x::Real, n::Int)
+   s = "$x"
+   l = length(s)
+   if l < n
+       s = reduce(*,fill("0",n-l))*s
+   end
+   return s
+end
+
 """
 	fitsave_unsupervised(data, model, batchsize, outer_nepochs, inner_nepochs,
 	 model_args, model_kwargs, fit_kwargs, savepath[,optname, eta, usegpu,
@@ -147,7 +156,8 @@ function fitsave_unsupervised(data, model, batchsize, outer_nepochs, inner_nepoc
 			# replace the number of epochs in the filename string with the current number of epochs
 			if occursin("nepochs",filename)
 				fs = split(filename, "_")
-				fs[collect(1:length(fs))[map(x->occursin("nepochs",x), fs)][1]] = "nepochs-$epoch"
+				epoch_string = prepend_zeros(epoch, length("$outer_nepochs"))
+				fs[collect(1:length(fs))[map(x->occursin("nepochs",x), fs)][1]] = "nepochs-$epoch_string"
 				filename = join(fs, "_")
 			end
 			cpumodel = model |> cpu
