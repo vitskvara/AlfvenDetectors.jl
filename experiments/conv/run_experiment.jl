@@ -348,8 +348,7 @@ filename = AlfvenDetectors.create_filename(modelname, [], Dict(), Dict(),
 	filename_kwargs...)
 # create the model
 model = GenerativeModels.construct_model(modelname, [x[2] for x in model_args]...; model_kwargs...)
-model, history, t = @profile AlfvenDetectors.fitsave_unsupervised(data, model, batchsize, 
+model, history, t = AlfvenDetectors.fitsave_unsupervised(data, model, batchsize, 
 	outer_nepochs, inner_nepochs, model_args, model_kwargs, fit_kwargs, savepath; 
 	modelname = "GenerativeModels."*modelname, optname=optimiser, eta=eta, 
 	usegpu=usegpu, savepoint=savepoint, filename=filename, experiment_args=parsed_args)
-Profile.print()
