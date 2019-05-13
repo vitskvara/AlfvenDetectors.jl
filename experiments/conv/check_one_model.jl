@@ -31,13 +31,11 @@ end
 
 #
 modelpath = "/home/vit/vyzkum/alfven/experiments/conv/uprobe"
-subpath = "wae_binormal2"
-subpath = "test"
-#subpath = "aae_3d"
-subpath = "wae_3d_4"
+subpath = "waae_64_8_16_32_32_lambda-10_sigma-1_cube-8/1"
 mpath = joinpath(modelpath, subpath) 
 models = readdir(mpath)
-imodel = 3
+#imode = 46
+imodel = 50
 mf = joinpath(mpath,models[imodel])
 
 # or load it directly
@@ -57,16 +55,16 @@ else
 end
 
 # plot training history
-plot()
 for key in keys(history)
 	is,ls = get(history, key)
-	plot!(is,ls,label=string(key))
+	plot!(is,ls,label=string(key)*"=$(ls[end])")
 end
-plot!()
+title!("")
 
 # look at the Z space
 Z_pt = model.pz(1000)
-Z_g = model.encoder(data).data
+batchsize = 128
+Z_g = GenerativeModels.encode(model, data, batchsize).data
 if size(Z_g,1) == 3
 	scatter(Z_pt[1,:],Z_pt[2,:],Z_pt[3,:], label="samples from pz")
 	scatter!(Z_g[1,:],Z_g[2,:],Z_g[3,:], label="encoded data")
@@ -82,6 +80,9 @@ else
 	scatter(Z_g[1,labels.==1],Z_g[2,labels.==1], label="alfven data")
 	scatter!(Z_g[1,labels.==0],Z_g[2,labels.==0], label="no alfven data")
 end
+plot()
+
+
 
 
 

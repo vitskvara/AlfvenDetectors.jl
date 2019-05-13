@@ -11,6 +11,10 @@ using DelimitedFiles
 using Random
 using GenerativeModels
 using Combinatorics
+using GaussianMixtures
+using Distances
+using NearestNeighbors
+using EvalCurves
 #using PyPlot
 # for alternative .h5 file loading
 using PyCall
@@ -33,5 +37,9 @@ include("data.jl")
 include("experiments.jl")
 include("distributions.jl")
 include("evaluation.jl")
+#include("knn.jl")
+include("few_shot_models.jl")
+
+export fit!
 
 end # module
