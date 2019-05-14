@@ -13,6 +13,8 @@ using EvalCurves
 	X = hcat(randn(xdim,N).-[10;10], randn(xdim,N).+[10;10], randn(xdim,N).+[-10;10])
 	Y = vcat(ones(N), zeros(2*N))
 	# test separate clustering algorithms
+	
+	# GMMS
 	Nclust = 3
 	clust_alg = AlfvenDetectors.GMMModel(Nclust; kind=:diag, method=:kmeans)
 	AlfvenDetectors.fit!(clust_alg, X)
@@ -34,7 +36,28 @@ using EvalCurves
 	asll = AlfvenDetectors.as_ll_maxarg(clust_alg, X, label)
 	@test EvalCurves.auc(EvalCurves.roccurve(asll, Y)...) == 1
 
-	# now train the gmm model together with a neural net for autoencoder
+	# KNN
+	Nclust = 3
+	clust_alg = AlfvenDetectors.KNN(:KDTree)
+	# this only fits the tree and saves X, but has no other use for semisupervised learning
+	AlfvenDetectors.fit!(clust_alg, X)
+	@test size(clust_alg.X) == size(X)
+	@test size(clust_alg.Y) == (0,)
+	@test !AlfvenDetectors.is_fitted(clust_alg)	
+	# this fits the tree, saves the data and labels
+	AlfvenDetectors.fit!(clust_alg, X, Y)
+	@test AlfvenDetectors.is_fitted(clust_alg)	
+	@test size(clust_alg.X) == size(X)
+	@test size(clust_alg.Y) == size(Y)
+	# now test the as functions
+	k = 5
+	asmean = AlfvenDetectors.as_mean(clust_alg, X, k)
+	@test EvalCurves.auc(EvalCurves.roccurve(asmean, Y)...) == 1	
+	asmeanw = AlfvenDetectors.as_mean_weighted(clust_alg, X, k)
+	@test EvalCurves.auc(EvalCurves.roccurve(asmeanw, Y)...) == 1	
+
+	# tests of the few shot learning structure
+	# first train the autoencoder
 	xdim = 3
 	Nclust = 3
 	N = 1000
@@ -47,20 +70,8 @@ using EvalCurves
 	hdim = 50
 	ae_model = WAAE(xdim, ldim, ae_nlayers, disc_nlayers, pz; hdim=hdim)
 	fit!(ae_model, X, 100, 500, σ=1, λ=10, verb=true)
-	# now add the gmm model for latent space clustering
-	clust_model = AlfvenDetectors.GMMModel(Nclust; kind=:diag, method=:kmeans)
-	# now create the fewshotmodel
-	anomaly_label = 1
-	asf(x,m) = AlfvenDetectors.as_ll_maxarg(x,m,anomaly_label)
-	params = nothing
-	model = AlfvenDetectors.FewShotModel(ae_model, clust_model, asf, params)
-	Z = AlfvenDetectors.encode(model, X)
-	@test size(Z) == (ldim, N)
-	@test !AlfvenDetectors.is_fitted(model.clust_model)
-	# next, fit the clustering model
-	fit!(model,X) # this will only fit the gmm with all 
-	# the available data without any knowledge of labels
-	# now create artificial labeled data
+
+	# now create artificial labeled training and testing data
 	_N = 10
 	Xtrl = []
 	for i in 1:Nclust
@@ -68,16 +79,44 @@ using EvalCurves
 		push!(Xtrl, AlfvenDetectors.sample(_px, _N))
 	end
 	Xtrl = hcat(Xtrl...)
-	Y = vcat(zeros(_N), ones(_N), zeros(_N))
-	fit!(model, Xtrl, Y; refit_gmm=false)
-	@test AlfvenDetectors.is_fitted(model.clust_model)
+	Ytr = vcat(zeros(_N), ones(_N), zeros(_N))
 	Xtstl = []
 	for i in 1:Nclust
 		_px = AlfvenDetectors.GM([px.μ[i]], [px.σ[i]])
 		push!(Xtstl, AlfvenDetectors.sample(_px, _N))
 	end
 	Xtstl = hcat(Xtstl...)
-	as = AlfvenDetectors.anomaly_score(model, Xtstl)
-	@test EvalCurves.auc(EvalCurves.roccurve(as, Y)...) == 1
+	Ytst = copy(Ytr)
 
+	# now add the gmm model for latent space clustering
+	clust_model = AlfvenDetectors.GMMModel(Nclust; kind=:diag, method=:kmeans)
+	# now create the fewshotmodel
+	anomaly_label = 1
+	asf(m,x) = AlfvenDetectors.as_ll_maxarg(m,x,anomaly_label)
+	params = nothing
+	# this constructs the whole model
+	model = AlfvenDetectors.FewShotModel(ae_model, clust_model, asf, params)
+	Z = AlfvenDetectors.encode(model, X)
+	@test size(Z) == (ldim, N)
+	@test !AlfvenDetectors.is_fitted(model.clust_model)
+	# next, fit the clustering model
+	fit!(model,X) # this will only fit the gmm with all 
+	# the available data without any knowledge of labels
+	fit!(model, Xtrl, Ytr; refit=false)
+	@test AlfvenDetectors.is_fitted(model.clust_model)
+	as = AlfvenDetectors.anomaly_score(model, Xtstl)
+	@test EvalCurves.auc(EvalCurves.roccurve(as, Ytst)...) == 1
+
+	# do the same with the KNN model
+	clust_model = AlfvenDetectors.KNN(:KDTree)
+	k = 5
+	asf(m,x) = AlfvenDetectors.as_mean(m,x,k)
+	params = nothing
+	model = AlfvenDetectors.FewShotModel(ae_model, clust_model, asf, params)
+	@test !AlfvenDetectors.is_fitted(model.clust_model)
+	fit!(model, Xtrl, Ytr)
+	@test AlfvenDetectors.is_fitted(model.clust_model)
+	as = AlfvenDetectors.anomaly_score(model, Xtstl)
+	@test EvalCurves.auc(EvalCurves.roccurve(as, Ytst)...) == 1
+	
 end

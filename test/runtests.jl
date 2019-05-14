@@ -9,6 +9,8 @@ using Random
 	include("data.jl")
 end
 
+include("few_shot_models.jl")
+
 @testset "Experiments" begin
 	@info "Testing experiments"
 	include("experiments.jl")

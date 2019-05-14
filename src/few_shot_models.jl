@@ -70,17 +70,17 @@ Observations are columns of X.
 """
 function fit!(m::GMMModel, X)
 	# the data has to be transposed
-	m.GMM = GaussianMixtures.GMM(m.n, Array(X'); m.kwargs...)
+	m.GMM = GaussianMixtures.GMM(m.n, Array(Float32.(X)'); m.kwargs...)
 end
 
 """
-	fit!(GMMModel, X, Y[; refit_gmm])
+	fit!(GMMModel, X, Y[; refit])
 
 Observations are columns of X.
 """
-function fit!(m::GMMModel, X::AbstractArray, Y::AbstractVector; refit_gmm=true)
+function fit!(m::GMMModel, X::AbstractArray, Y::AbstractVector; refit=true)
 	@assert length(Y) == size(X,2)
-	if refit_gmm
+	if refit
 		# the data has to be transposed
 		fit!(m, X)
 	end
@@ -148,7 +148,8 @@ other samples with the same label are most likely to belong to.
 """
 function as_ll_maxarg(m::GMMModel, X, label)
 	is_fitted(m) ? nothing : error("The model has not been fitted with labels!")
-	# first get the index of the component that the samples with label are most likely to belong to
+	# first get the index of the component that the samples with label are most likely to 
+	# belong to
 	inds = map(x->x[1],argmax(m.train_ll[:,m.train_labels.==label],dims=1))
 	suminds = map(x->length(inds[inds.==x]), unique(inds))
 	maxind = unique(inds)[argmax(suminds)]
@@ -158,3 +159,90 @@ end
 #####################
 ####### KNNS ########
 #####################
+
+"""
+    KNN
+
+Implements k-nearest-neighbor algorithm for semi-supervised anomaly detection. 
+"""
+mutable struct KNN
+    tree::NNTree
+    X::Matrix
+    Y::Vector
+    tree_type::Symbol
+end
+
+"""
+    KNN(type)
+
+    Create the KNN anomaly detector with tree of type T.
+"""
+KNN(tree_type::Symbol = :BruteTree) = KNN(eval(tree_type)(Array{Float32,2}(undef,1,0)), 
+	Array{Float32,2}(undef,1,0), Array{Int64,1}(undef,0), tree_type)
+
+
+"""
+	fit!(KNN, X)
+
+Observations are columns of X.
+"""
+function fit!(m::KNN, X)
+	# the data has to be transposed
+	m.tree = eval(m.tree_type)(X)
+	m.X = copy(X)
+end
+
+"""
+	fit!(KNN, X, Y)
+
+Observations are columns of X.
+"""
+function fit!(m::KNN, X::AbstractArray, Y::AbstractVector)
+	@assert length(Y) == size(X,2)
+	fit!(m, X)
+	# now record the labels
+	m.Y = copy(Y)
+end
+
+"""
+	check_fit(KNN) 
+
+Check if model was fitted with labels.
+"""
+is_fitted(m::KNN) = !(size(m.X,2) == 0 || length(m.Y) == 0)
+
+
+"""
+	as_mean(KNN, X, k)
+
+Anomaly score is the average labels of the k--nearest neighbors. This works under 
+the condition that anomalous samples are labeled with a higher number 
+(e.g. 0 for normal and 1 for anomalous).
+"""
+function as_mean(m::KNN, X, k::Int)
+	is_fitted(m) ? nothing : error("The model has not been fitted with labels!")
+	inds, dists = NearestNeighbors.knn(m.tree, X, k,true)
+	# now get the labels of the nearest neighbors 
+	ys = map(x->m.Y[x],inds)
+	return map(x->StatsBase.mean(x), ys)
+end
+
+
+"""
+	as_mean_weighted(KNN, X, k)
+
+Anomaly score is the average labels of the k--nearest neighbors weighted by their distance.
+This works under the condition that anomalous samples are labeled with a higher number 
+(e.g. 0 for normal and 1 for anomalous).
+"""
+function as_mean_weighted(m::KNN, X, k::Int)
+	is_fitted(m) ? nothing : error("The model has not been fitted with labels!")
+	inds, dists = NearestNeighbors.knn(m.tree, X, k,true)
+	# now get the labels of the nearest neighbors 
+	ys = map(x->m.Y[x],inds)
+	return map(x->StatsBase.mean(x[1],Weights(x[2]/sum(x[2]))), zip(ys,dists))
+end
+
+#####################################
+##### Spherical VAE with memory #####
+#####################################

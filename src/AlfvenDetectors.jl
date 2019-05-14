@@ -37,7 +37,6 @@ include("data.jl")
 include("experiments.jl")
 include("distributions.jl")
 include("evaluation.jl")
-#include("knn.jl")
 include("few_shot_models.jl")
 
 export fit!
