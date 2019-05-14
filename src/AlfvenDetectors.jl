@@ -15,6 +15,9 @@ using GaussianMixtures
 using Distances
 using NearestNeighbors
 using EvalCurves
+using MLDataPattern
+using FewShotAnomalyDetection
+
 #using PyPlot
 # for alternative .h5 file loading
 using PyCall

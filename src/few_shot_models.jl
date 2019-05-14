@@ -1,8 +1,15 @@
-mutable struct FewShotModel{AE, C, AS, P}
+"""
+	FewShotModel(autoencoder, clustering_model, anomaly_score_function, fit_function)
+
+A structure for general semi-supervised training via clustering model on latent
+space produced by the autoencoder.
+"""
+mutable struct FewShotModel{AE, C, FX, FXY, AS}
 	ae::AE
 	clust_model::C
+	fitx::FX
+	fitxy::FXY
 	asf::AS
-	params::P
 end
 
 import GenerativeModels: encode, fit!
@@ -15,14 +22,21 @@ Produce an encoding of X.
 encode(m::FewShotModel,X,args...) = Flux.Tracker.data(encode(m.ae,X,args...))
 
 """
-	fit!(FewShotModel,X[,Y,args...];[kwargs...])	
+	fit!(FewShotModel,ff, X[, Y, args...][; encoding_batchsize, kwargs...])	
 
 Fit the clustering model. If Y is not specified, the clustering model will
 be fit unsupervisedly.
 """
-function fit!(m::FewShotModel,X,args...;encoding_batchsize=128,kwargs...)
+function fit!(m::FewShotModel,ff,X::AbstractArray, args...;encoding_batchsize::Int=128)
 	Z = encode(m, X, encoding_batchsize)
-	fit!(m.clust_model, Z, args...; kwargs...)
+	ff(m.clust_model, Z, args...)
+end
+fitx!(m::FewShotModel,X::AbstractArray) = fit!(m,m.fitx,X)
+fitxy!(m::FewShotModel,X::AbstractArray, Y::AbstractVector) = fit!(m,m.fitxy,X,Y)
+function fit!(m::FewShotModel,X_unlabeled::AbstractArray,X_labeled::AbstractArray,
+	Y::AbstractVector)
+	fitx!(m,X_unlabeled)
+	fitxy!(m,X_labeled,Y)
 end
 
 """
@@ -68,7 +82,7 @@ GMMModel(n::Int; kwargs...) = GMMModel(convert(GMM{Float32},GaussianMixtures.GMM
 
 Observations are columns of X.
 """
-function fit!(m::GMMModel, X)
+function fit!(m::GMMModel, X; refit=nothing)
 	# the data has to be transposed
 	m.GMM = GaussianMixtures.GMM(m.n, Array(Float32.(X)'); m.kwargs...)
 end
@@ -78,7 +92,7 @@ end
 
 Observations are columns of X.
 """
-function fit!(m::GMMModel, X::AbstractArray, Y::AbstractVector; refit=true)
+function fit!(m::GMMModel, X::AbstractArray, Y::AbstractVector; refit=false)
 	@assert length(Y) == size(X,2)
 	if refit
 		# the data has to be transposed
@@ -175,7 +189,7 @@ end
 """
     KNN(type)
 
-    Create the KNN anomaly detector with tree of type T.
+Create the KNN anomaly detector with tree of type T.
 """
 KNN(tree_type::Symbol = :BruteTree) = KNN(eval(tree_type)(Array{Float32,2}(undef,1,0)), 
 	Array{Float32,2}(undef,1,0), Array{Int64,1}(undef,0), tree_type)
@@ -246,3 +260,89 @@ end
 #####################################
 ##### Spherical VAE with memory #####
 #####################################
+
+"""
+    SVAEMem
+
+Spherical VAE with memory for semi-supervised anomaly detection.
+"""
+mutable struct SVAEMem
+    svae
+    mem
+    params
+end
+
+"""
+    SVAEMem(inputdim, hiddenDim, latentDim, numLayers, memorySize, k, labelCount, α
+    [; nonlinearity, layerType])
+
+Create the SVAEMem anomaly detector.
+"""
+function SVAEMem(inputdim, hiddenDim, latentDim, numLayers, memorySize, k, labelCount, α; 
+	nonlinearity="relu", layerType="Dense") 
+	svae = FewShotAnomalyDetection.SVAEbase(inputdim, hiddenDim, latentDim, numLayers, 
+		nonlinearity, layerType)
+	mem = FewShotAnomalyDetection.KNNmemory{Float32}(memorySize, inputdim, k, labelCount, 
+		(x) -> FewShotAnomalyDetection.zparams(svae, x)[1], α)
+	return SVAEMem(svae, mem, nothing)
+end
+
+# Basic Wasserstein loss to train the svae on unlabelled data
+trainRepresentation(m::SVAEMem, data, β, σ) = FewShotAnomalyDetection.wloss(m.svae, data, β, 
+	(x, y) -> FewShotAnomalyDetection.mmd_imq(x, y, σ))
+# inserts the data into the memory
+remember(m::SVAEMem, data, labels) = FewShotAnomalyDetection.trainQuery!(m.mem, data, labels)
+# Expects anomalies in the data with correct label (some of them)
+trainWithAnomalies(m::SVAEMem, data, labels, β, σ, γ) = 
+	FewShotAnomalyDetection.mem_wloss(m.svae, m.mem, data, labels, β, 
+		(x, y) -> FewShotAnomalyDetection.mmd_imq(x, y, σ), γ)
+
+"""
+	fit!(SVAEMem, X, batchsize, nbatches, β, σ[; η, cbtime])
+
+Observations are columns of X. 
+
+	β - ratio between reconstruction error and the distance between p(z) and q(z)
+	σ - width of the imq kernel
+	η - optimiser learning rate [1e-5]
+"""
+function fit!(m::SVAEMem, X::AbstractArray, batchsize::Int, nbatches::Int, β, σ;
+	η=1e-5, cbtime=5)
+	opt = Flux.Optimise.ADAM(η)
+	cb = Flux.throttle(() -> println("SVAE: $(trainRepresentation(m, X[:,1:batchsize], 
+		β, σ))"), cbtime)
+	# there is a hack with RandomBatches because so far I can't manage to get them to work 
+	# without the tuple - I have to find a different sampling iterator
+	Flux.train!((x) -> trainRepresentation(m, getobs(x), β, σ), 
+		Flux.params(m.svae), 
+		RandomBatches((X,), size = batchsize, count = nbatches), opt, cb = cb)
+	return opt
+end
+
+"""
+	fit!(SVAEMem, X, Y, batchsize, nbatches, β, σ, γ[; η, cbtime])
+
+	β - ratio between reconstruction error and the distance between p(z) and q(z)
+	σ - width of the imq kernel
+	γ - importance ratio between anomalies and normal data in mem_loss
+	η - optimiser learning rate [1e-5]
+"""
+function fit!(m::SVAEMem, X::AbstractArray, Y::AbstractVector, batchsize::Int, nbatches::Int, 
+	β, σ, γ; η=1e-5, cbtime=60)
+	remember(m, Float32.(X), Int.(Y))
+	opt = ADAM(η)
+	# learn with labels
+	cb = Flux.throttle(() -> println("SVAE mem loss: $(trainWithAnomalies(m, X[:,1:batchsize], 
+		Y[1:batchsize], β, σ, γ))"), cbtime)
+	Flux.train!((x,y)->trainWithAnomalies(m,x,y,β,σ,γ), 
+		Flux.params(m.svae), 
+		RandomBatches((X, Y), size = batchsize, count = nbatches), opt, cb = cb)
+	return opt
+end
+
+"""
+	as_logpxgivenz(m::SVAEMem, X)
+
+Anomaly score as logp(x) given expected p(z).
+"""
+as_logpxgivenz(m::SVAEMem, X) = vec(-FewShotAnomalyDetection.log_pxexpectedz(m.svae, X))

@@ -68,7 +68,7 @@ println("Train err: $(trainRepresentation(train[1])) vs test error: $(trainRepre
 # Adding stuff into the memory
 remember(train[1], train[2])
 
-numBatches = 1000 # it will take a looong time
+numBatches = 2000 # it will take a looong time
 
 # learn with labels
 cb = Flux.throttle(() -> println("SVAE mem loss: $(trainWithAnomalies(train[1], train[2]))"), 60)
@@ -76,7 +76,7 @@ cb = Flux.throttle(() -> println("SVAE mem loss: $(trainWithAnomalies(train[1], 
 Flux.train!(trainWithAnomalies, Flux.params(svae), RandomBatches((train[1], train[2]), size = batchSize, count = numBatches), opt, cb = cb)
 
 # get the anomaly score
-as=vec(-FewShotAnomalyDetection.pxexpectedz(svae, test[1]))
+as=vec(-FewShotAnomalyDetection.log_pxexpectedz(svae, test[1]))
 roc = EvalCurves.roccurve(as,test[2])
 auc = EvalCurves.auc(roc...)
 figure()
