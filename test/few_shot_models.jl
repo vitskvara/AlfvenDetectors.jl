@@ -8,6 +8,7 @@ using GaussianMixtures
 using EvalCurves
 
 @testset "few-shot models" begin
+	Random.seed!(12345)
 	xdim = 2
 	N = 10
 	X = Float32.(hcat(randn(xdim,N).-[10;10], randn(xdim,N).+[10;10], randn(xdim,N).+[-10;10]))
@@ -77,10 +78,10 @@ using EvalCurves
 	batchsize = N
 	nbatches = 50
 	σ = 0.1 # width of imq kernel
-	fit!(clust_alg, X, batchsize, nbatches, β, σ, η=0.0001,cbtime=1);
+	AlfvenDetectors.fit!(clust_alg, X, batchsize, nbatches, β, σ, η=0.0001,cbtime=1);
 	σ = 0.01
 	nbatches = 50
-	fit!(clust_alg, X, Y, batchsize, nbatches, β, σ, γ, η=0.00001, cbtime=1);
+	AlfvenDetectors.fit!(clust_alg, X, Y, batchsize, nbatches, β, σ, γ, η=0.00001, cbtime=1);
 	as = AlfvenDetectors.as_logpxgivenz(clust_alg, Xtst)
 	# for some reason, fitting the model on this data does not really work
 	# maybe the input data should be 3D?
@@ -101,7 +102,7 @@ using EvalCurves
 	disc_nlayers = 3
 	hdim = 50
 	ae_model = WAAE(xdim, ldim, ae_nlayers, disc_nlayers, pz; hdim=hdim)
-	fit!(ae_model, X, 100, 500, σ=1, λ=10, verb=true)
+	AlfvenDetectors.fit!(ae_model, X, 100, 500, σ=1, λ=10, verb=true)
 
 	# now create artificial labeled training and testing data
 	_N = 10
@@ -135,7 +136,7 @@ using EvalCurves
 	# next, fit the clustering model
 	#fit!(model,X) # this will only fit the gmm with all 
 	# the available data without any knowledge of labels
-	fit!(model, X, Xtrl, Ytr)
+	AlfvenDetectors.fit!(model, X, Xtrl, Ytr)
 	@test AlfvenDetectors.is_fitted(model.clust_model)
 	as = AlfvenDetectors.anomaly_score(model, Xtstl)
 	@test EvalCurves.auc(EvalCurves.roccurve(as, Ytst)...) == 1
@@ -148,9 +149,44 @@ using EvalCurves
 	asf(m,x) = AlfvenDetectors.as_mean(m,x,k)
 	model = AlfvenDetectors.FewShotModel(ae_model, clust_model, fx, fxy, asf)
 	@test !AlfvenDetectors.is_fitted(model.clust_model)
-	fit!(model, X, Xtrl, Ytr)
+	AlfvenDetectors.fit!(model, X, Xtrl, Ytr)
 	@test AlfvenDetectors.is_fitted(model.clust_model)
 	as = AlfvenDetectors.anomaly_score(model, Xtstl)
 	@test EvalCurves.auc(EvalCurves.roccurve(as, Ytst)...) == 1
-	
+
+	# and finally with the SVAE model
+	inputdim = 2
+	hiddenDim = 32
+	latentDim = 2
+	numLayers = 3
+	# params for memory
+	memorySize = 128
+	α = 0.1 # threshold in the memory that does not matter to us at the moment!
+	k = 128
+	labelCount = 1
+	clust_model = AlfvenDetectors.SVAEMem(inputdim, hiddenDim, latentDim, numLayers, 
+		memorySize, k, labelCount, α)
+	# construct the fit functions
+	β = 0.1 # ratio between reconstruction error and the distance between p(z) and q(z)
+	γ = 0.1 # importance ratio between anomalies and normal data in mem_loss
+	batchsize = 64
+	nbatches = 200
+	σ = 0.1 # width of imq kernel
+	fx(m,x)=AlfvenDetectors.fit!(m, x, batchsize, nbatches, β, σ, η=0.0001,cbtime=1);
+	σ = 0.01
+	batchsize = 10 # this batchsize must be smaller than the size of the labeled training data
+	nbatches = 50
+	fxy(m,x,y)=AlfvenDetectors.fit!(m,x,y, batchsize, nbatches, β, σ, γ, η=0.0001, cbtime=1);
+	# finally construct the anomaly score function
+	asf(m,x) = AlfvenDetectors.as_logpxgivenz(m,x)
+	# create the whole few shot model
+	model = AlfvenDetectors.FewShotModel(ae_model, clust_model, fx, fxy, asf);
+	#@test !AlfvenDetectors.is_fitted(model.clust_model)
+	AlfvenDetectors.fit!(model, X, Xtrl, Ytr);
+	#@test AlfvenDetectors.is_fitted(model.clust_model)
+	as = AlfvenDetectors.anomaly_score(model, Xtstl)
+	auc = EvalCurves.auc(EvalCurves.roccurve(as, Ytst)...)
+	@test auc  >= 0
+	println(auc)
 end
+Random.seed!()

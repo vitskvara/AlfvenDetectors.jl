@@ -7,6 +7,7 @@ using Random
 @testset "utilities" begin
 	@info "Testing utilities"
 	include("data.jl")
+	include("umap.jl")
 end
 
 include("few_shot_models.jl")

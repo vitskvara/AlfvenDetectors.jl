@@ -5,7 +5,7 @@ using Pkg
 using Flux
 using GenerativeModels
 
-verb = false
+verb = true
 
 hostname = gethostname()
 if hostname == "vit-ThinkPad-E470"
@@ -88,7 +88,11 @@ if isdir(datapath)
 
 	# msc amplitude + AE
 	rawdata = hcat(AlfvenDetectors.collect_signals(shots, AlfvenDetectors.readmscampphase, coils; type="flattop")...)
-	data = rawdata |> gpu
+	if usegpu
+		data = rawdata |> gpu
+	else
+		data = rawdata
+	end
 	xdim = size(data,1)
 	batchsize = 64
 	outer_nepochs = 2
@@ -116,7 +120,11 @@ if isdir(datapath)
 	# msc phase + VAE
 	GC.gc()
 	rawdata = hcat(AlfvenDetectors.collect_signals(shots, AlfvenDetectors.readnormmscphase, coils; type="valid")...)
-	data = rawdata |> gpu
+	if usegpu
+		data = rawdata |> gpu
+	else
+		data = rawdata
+	end
 	xdim = size(data,1)
 	@testset "single column unsupervised - VAE" begin
 		modelname = "VAE"
@@ -143,7 +151,11 @@ if isdir(datapath)
 	# uprobe psd + TSVAE
 	GC.gc()
 	rawdata = hcat(AlfvenDetectors.collect_signals(shots, AlfvenDetectors.readnormlogupsd)...)
-	data = rawdata |> gpu
+	if usegpu
+		data = rawdata |> gpu
+	else
+		data = rawdata
+	end
 	xdim = size(data,1)
 	@testset "single column unsupervised - TSVAE" begin
 		modelname = "TSVAE"

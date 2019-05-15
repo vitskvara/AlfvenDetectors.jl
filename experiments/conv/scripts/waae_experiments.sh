@@ -137,3 +137,9 @@ julia run_experiment.jl WAAE 64 4 16 16 32 32 \
 	--savepath=waae_64_16_16_32_32_lambda-10_sigma-1_cube-8/$SEED --nshots=100 --nepochs=50 \
 	--savepoint=1 --pz-components=8 --eta=0.001 --batchnorm --seed=$SEED --lambda=10 \
 	--pz-type=cube --sigma=1
+# larger net, 3D, 8cube, lambda 10, sigma 1
+julia run_experiment.jl WAAE 3 4 16 16 32 32 \
+    --scaling 2 2 1 1 --gpu --memory-efficient --memorysafe \
+	--ndense=3 --hdim=64 --positive-patch-ratio=0.1 \
+	--savepath=waae_3_16_16_32_32_lambda-10_sigma-0.01_cube-8/$SEED --nshots=100 --nepochs=50 --savepoint=1 \
+	--pz-components=8 --eta=0.001 --batchnorm --seed=$SEED --lambda=10 --pz-type=cube --sigma=0.01
