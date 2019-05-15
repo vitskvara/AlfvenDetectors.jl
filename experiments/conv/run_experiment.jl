@@ -272,7 +272,7 @@ xdim = size(data)
 # load the labeled patches
 if positive_patch_ratio > 0
 	println("Loading labeled patch data...")
-	shotnos, patch_labels, tstarts, fstarts = AlfvenDetectors.select_training_patches(0.5, seed=seed)
+	shotnos, patch_labels, tstarts, fstarts = AlfvenDetectors.select_positive_training_patches(0.5, seed=seed)
 	Nadded = floor(Int, xdim[4]*positive_patch_ratio/(1-positive_patch_ratio))
 	# now that we know how many samples to add, we can sample the appropriate number of them with some added noise
 	added_patches = AlfvenDetectors.collect_training_patches(datapath, shotnos, tstarts, fstarts,

@@ -349,6 +349,33 @@ function select_training_shots(nshots::Int, available_shots::AbstractVector;
 end
 
 """
+	split_patches(α, shotnos, patch_labels, tstarts, fstarts[, seed])
+
+Return the info on α ratio of labeled patches.
+"""
+function split_patches(α::Real, shotnos, patch_labels, tstarts, fstarts; seed = nothing)
+	Npatches = length(shotnos)
+	# set the seed and shuffle the data
+	(seed != nothing) ? Random.seed!(seed) : nothing
+	used_inds = sample(1:Npatches, Npatches)
+	shotnos, patch_lables, tstarts, fstarts =
+		shotnos[used_inds], patch_labels[used_inds], tstarts[used_inds], fstarts[used_inds]
+	# now return the data using given α
+	Nused = floor(Int, Npatches*α)
+	# restart the seed
+	Random.seed!()
+	if Nused > 0
+		return (shotnos[1:Nused], patch_lables[1:Nused], tstarts[1:Nused], fstarts[1:Nused]), 
+			used_inds[1:Nused],
+			(shotnos[Nused+1:end], patch_lables[Nused+1:end], 
+				tstarts[Nused+1:end], fstarts[Nused+1:end]),
+			used_inds[Nused+1:end]
+	else
+		return (nothing, nothing, nothing, nothing), (nothing, nothing, nothing, nothing)
+	end
+end
+
+"""
 	select_training_patches(α[, seed])
 
 Return the info on α ratio of labeled patches.
@@ -357,25 +384,23 @@ function select_training_patches(α::Real; seed = nothing)
 	@assert 0 <=  α <= 1
 	# get the information on the patches
 	shotnos, patch_labels, tstarts, fstarts = labeled_patches()
+	return split_patches(α, shotnos, patch_labels, tstarts, fstarts; seed=seed)[1]
+end
+
+"""
+	select_positive_training_patches(α[, seed])
+
+Return the info on α ratio of positively labeled patches.
+"""
+function select_positive_training_patches(α::Real; seed=nothing)
+	@assert 0 <=  α <= 1
+	# get the information on the patches
+	shotnos, patch_labels, tstarts, fstarts = select_training_patches(α; seed=seed)
 	shotnos = shotnos[patch_labels.==1]
 	tstarts = tstarts[patch_labels.==1]
 	fstarts = fstarts[patch_labels.==1]
 	patch_labels = patch_labels[patch_labels.==1]
-	Npatches = length(shotnos)
-	# set the seed and shuffle the data
-	(seed != nothing) ? Random.seed!(seed) : nothing
-	used_inds = sample(1:Npatches, Npatches)
-	shotnos, tstarts, fstarts, patch_lables =
-		shotnos[used_inds], tstarts[used_inds], fstarts[used_inds], patch_labels[used_inds]
-	# now return the data using given α
-	Nused = floor(Int, Npatches*α)
-	# restart the seed
-	Random.seed!()
-	if Nused > 0
-		return shotnos[1:Nused], patch_lables[1:Nused], tstarts[1:Nused], fstarts[1:Nused]
-	else
-		return nothing, nothing, nothing, nothing
-	end
+	return shotnos, patch_labels, tstarts, fstarts
 end
 
 """

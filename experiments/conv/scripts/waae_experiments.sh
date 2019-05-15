@@ -117,6 +117,7 @@ julia run_experiment.jl WAAE 64 4 8 16 32 32 \
 	--savepath=waae_64_8_16_32_32_lambda-10_sigma-1_cube-8/$SEED --nshots=100 --nepochs=50 --savepoint=1 \
 	--pz-components=8 --eta=0.001 --batchnorm --seed=$SEED --lambda=10 --pz-type=cube --sigma=1
 # large net, 3D, 8cube, lambda 10, sigma 1, 64 ldim
+# this fits in between the data although MMD~2 and gloss~1e-2 - interesting
 julia run_experiment.jl WAAE 64 4 8 16 32 32 \
 	--scaling 2 2 1 1 --gpu --memory-efficient --memorysafe \
 	--ndense=3 --hdim=64 --positive-patch-ratio=0.1 \
@@ -124,22 +125,37 @@ julia run_experiment.jl WAAE 64 4 8 16 32 32 \
 	--savepoint=1 --pz-components=8 --eta=0.001 --batchnorm --seed=$SEED --lambda=100 \
 	--pz-type=cube --sigma=1
 # larger net, 3D, 8cube, lambda 10, sigma 1
+# not so far from the pz, but no clustering
 julia run_experiment.jl WAAE 3 4 16 16 32 32 \
     --scaling 2 2 1 1 --gpu --memory-efficient --memorysafe \
 	--ndense=3 --hdim=64 --positive-patch-ratio=0.1 \
 	--savepath=waae_3_16_16_32_32_lambda-10_sigma-1_cube-8/$SEED --nshots=100 --nepochs=50 --savepoint=1 \
 	--pz-components=8 --eta=0.001 --batchnorm --seed=$SEED --lambda=10 --pz-type=cube --sigma=1
-# largeer net, 3D, 8cube, lambda 10, sigma 1, 64 ldim
-# RUN THIS
+# larger net, 64, 8cube, lambda 10, sigma 1, 64 ldim
+# good clustering
 julia run_experiment.jl WAAE 64 4 16 16 32 32 \
 	--scaling 2 2 1 1 --gpu --memory-efficient --memorysafe \
 	--ndense=3 --hdim=64 --positive-patch-ratio=0.1 \
 	--savepath=waae_64_16_16_32_32_lambda-10_sigma-1_cube-8/$SEED --nshots=100 --nepochs=50 \
 	--savepoint=1 --pz-components=8 --eta=0.001 --batchnorm --seed=$SEED --lambda=10 \
 	--pz-type=cube --sigma=1
-# larger net, 3D, 8cube, lambda 10, sigma 1
+# larger net, 3D, 8cube, lambda 10, sigma 0.01
+# VERY GOOD SEPARATION, but poor fit to pz
+# knn5 auc = 0.836
 julia run_experiment.jl WAAE 3 4 16 16 32 32 \
     --scaling 2 2 1 1 --gpu --memory-efficient --memorysafe \
 	--ndense=3 --hdim=64 --positive-patch-ratio=0.1 \
 	--savepath=waae_3_16_16_32_32_lambda-10_sigma-0.01_cube-8/$SEED --nshots=100 --nepochs=50 --savepoint=1 \
 	--pz-components=8 --eta=0.001 --batchnorm --seed=$SEED --lambda=10 --pz-type=cube --sigma=0.01
+# larger net, pure AE
+julia run_experiment.jl AE 3 4 16 16 32 32 \
+    --scaling 2 2 1 1 --gpu --memory-efficient --memorysafe \
+	--positive-patch-ratio=0.1 \
+	--savepath=ae_3_16_16_32_32/$SEED --nshots=100 --nepochs=50 --savepoint=1 \
+	--eta=0.0001 --batchnorm --seed=$SEED
+# try shorter but wider, the above model does not seem to reconstruct very well
+julia run_experiment.jl AE 3 3 32 64 64 \
+    --scaling 2 2 1  --gpu --memory-efficient --memorysafe \
+	--positive-patch-ratio=0.1 \
+	--savepath=ae_3_32_64_64/$SEED --nshots=100 --nepochs=50 --savepoint=1 \
+	--eta=0.0001 --batchnorm --seed=$SEED

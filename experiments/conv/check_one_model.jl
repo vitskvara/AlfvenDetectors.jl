@@ -5,6 +5,8 @@ using StatsBase
 using GenerativeModels
 using Dates
 using BSON
+using Random
+using EvalCurves
 #using PyPlot
 using Plots
 plotly()
@@ -13,7 +15,8 @@ plotly()
 # now get some data
 datapath = "/home/vit/vyzkum/alfven/cdb_data/uprobe_data"
 patchsize = 128
-patch_f = joinpath(dirname(pathof(AlfvenDetectors)), "../experiments/conv/data/labeled_patches_$patchsize.bson")
+patch_f = joinpath(dirname(pathof(AlfvenDetectors)), 
+	"../experiments/conv/data/labeled_patches_$patchsize.bson")
 if isfile(patch_f)
 	patchdata = BSON.load(patch_f)
 	data = patchdata[:data];
@@ -31,16 +34,16 @@ end
 
 #
 modelpath = "/home/vit/vyzkum/alfven/experiments/conv/uprobe"
-subpath = "waae_64_8_16_32_32_lambda-10_sigma-1_cube-8/1"
+subpath = "waae_3_16_16_32_32_lambda-10_sigma-0.01_cube-8/1"
 mpath = joinpath(modelpath, subpath) 
 models = readdir(mpath)
 #imode = 46
-imodel = 50
+imodel = 40
 mf = joinpath(mpath,models[imodel])
 
 # or load it directly
-#mf = "/home/vit/.julia/environments/v1.1/dev/AlfvenDetectors/experiments/conv/ConvAAE_channels-[2,2]_patchsize-128_nepochs-10_2019-05-06T10:03:25.287.bson"
-#mf = "./ConvWAE_channels-[2,2]_patchsize-128_nepochs-2_2019-05-07T09:16:59.027.bson"
+#mf="/home/vit/.julia/environments/v1.1/dev/AlfvenDetectors/experiments/conv/ConvAAE_channels-[2,2]_patchsize-128_nepochs-10_2019-05-06T10:03:25.287.bson"
+#mf="./ConvWAE_channels-[2,2]_patchsize-128_nepochs-2_2019-05-07T09:16:59.027.bson"
 
 # 
 model_data = BSON.load(mf)
@@ -62,26 +65,56 @@ end
 title!("")
 
 # look at the Z space
-Z_pt = model.pz(1000)
+Zpz = model.pz(1000);
 batchsize = 128
-Z_g = GenerativeModels.encode(model, data, batchsize).data
-if size(Z_g,1) == 3
-	scatter(Z_pt[1,:],Z_pt[2,:],Z_pt[3,:], label="samples from pz")
-	scatter!(Z_g[1,:],Z_g[2,:],Z_g[3,:], label="encoded data")
+Zqz = GenerativeModels.encode(model, data, batchsize).data;
+# if the ldim is larger than 3, reduce it with UMAP for plotting purposes
+ldim = size(Zpz,1)
+if ldim > 3
+	pdim = 3
+	global umap_model = AlfvenDetectors.UMAP(pdim, n_neighbors=5, min_dist=0.4)
+	Zt = AlfvenDetectors.fit!(umap_model, hcat(Zpz, Zqz));
+	Zpzp = Zt[:,1:size(Zpz,2)];
+	Zqzp = Zt[:,size(Zpz,2)+1:end];
 else
-	scatter(Z_pt[1,:],Z_pt[2,:], label="samples from pz")
-	scatter!(Z_g[1,:],Z_g[2,:], label="encoded data")
+	pdim = ldim
+	Zpzp = copy(Zpz);
+	Zqzp = copy(Zqz);
 end
-
-if size(Z_g,1) == 3
-	scatter(Z_g[1,labels.==1],Z_g[2,labels.==1],Z_g[3,labels.==1], label="alfven data")
-	scatter!(Z_g[1,labels.==0],Z_g[2,labels.==0],Z_g[3,labels.==0], label="no alfven data")
+if pdim == 3
+	scatter(Zpzp[1,:],Zpzp[2,:],Zpzp[3,:], label="samples from pz")
+	scatter!(Zqzp[1,:],Zqzp[2,:],Zqzp[3,:], label="encoded data")
 else
-	scatter(Z_g[1,labels.==1],Z_g[2,labels.==1], label="alfven data")
-	scatter!(Z_g[1,labels.==0],Z_g[2,labels.==0], label="no alfven data")
+	scatter(Zpzp[1,:],Zpzp[2,:], label="samples from pz")
+	scatter!(Zqzp[1,:],Zqzp[2,:], label="encoded data")
+end
+if pdim == 3
+	scatter(Zqzp[1,labels.==1],Zqzp[2,labels.==1],Zqzp[3,labels.==1], label="alfven data")
+	scatter!(Zqzp[1,labels.==0],Zqzp[2,labels.==0],Zqzp[3,labels.==0], label="no alfven data")
+else
+	scatter(Zqzp[1,labels.==1],Zqzp[2,labels.==1], label="alfven data")
+	scatter!(Zqzp[1,labels.==0],Zqzp[2,labels.==0], label="no alfven data")
 end
 plot()
 
+# get  training and testing data
+seed = model_data[:experiment_args]["seed"];
+train_info, train_inds, test_info, test_inds = AlfvenDetectors.split_patches(0.5, shotnos, labels, tstarts, 
+	fstarts; seed=seed);
+train = (data[:,:,:,train_inds], train_info[2]);
+test = (data[:,:,:,test_inds], test_info[2]);
+
+# test the separation by fitting kNN
+knn_model = AlfvenDetectors.KNN(:KDTree);
+fx(m,x) = nothing # there is no point in fitting the unlabeled samples
+fxy(m,x,y) = AlfvenDetectors.fit!(m,x,y) ;
+k = 3
+asf(m,x) = AlfvenDetectors.as_mean(m,x,k);
+fsmodel = AlfvenDetectors.FewShotModel(model, knn_model, fx, fxy, asf);
+AlfvenDetectors.fit!(fsmodel, train[1], train[1], train[2]);
+as = AlfvenDetectors.anomaly_score(fsmodel, test[1]);
+auc = EvalCurves.auc(EvalCurves.roccurve(as, test[2])...)
+println("AUC (kNN 5) = $auc")
 
 
 
@@ -98,21 +131,7 @@ plot()
 
 
 
-figure(figsize=(10,10))
-subplot(221)
-title("histogram of z space")
-plt.hist2d(Z_g[1,:], Z_g[2,:],20)
-subplot(222)
-title("labeled z space")
-scatter(Z_g[1,labels.==1], Z_g[2,labels.==1], label="alfven",s=5)
-scatter(Z_g[1,labels.==0], Z_g[2,labels.==0], label="no alfven",s=5)
-legend()
-subplot(223)
-title("histogram of alfven samples")
-plt.hist2d(Z_g[1,labels.==1], Z_g[2,labels.==1],20)
-subplot(224)
-title("histogram of no alfven samples")
-plt.hist2d(Z_g[1,labels.==0], Z_g[2,labels.==0],20)
+
 
 # check some reconstructions
 ipatch = 10

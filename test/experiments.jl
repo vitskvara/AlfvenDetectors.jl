@@ -85,7 +85,10 @@ if isdir(datapath)
 	patchdata = AlfvenDetectors.select_training_patches(0.1)
 	@test length(patchdata) == 4
 	@test length(patchdata[1]) == length(patchdata[2]) == length(patchdata[3]) == length(patchdata[4]) != 0
-
+	patchdata = AlfvenDetectors.select_positive_training_patches(0.1)
+	@test length(patchdata) == 4
+	@test length(patchdata[1]) == length(patchdata[2]) == length(patchdata[3]) == length(patchdata[4]) != 0
+	
 	# msc amplitude + AE
 	rawdata = hcat(AlfvenDetectors.collect_signals(shots, AlfvenDetectors.readmscampphase, coils; type="flattop")...)
 	if usegpu
