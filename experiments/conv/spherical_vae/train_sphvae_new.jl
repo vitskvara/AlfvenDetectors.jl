@@ -31,7 +31,7 @@ test = (tstZ, tstY)
 # setup the svae
 inputdim = size(train[1],1)
 hiddenDim = 32
-latentDim = 2
+latentDim = 8
 numLayers = 3
 nonlinearity = "relu"
 layerType = "Dense"
@@ -52,7 +52,7 @@ s = 0.1 # width of imq kernel
 model = AlfvenDetectors.SVAEMem(inputdim, hiddenDim, latentDim, numLayers, 
 		memorySize, k, labelCount, α; nonlinearity=nonlinearity, layerType=layerType)
 # first train the svae
-AlfvenDetectors.fit!(model, train[1], batchSize, numBatches, β, s);
+AlfvenDetectors.fit!(model, train[1], batchSize, numBatches, β, s; cbtime=10);
 # then train the memory
 numBatches = 500 # it will take a looong time
 AlfvenDetectors.fit!(model, train[1], train[2], batchSize, numBatches, β, 1, loss_α, cbtime=20);

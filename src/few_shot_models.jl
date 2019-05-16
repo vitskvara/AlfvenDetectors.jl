@@ -320,16 +320,31 @@ function fit!(m::SVAEMem, X::AbstractArray, batchsize::Int, nbatches::Int, β, �
 end
 
 """
-	fit!(SVAEMem, X, Y, batchsize, nbatches, β, σ, γ[; η, cbtime])
+	fit!(SVAEMem, X, Y, batchsize, nbatches, β, σ, γ[; η, cbtime, n_memory_prefill])
 
 	β - ratio between reconstruction error and the distance between p(z) and q(z)
 	σ - width of the imq kernel
 	γ - importance ratio between anomalies and normal data in mem_loss
 	η - optimiser learning rate [1e-5]
+	n_memory_prefill - how many samples should be put in memory [batchsize]
 """
 function fit!(m::SVAEMem, X::AbstractArray, Y::AbstractVector, batchsize::Int, nbatches::Int, 
-	β, σ, γ; η=1e-5, cbtime=60)
-	remember(m, Float32.(X), Int.(Y))
+	β, σ, γ; η=1e-5, cbtime=60, n_memory_prefill=batchsize)
+	# put as many anomalies here and only a few normal samples 
+	Na = Int(sum(Y))
+	inds = sample(1:Na, min(n_memory_prefill,Na), replace=false)
+	Xmem = X[:,Y.==1][:,inds]
+	Ymem = Y[Y.==1][inds]
+	# if there are less anomalies then the requested number of samples for memory prefill 
+	# add some normal ones
+	if Na < n_memory_prefill
+		N = size(X,2)
+		inds = sample(1:(N-Na), n_memory_prefill-Na, replace=false)
+		Xmem = hcat(Xmem, X[:,Y.==0][:,inds])
+		Ymem = vcat(Ymem, Y[Y.==0][inds])
+	end
+	remember(m, Float32.(Xmem), Int.(Ymem))
+	# now train the encoder with memory
 	opt = ADAM(η)
 	# learn with labels
 	cb = Flux.throttle(() -> println("SVAE mem loss: $(trainWithAnomalies(m, X[:,1:batchsize], 
