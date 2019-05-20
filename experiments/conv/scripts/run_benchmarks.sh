@@ -3,10 +3,10 @@
 # run everything with a different seed about 10 times
 
 SEED=1
-LDIM=3
+LDIM=8
 NCONV=3
 C1=32
-C2=64
+C2=32
 C3=64
 GAMMA=0.0
 LAMBDA=0.0
