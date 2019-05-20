@@ -8,9 +8,13 @@ using BSON
 using Random
 using EvalCurves
 #using PyPlot
-using Plots
-plotly()
 #using CuArrays
+plotstuff = false
+
+if plotstuff
+	using Plots
+	plotly()
+end
 
 # now get some data
 datapath = "/home/vit/vyzkum/alfven/cdb_data/uprobe_data"
@@ -34,7 +38,8 @@ end
 
 #
 modelpath = "/home/vit/vyzkum/alfven/experiments/conv/uprobe"
-subpath = "ae_64_32_64_64/1"
+subpath = subpath*"/1"
+#subpath = "waae_2_4_8_lambda-10_sigma-1_cube-4/1"
 mpath = joinpath(modelpath, subpath) 
 models = readdir(mpath)
 #imode = 46
@@ -57,49 +62,51 @@ else
 	model = Flux.testmode!(GenerativeModels.construct_model(mf))
 end
 
-# plot training history
-for key in keys(history)
-	is,ls = get(history, key)
-	plot!(is,ls,label=string(key)*"=$(ls[end])")
-end
-title!("")
+if plotstuff
+	# plot training history
+	for key in keys(history)
+		is,ls = get(history, key)
+		plot!(is,ls,label=string(key)*"=$(ls[end])")
+	end
+	title!("")
 
-# look at the Z space
-batchsize = 128
-Zqz = GenerativeModels.encode(model, data, batchsize).data;
-ldim = size(Zqz,1)
-if :pz in fieldnames(typeof(model))
-	Zpz = model.pz(1000);
-else
-	Zpz = Array{Float32,2}(undef,ldim,0)
+	# look at the Z space
+	batchsize = 128
+	Zqz = GenerativeModels.encode(model, data, batchsize).data;
+	ldim = size(Zqz,1)
+	if :pz in fieldnames(typeof(model))
+		Zpz = model.pz(1000);
+	else
+		Zpz = Array{Float32,2}(undef,ldim,0)
+	end
+	# if the ldim is larger than 3, reduce it with UMAP for plotting purposes
+	if ldim > 3
+		pdim = 3
+		global umap_model = AlfvenDetectors.UMAP(pdim, n_neighbors=5, min_dist=0.4)
+		Zt = AlfvenDetectors.fit!(umap_model, hcat(Zpz, Zqz));
+		Zpzp = Zt[:,1:size(Zpz,2)];
+		Zqzp = Zt[:,size(Zpz,2)+1:end];
+	else
+		pdim = ldim
+		Zpzp = copy(Zpz);
+		Zqzp = copy(Zqz);
+	end
+	if pdim == 3
+		scatter(Zpzp[1,:],Zpzp[2,:],Zpzp[3,:], label="samples from pz")
+		scatter!(Zqzp[1,:],Zqzp[2,:],Zqzp[3,:], label="encoded data")
+	else
+		scatter(Zpzp[1,:],Zpzp[2,:], label="samples from pz")
+		scatter!(Zqzp[1,:],Zqzp[2,:], label="encoded data")
+	end
+	if pdim == 3
+		scatter(Zqzp[1,labels.==1],Zqzp[2,labels.==1],Zqzp[3,labels.==1], label="alfven data")
+		scatter!(Zqzp[1,labels.==0],Zqzp[2,labels.==0],Zqzp[3,labels.==0], label="no alfven data")
+	else
+		scatter(Zqzp[1,labels.==1],Zqzp[2,labels.==1], label="alfven data")
+		scatter!(Zqzp[1,labels.==0],Zqzp[2,labels.==0], label="no alfven data")
+	end
+	plot()
 end
-# if the ldim is larger than 3, reduce it with UMAP for plotting purposes
-if ldim > 3
-	pdim = 3
-	global umap_model = AlfvenDetectors.UMAP(pdim, n_neighbors=5, min_dist=0.4)
-	Zt = AlfvenDetectors.fit!(umap_model, hcat(Zpz, Zqz));
-	Zpzp = Zt[:,1:size(Zpz,2)];
-	Zqzp = Zt[:,size(Zpz,2)+1:end];
-else
-	pdim = ldim
-	Zpzp = copy(Zpz);
-	Zqzp = copy(Zqz);
-end
-if pdim == 3
-	scatter(Zpzp[1,:],Zpzp[2,:],Zpzp[3,:], label="samples from pz")
-	scatter!(Zqzp[1,:],Zqzp[2,:],Zqzp[3,:], label="encoded data")
-else
-	scatter(Zpzp[1,:],Zpzp[2,:], label="samples from pz")
-	scatter!(Zqzp[1,:],Zqzp[2,:], label="encoded data")
-end
-if pdim == 3
-	scatter(Zqzp[1,labels.==1],Zqzp[2,labels.==1],Zqzp[3,labels.==1], label="alfven data")
-	scatter!(Zqzp[1,labels.==0],Zqzp[2,labels.==0],Zqzp[3,labels.==0], label="no alfven data")
-else
-	scatter(Zqzp[1,labels.==1],Zqzp[2,labels.==1], label="alfven data")
-	scatter!(Zqzp[1,labels.==0],Zqzp[2,labels.==0], label="no alfven data")
-end
-plot()
 
 # get  training and testing data
 seed = model_data[:experiment_args]["seed"];
@@ -136,21 +143,22 @@ println("AUC (kNN 5) = $auc")
 
 
 
+if false
+	# check some reconstructions
+	ipatch = 10
+	cmap = "plasma"
+	patch = data[:,:,:,ipatch:ipatch]
+	rpatch = model(patch).data
+	e = Flux.mse(patch, rpatch)
+	figure(figsize=(10,5))
+	subplot(121)
+	title("original")
+	pcolormesh(patch[:,:,1,1],cmap=cmap)
+	subplot(122)
+	title("reconstruction, error = $(e)")
+	pcolormesh(rpatch[:,:,1,1],cmap=cmap)
 
-# check some reconstructions
-ipatch = 10
-cmap = "plasma"
-patch = data[:,:,:,ipatch:ipatch]
-rpatch = model(patch).data
-e = Flux.mse(patch, rpatch)
-figure(figsize=(10,5))
-subplot(121)
-title("original")
-pcolormesh(patch[:,:,1,1],cmap=cmap)
-subplot(122)
-title("reconstruction, error = $(e)")
-pcolormesh(rpatch[:,:,1,1],cmap=cmap)
-
-# check the reconstruction error progress
-is, ls = get(history, :aeloss)
-plot(ls[1000:end])
+	# check the reconstruction error progress
+	is, ls = get(history, :aeloss)
+	plot(ls[1000:end])
+end
