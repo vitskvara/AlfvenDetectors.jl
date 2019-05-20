@@ -1,4 +1,3 @@
-using Profile
 using AlfvenDetectors
 using Flux
 using ValueHistories
@@ -75,7 +74,7 @@ s = ArgParseSettings()
 		action = :store_true
 		help = "use ResNet blocks for convolutional layers"
 	"--eta"
-		default = Float32(0.001)
+		default = Float32(0.0001)
 		arg_type = Float32
 		help = "learning rate"
 	"--beta"

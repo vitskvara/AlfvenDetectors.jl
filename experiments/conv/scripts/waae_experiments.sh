@@ -156,12 +156,14 @@ julia run_experiment.jl AE 3 4 16 16 32 32 \
 	--savepath=ae_3_16_16_32_32/$SEED --nshots=100 --nepochs=50 --savepoint=1 \
 	--eta=0.0001 --batchnorm --seed=$SEED
 # try shorter but wider, the above model does not seem to reconstruct very well
+# knn5 auc = 0.815, but quite terrible separation
 julia run_experiment.jl AE 3 3 32 64 64 \
     --scaling 2 2 1  --gpu --memory-efficient --memorysafe \
 	--positive-patch-ratio=0.1 \
 	--savepath=ae_3_32_64_64/$SEED --nshots=100 --nepochs=50 --savepoint=1 \
 	--eta=0.0001 --batchnorm --seed=$SEED
 # AE large, 64D
+# no separation, knn5 auc = 0.813
 julia run_experiment.jl AE 64 3 32 64 64 \
     --scaling 2 2 1  --gpu --memory-efficient --memorysafe \
 	--positive-patch-ratio=0.1 \

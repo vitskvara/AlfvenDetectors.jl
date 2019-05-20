@@ -34,7 +34,7 @@ end
 
 #
 modelpath = "/home/vit/vyzkum/alfven/experiments/conv/uprobe"
-subpath = "ae_3_32_64_64/1"
+subpath = "ae_64_32_64_64/1"
 mpath = joinpath(modelpath, subpath) 
 models = readdir(mpath)
 #imode = 46
@@ -65,11 +65,15 @@ end
 title!("")
 
 # look at the Z space
-Zpz = model.pz(1000);
 batchsize = 128
 Zqz = GenerativeModels.encode(model, data, batchsize).data;
+ldim = size(Zqz,1)
+if :pz in fieldnames(typeof(model))
+	Zpz = model.pz(1000);
+else
+	Zpz = Array{Float32,2}(undef,ldim,0)
+end
 # if the ldim is larger than 3, reduce it with UMAP for plotting purposes
-ldim = size(Zpz,1)
 if ldim > 3
 	pdim = 3
 	global umap_model = AlfvenDetectors.UMAP(pdim, n_neighbors=5, min_dist=0.4)
