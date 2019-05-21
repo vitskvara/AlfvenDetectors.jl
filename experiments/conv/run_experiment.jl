@@ -227,7 +227,7 @@ if hostname == "vit-ThinkPad-E470"
 elseif hostname == "tarbik.utia.cas.cz"
 	datapath = "/home/skvara/work/alfven/cdb_data/uprobe_data"
 	savepath = "/home/skvara/work/alfven/experiments/conv/$measurement_type"
-elseif hostname == "soroban-node-03"
+elseif occursin("soroban", hostname)
 #	datapath = "/compass/Shared/Exchange/Havranek/Link to Alfven"
 	datapath = "/compass/home/skvara/no-backup/uprobe_data"
 	savepath = "/compass/home/skvara/alfven/experiments/conv/$measurement_type"
