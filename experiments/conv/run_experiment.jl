@@ -6,6 +6,7 @@ using DelimitedFiles
 using Random
 using StatsBase
 using GenerativeModels
+using Pkg
 
 # use argparse to extract the command line arguments
 # name of algorithm, usegpu, latentdim, no of layers, coils?
@@ -215,7 +216,7 @@ elseif measurement_type == "uprobe"
 	readfun = AlfvenDetectors.readnormlogupsd
 end
 ### set the rest of the stuff
-if usegpu
+if usegpu && "CuArrays" in keys(Pkg.installed())
 	using CuArrays
 end
 
