@@ -96,6 +96,10 @@ test = (reshape(data[:,:,:,test_inds],:,length(test_info[2])), test_info[2]);
 # do the knn classification
 knn_model = AlfvenDetectors.KNN(:BruteTree);
 AlfvenDetectors.fit!(knn_model,train[1],train[2]) ;
-k=5
-as = AlfvenDetectors.as_mean(knn_model,test[1],k);
-auc = EvalCurves.auc(EvalCurves.roccurve(as, test[2])...)
+kvec = collect(1:2:21)
+aucs = []
+for k in kvec
+	as = AlfvenDetectors.as_mean(knn_model,test[1],k);
+	auc = EvalCurves.auc(EvalCurves.roccurve(as, test[2])...)
+	push!(aucs, auc)
+end
