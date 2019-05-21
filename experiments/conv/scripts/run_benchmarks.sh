@@ -14,6 +14,16 @@ SIGMA=0.1
 # this is AE
 ./run_benchmark.sh "$SEED" "$LDIM" "$NCONV" "$C1" "$C2" "$C3" "$GAMMA" "$LAMBDA" "$SIGMA"
 
+# this is VAE
+BETA=1.0
+./run_vae_benchmark.sh "$SEED" "$LDIM" "$NCONV" "$C1" "$C2" "$C3" "$BETA"
+BETA=0.1
+./run_vae_benchmark.sh "$SEED" "$LDIM" "$NCONV" "$C1" "$C2" "$C3" "$BETA"
+BETA=0.01
+./run_vae_benchmark.sh "$SEED" "$LDIM" "$NCONV" "$C1" "$C2" "$C3" "$BETA"
+BETA=0.001
+./run_vae_benchmark.sh "$SEED" "$LDIM" "$NCONV" "$C1" "$C2" "$C3" "$BETA"
+
 # this is AAE
 GAMMA=0.0
 ./run_benchmark.sh "$SEED" "$LDIM" "$NCONV" "$C1" "$C2" "$C3" "$GAMMA" "$LAMBDA" "$SIGMA"
