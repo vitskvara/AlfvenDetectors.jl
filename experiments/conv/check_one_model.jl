@@ -38,8 +38,8 @@ end
 
 #
 modelpath = "/home/vit/vyzkum/alfven/experiments/conv/uprobe"
-subpath = subpath*"/1"
-#subpath = "waae_2_4_8_lambda-10_sigma-1_cube-4/1"
+#subpath = subpath*"/1"
+subpath = "waae_2_4_8_lambda-10_sigma-1_cube-4/1"
 mpath = joinpath(modelpath, subpath) 
 models = readdir(mpath)
 #imode = 46
