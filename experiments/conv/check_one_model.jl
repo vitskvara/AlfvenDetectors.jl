@@ -37,13 +37,13 @@ else
 end
 
 #
-modelpath = "/home/vit/vyzkum/alfven/experiments/conv/uprobe"
-#subpath = subpath*"/1"
-subpath = "waae_2_4_8_lambda-10_sigma-1_cube-4/1"
+modelpath = "/home/vit/vyzkum/alfven/experiments/conv/uprobe/benchmarks"
+subpath = subpath*"/1"
+#subpath = "vae_8_16_16_32_beta-0.001/1"
 mpath = joinpath(modelpath, subpath) 
 models = readdir(mpath)
 #imode = 46
-imodel = 50
+imodel = length(models)
 mf = joinpath(mpath,models[imodel])
 
 # or load it directly
