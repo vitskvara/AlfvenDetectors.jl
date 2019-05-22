@@ -115,7 +115,7 @@ function plot_lines(df, label, color)
 end
 plot_lines(auc_patches, "full patches", "r")
 plot_lines(auc_latent, "latent", "b")
-ylim([0.6, 1.0])
+ylim([0.5, 1.0])
 xlabel("k")
 ylabel("AUC")
 legend()
@@ -133,10 +133,52 @@ end
 figure()
 plot_mean_sd(auc_patches, "full patches", "r",1)
 plot_mean_sd(auc_latent, "latent", "b",1)
-ylim([0.6, 1.0])
+ylim([0.5, 1.0])
 xlabel("k")
 ylabel("AUC")
 legend()
 tight_layout()
 fname = "knn_patches_vs_latent_means.pdf"
+savefig(joinpath(outpath, fname))
+
+# use the validation data with uniquely split training and testing shots
+#auc_patches_unique = CSV.read("auc_patches_unique.csv")
+auc_latent_unique = CSV.read("auc_latent_unique.csv")
+
+#
+fname = "knn_patches_vs_latent_unique.eps"
+figure()
+#plot_lines(auc_patches, "full patches (u)", "r")
+plot_lines(auc_latent_unique, "latent (u)", "b")
+ylim([0.5, 1.0])
+xlabel("k")
+ylabel("AUC")
+legend()
+tight_layout()
+savefig(joinpath(outpath, fname))
+
+# now plot means and sds
+figure()
+#plot_mean_sd(auc_patches_unique, "full patches", "r",1)
+plot_mean_sd(auc_latent_unique, "latent (u)", "b",1)
+ylim([0.5, 1.0])
+xlabel("k")
+ylabel("AUC")
+legend()
+tight_layout()
+fname = "knn_patches_vs_latent_means_unique.pdf"
+savefig(joinpath(outpath, fname))
+
+# plot together the uniquely sampled patches and the original ones
+figure()
+plot_mean_sd(auc_patches, "full patches", "r",1)
+plot_mean_sd(auc_latent, "latent", "b",1)
+#plot_mean_sd(auc_patches_unique, "full patches", "coral",1)
+plot_mean_sd(auc_latent_unique, "latent (u)", "cyan",1)
+ylim([0.5, 1.0])
+xlabel("k")
+ylabel("AUC")
+legend()
+tight_layout()
+fname = "knn_patches_vs_latent_means_all.pdf"
 savefig(joinpath(outpath, fname))
