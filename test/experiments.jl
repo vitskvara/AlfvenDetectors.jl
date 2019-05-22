@@ -61,6 +61,45 @@ if isdir(datapath)
 	shotnos, labels, tstarts, fstarts = AlfvenDetectors.labeled_patches()
 	@test length(shotnos) == length(labels) == length(tstarts) == length(fstarts) == 371
 	
+	# split patches
+	train_info, train_inds, test_info, test_inds = AlfvenDetectors.split_patches(0.0, shotnos, 
+			labels, tstarts, fstarts; seed=1);
+	@test train_info[1] == train_inds == nothing
+	train_info, train_inds, test_info, test_inds = AlfvenDetectors.split_patches(1.0, shotnos, 
+			labels, tstarts, fstarts; seed=1);
+	@test train_info[1] == train_inds == nothing
+	train_info, train_inds, test_info, test_inds = AlfvenDetectors.split_patches(0.5, shotnos, 
+			labels, tstarts, fstarts; seed=1);
+	@test shotnos[train_inds] == train_info[1]
+	@test labels[train_inds] == train_info[2]
+	@test tstarts[train_inds] == train_info[3]
+	@test fstarts[train_inds] == train_info[4]
+	@test shotnos[test_inds] == test_info[1]
+	@test labels[test_inds] == test_info[2]
+	@test tstarts[test_inds] == test_info[3]
+	@test fstarts[test_inds] == test_info[4]
+
+	# split patches unique
+	train_info, train_inds, test_info, test_inds = AlfvenDetectors.split_patches_unique(0.0, shotnos, 
+			labels, tstarts, fstarts; seed=1);
+	@test train_info[1] == train_inds == nothing
+	train_info, train_inds, test_info, test_inds = AlfvenDetectors.split_patches_unique(1.0, shotnos, 
+			labels, tstarts, fstarts; seed=1);
+	@test train_info[1] == train_inds == nothing
+	train_info, train_inds, test_info, test_inds = AlfvenDetectors.split_patches_unique(0.5, shotnos, 
+			labels, tstarts, fstarts);
+	@test shotnos[train_inds] == train_info[1]
+	@test labels[train_inds] == train_info[2]
+	@test tstarts[train_inds] == train_info[3]
+	@test fstarts[train_inds] == train_info[4]
+	@test shotnos[test_inds] == test_info[1]
+	@test labels[test_inds] == test_info[2]
+	@test tstarts[test_inds] == test_info[3]
+	@test fstarts[test_inds] == test_info[4]
+	# shot numbers should not intersect in the 
+	@test intersect(unique(train_info[1]), unique(test_info[1])) == []
+	@test sort(vcat(unique(train_info[1]), unique(test_info[1]))) == sort(unique(shotnos))
+	
 	# get a patch
 	ipatch = 10
 	patch, t, f = AlfvenDetectors.get_patch(datapath, shotnos[ipatch], tstarts[ipatch],
@@ -80,8 +119,9 @@ if isdir(datapath)
 	@test length(shotlist3) == 11
 	@test shotlist2 != shotlist3
 
+	
 	# select_training_patches(α::Real; seed = nothing)
-	@test AlfvenDetectors.select_training_patches(0.0) == (nothing, nothing, nothing, nothing)
+	@test AlfvenDetectors.select_training_patches(0.0) == [nothing, nothing, nothing, nothing]
 	patchdata = AlfvenDetectors.select_training_patches(0.1)
 	@test length(patchdata) == 4
 	@test length(patchdata[1]) == length(patchdata[2]) == length(patchdata[3]) == length(patchdata[4]) != 0

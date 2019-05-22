@@ -8,6 +8,16 @@ using BSON
 using Random
 using EvalCurves
 using PyPlot
+using DataFrames
+using CSV
+
+# plot params
+outpath = "/home/vit/Dropbox/vyzkum/alfven/iaea2019/presentation/images"
+cmap = "plasma" # colormap
+matplotlib.rc("font", family = "normal",
+    weight = "bold",
+    size = 16
+)
 
 # get some data
 datapath = "/home/vit/vyzkum/alfven/cdb_data/uprobe_data"
@@ -70,14 +80,6 @@ as = AlfvenDetectors.anomaly_score(fsmodel, test[1]);
 auc = EvalCurves.auc(EvalCurves.roccurve(as, test[2])...)
 println("AUC (kNN 5) = $auc")
 
-# plot params
-outpath = "/home/vit/Dropbox/vyzkum/alfven/iaea2019/presentation/images"
-cmap = "plasma" # colormap
-matplotlib.rc("font", family = "normal",
-    weight = "bold",
-    size = 16
-)
-
 # now save the most anomalous samples
 fname = "anomalous_patches.png"
 sortinds=sortperm(as,rev=true)
@@ -94,3 +96,47 @@ end
 tight_layout()
 savefig(joinpath(outpath, fname),dpi=500)
 
+# now do the comparison of knn on encoded data and on the original samples
+auc_patches = CSV.read("auc_patches.csv")
+auc_latent = CSV.read("auc_latent.csv")
+
+# first plot everything over and over
+fname = "knn_patches_vs_latent.eps"
+figure()
+function plot_lines(df, label, color)
+	for seed in unique(df[:seed])
+		subdf = filter(x->x[:seed]==seed, df)
+		if seed==1
+			plot(subdf[:k], subdf[:auc], label=label, c=color)
+		else
+			plot(subdf[:k], subdf[:auc], c=color)
+		end
+	end
+end
+plot_lines(auc_patches, "full patches", "r")
+plot_lines(auc_latent, "latent", "b")
+ylim([0.6, 1.0])
+xlabel("k")
+ylabel("AUC")
+legend()
+tight_layout()
+savefig(joinpath(outpath, fname))
+
+# now plot means and sds
+function plot_mean_sd(df, label, color, nsd)
+	kvec = unique(df[:k])
+	means = map(k->StatsBase.mean((filter(row->row[:k]==k,df))[:auc]), kvec)
+	sds = map(k->sqrt(StatsBase.var((filter(row->row[:k]==k,df))[:auc])), kvec)
+	plot(kvec, means, label=label, c=color)
+	fill_between(kvec, means-nsd*sds, means+nsd*sds, color=color, alpha=0.3, linewidth=0)
+end
+figure()
+plot_mean_sd(auc_patches, "full patches", "r",1)
+plot_mean_sd(auc_latent, "latent", "b",1)
+ylim([0.6, 1.0])
+xlabel("k")
+ylabel("AUC")
+legend()
+tight_layout()
+fname = "knn_patches_vs_latent_means.pdf"
+savefig(joinpath(outpath, fname))

@@ -349,29 +349,74 @@ function select_training_shots(nshots::Int, available_shots::AbstractVector;
 end
 
 """
-	split_patches(α, shotnos, patch_labels, tstarts, fstarts[, seed])
+	split_patches(α, shotnos, labels, tstarts, fstarts[, seed])
 
 Return the info on α ratio of labeled patches.
 """
-function split_patches(α::Real, shotnos, patch_labels, tstarts, fstarts; seed = nothing)
+function split_patches(α::Real, shotnos, labels, tstarts, fstarts; seed = nothing)
 	Npatches = length(shotnos)
 	# set the seed and shuffle the data
 	(seed != nothing) ? Random.seed!(seed) : nothing
-	used_inds = sample(1:Npatches, Npatches)
-	shotnos, patch_lables, tstarts, fstarts =
-		shotnos[used_inds], patch_labels[used_inds], tstarts[used_inds], fstarts[used_inds]
+	used_inds = sample(1:Npatches, Npatches, replace=false)
+	shotnos, labels, tstarts, fstarts =
+		shotnos[used_inds], labels[used_inds], tstarts[used_inds], fstarts[used_inds]
 	# now return the data using given α
 	Nused = floor(Int, Npatches*α)
 	# restart the seed
 	Random.seed!()
-	if Nused > 0
-		return (shotnos[1:Nused], patch_lables[1:Nused], tstarts[1:Nused], fstarts[1:Nused]), 
-			used_inds[1:Nused],
-			(shotnos[Nused+1:end], patch_lables[Nused+1:end], 
-				tstarts[Nused+1:end], fstarts[Nused+1:end]),
-			used_inds[Nused+1:end]
+	if 0 < Nused < Npatches 
+		return map(x->x[1:Nused], [shotnos, labels, tstarts, fstarts]), used_inds[1:Nused],
+			map(x->x[Nused+1:end], [shotnos, labels, tstarts, fstarts]), used_inds[Nused+1:end]
 	else
-		return (nothing, nothing, nothing, nothing), (nothing, nothing, nothing, nothing)
+		@warn "split_patches(...) not returning anything since one of the sets is empty, Nused=$Nused, Npatches=$Npatches"
+		return fill(nothing, 4), nothing, fill(nothing, 4), nothing
+	end
+end
+
+function split_shotnos(shotnos,α;seed=nothing)
+	# set the seed and shuffle the data
+	(seed != nothing) ? Random.seed!(seed) : nothing
+
+	# get unique shotnos
+	ushotnos = unique(shotnos)
+	Nunique = length(ushotnos)
+	# shuffle them
+	ushotnos = ushotnos[sample(1:Nunique, Nunique, replace=false)]
+	Ntrushots = floor(Int,Nunique*α )
+	trushots = ushotnos[1:Ntrushots]
+	tstushots = ushotnos[Ntrushots+1:end]
+
+	Random.seed!()
+	return trushots, tstushots
+end
+function split_patches_unique(α::Real, shotnos, labels, tstarts, fstarts; seed = nothing)
+	# set the seed and shuffle the data
+	(seed != nothing) ? Random.seed!(seed) : nothing
+
+	# shuffle everything
+	Npatches = length(shotnos)
+	used_inds = sample(1:Npatches, Npatches, replace=false)
+	shotnos, labels, tstarts, fstarts =
+		shotnos[used_inds], labels[used_inds], tstarts[used_inds], fstarts[used_inds]
+
+	# in this part, extract the unique shot numbers, then shuffle and split them with α
+	trshots1, tstshots1 = split_shotnos(shotnos[labels.==1], α, seed=seed)
+	trshots0, tstshots0 = split_shotnos(shotnos[labels.==0], α, seed=seed)
+	
+	# get indices of training positive and negative samples
+	traininds = map(x->any(occursin.(string.(trshots1), string(x))),shotnos) .| 
+		map(x->any(occursin.(string.(trshots0), string(x))),shotnos)
+	testinds = map(x->any(occursin.(string.(tstshots1), string(x))),shotnos) .|
+		map(x->any(occursin.(string.(tstshots0), string(x))),shotnos)
+	
+	# restart the seed
+	Random.seed!()
+	if 0 < sum(traininds) < Npatches
+		return map(x->x[traininds], [shotnos, labels, tstarts, fstarts]), used_inds[traininds],
+			map(x->x[testinds], [shotnos, labels, tstarts, fstarts]), used_inds[testinds]
+	else
+		@warn "split_patches_unique(...) not returning anything since one of the sets is empty, Nused=$(sum(traininds)), Npatches=$Npatches"
+		return fill(nothing, 4), nothing, fill(nothing, 4), nothing
 	end
 end
 
