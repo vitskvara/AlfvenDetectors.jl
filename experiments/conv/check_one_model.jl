@@ -110,8 +110,8 @@ end
 
 # get  training and testing data
 seed = model_data[:experiment_args]["seed"];
-train_info, train_inds, test_info, test_inds = AlfvenDetectors.split_patches(0.5, shotnos, labels, tstarts, 
-	fstarts; seed=seed);
+train_info, train_inds, test_info, test_inds = AlfvenDetectors.split_patches_unique(0.5, shotnos, 
+	labels, tstarts, fstarts; seed=seed);
 train = (data[:,:,:,train_inds], train_info[2]);
 test = (data[:,:,:,test_inds], test_info[2]);
 
@@ -125,7 +125,7 @@ fsmodel = AlfvenDetectors.FewShotModel(model, knn_model, fx, fxy, asf);
 AlfvenDetectors.fit!(fsmodel, train[1], train[1], train[2]);
 as = AlfvenDetectors.anomaly_score(fsmodel, test[1]);
 auc = EvalCurves.auc(EvalCurves.roccurve(as, test[2])...)
-println("AUC (kNN 5) = $auc")
+println("AUC (kNN 3) = $auc")
 
 
 

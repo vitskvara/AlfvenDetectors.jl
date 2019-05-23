@@ -97,12 +97,6 @@ tight_layout()
 savefig(joinpath(outpath, fname),dpi=500)
 
 # now do the comparison of knn on encoded data and on the original samples
-auc_patches = CSV.read("auc_patches.csv")
-auc_latent = CSV.read("auc_latent.csv")
-
-# first plot everything over and over
-fname = "knn_patches_vs_latent.eps"
-figure()
 function plot_lines(df, label, color)
 	for seed in unique(df[:seed])
 		subdf = filter(x->x[:seed]==seed, df)
@@ -113,16 +107,6 @@ function plot_lines(df, label, color)
 		end
 	end
 end
-plot_lines(auc_patches, "full patches", "r")
-plot_lines(auc_latent, "latent", "b")
-ylim([0.5, 1.0])
-xlabel("k")
-ylabel("AUC")
-legend()
-tight_layout()
-savefig(joinpath(outpath, fname))
-
-# now plot means and sds
 function plot_mean_sd(df, label, color, nsd)
 	kvec = unique(df[:k])
 	means = map(k->StatsBase.mean((filter(row->row[:k]==k,df))[:auc]), kvec)
@@ -130,55 +114,85 @@ function plot_mean_sd(df, label, color, nsd)
 	plot(kvec, means, label=label, c=color)
 	fill_between(kvec, means-nsd*sds, means+nsd*sds, color=color, alpha=0.3, linewidth=0)
 end
+
+auc_patches = CSV.read("auc_patches.csv")
+auc_latent = CSV.read("auc_latent.csv")
+
+# first plot everything over and over
+fname = "knn_patches_vs_latent.eps"
 figure()
-plot_mean_sd(auc_patches, "full patches", "r",1)
-plot_mean_sd(auc_latent, "latent", "b",1)
+plot_lines(auc_patches, "full patches", "r")
+plot_lines(auc_latent, "latent", "b")
 ylim([0.5, 1.0])
 xlabel("k")
 ylabel("AUC")
-legend()
-tight_layout()
-fname = "knn_patches_vs_latent_means.pdf"
-savefig(joinpath(outpath, fname))
-
-# use the validation data with uniquely split training and testing shots
-#auc_patches_unique = CSV.read("auc_patches_unique.csv")
-auc_latent_unique = CSV.read("auc_latent_unique.csv")
-
-#
-fname = "knn_patches_vs_latent_unique.eps"
-figure()
-#plot_lines(auc_patches, "full patches (u)", "r")
-plot_lines(auc_latent_unique, "latent (u)", "b")
-ylim([0.5, 1.0])
-xlabel("k")
-ylabel("AUC")
-legend()
+legend(frameon=false)
 tight_layout()
 savefig(joinpath(outpath, fname))
 
 # now plot means and sds
 figure()
-#plot_mean_sd(auc_patches_unique, "full patches", "r",1)
-plot_mean_sd(auc_latent_unique, "latent (u)", "b",1)
+plot_mean_sd(auc_patches, "full patches", "r",1)
+plot_mean_sd(auc_latent, "latent", "b",1)
 ylim([0.5, 1.0])
 xlabel("k")
 ylabel("AUC")
-legend()
+legend(frameon=false)
+tight_layout()
+fname = "knn_patches_vs_latent_means.pdf"
+savefig(joinpath(outpath, fname))
+
+# use the validation data with uniquely split training and testing shots
+auc_patches_unique = CSV.read("auc_patches_unique.csv")
+auc_latent_unique = CSV.read("auc_latent_unique.csv")
+
+# plot all  the lines
+fname = "knn_patches_vs_latent_unique.eps"
+figure()
+plot_lines(auc_patches_unique, "full patches", "r")
+plot_lines(auc_latent_unique, "latent", "b")
+ylim([0.5, 1.0])
+xlabel("k")
+ylabel("AUC")
+legend(frameon=false)
+tight_layout()
+savefig(joinpath(outpath, fname))
+
+# now plot means and sds
+figure()
+plot_mean_sd(auc_patches_unique, "full patches", "r",1)
+plot_mean_sd(auc_latent_unique, "latent", "b",1)
+ylim([0.5, 1.0])
+xlabel("k")
+ylabel("AUC")
+legend(frameon=false)
 tight_layout()
 fname = "knn_patches_vs_latent_means_unique.pdf"
 savefig(joinpath(outpath, fname))
 
 # plot together the uniquely sampled patches and the original ones
+fname = "knn_patches_vs_latent_unique_all.eps"
+figure()
+plot_lines(auc_patches, "full patches", "r")
+plot_lines(auc_latent, "latent", "b")
+plot_lines(auc_patches_unique, "full patches (u)", "coral")
+plot_lines(auc_latent_unique, "latent (u)", "cyan")
+ylim([0.5, 1.0])
+xlabel("k")
+ylabel("AUC")
+legend(frameon=false)
+tight_layout()
+savefig(joinpath(outpath, fname))
+
 figure()
 plot_mean_sd(auc_patches, "full patches", "r",1)
 plot_mean_sd(auc_latent, "latent", "b",1)
-#plot_mean_sd(auc_patches_unique, "full patches", "coral",1)
+plot_mean_sd(auc_patches_unique, "full patches (u)", "coral",1)
 plot_mean_sd(auc_latent_unique, "latent (u)", "cyan",1)
 ylim([0.5, 1.0])
 xlabel("k")
 ylabel("AUC")
-legend()
+legend(frameon=false)
 tight_layout()
 fname = "knn_patches_vs_latent_means_all.pdf"
 savefig(joinpath(outpath, fname))
