@@ -159,7 +159,6 @@ s = ArgParseSettings()
 		arg_type = Float32
 		default = 1.0f0
 		help = "scaling parameter of the GAN loss in WAAE"
-
 end
 parsed_args = parse_args(ARGS, s)
 modelname = "Conv"*parsed_args["modelname"]

@@ -32,7 +32,8 @@ end
 
 # now do the same with knn on encoded data
 modelpath = "/home/vit/vyzkum/alfven/experiments/conv/uprobe/benchmarks"
-modelpath = joinpath(modelpath, "waae_8_16_16_32_lambda-1.0_gamma-0.0_sigma-0.01/1")
+#modelpath = joinpath(modelpath, "waae_8_16_16_32_lambda-1.0_gamma-0.0_sigma-0.01/1")
+modelpath = joinpath(modelpath, "waae_8_16_16_32_lambda-10.0_gamma-0.0_sigma-0.01/1")
 models = readdir(modelpath)
 #imode = 46
 imodel = length(models)
@@ -68,7 +69,7 @@ for seed in seedvec
 	knn_model = AlfvenDetectors.KNN(:KDTree);
 	fx(m,x) = nothing # there is no point in fitting the unlabeled samples
 	fxy(m,x,y) = AlfvenDetectors.fit!(m,x,y) ;
-	kvec = collect(1:2:21)
+	kvec = collect(1:2:31)
 	aucs=[]
 	for k in kvec
 		asf(m,x) = AlfvenDetectors.as_mean(m,x,k);
@@ -81,6 +82,5 @@ for seed in seedvec
 	push!(auc_latent, DataFrame(seed=fill(seed, length(kvec)),k=kvec, auc=aucs))
 end
 auc_latent=vcat(auc_latent...)
-fname = "auc_latent_unique.csv"
+fname = "auc_latent_unique_31.csv"
 CSV.write(fname, auc_latent)
-

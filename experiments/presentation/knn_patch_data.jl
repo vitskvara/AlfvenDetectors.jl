@@ -42,8 +42,9 @@ for seed in 1:10
 	# do the knn classification
 	knn_model = AlfvenDetectors.KNN(:BruteTree);
 	println("fit $seed")
+	# precompilation
 	@time AlfvenDetectors.fit!(knn_model,train[1],train[2]) ;
-	kvec = collect(1:2:21)
+	kvec = collect(1:2:31)
 	aucs = []
 	println("predict $seed")
 	@time for k in kvec

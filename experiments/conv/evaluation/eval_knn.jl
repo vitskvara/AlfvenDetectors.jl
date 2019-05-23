@@ -2,6 +2,7 @@ using Distributed
 using AlfvenDetectors
 @everywhere begin
     using ValueHistories
+    using StatsBase
 end
 # savepath
 hostname = gethostname()
