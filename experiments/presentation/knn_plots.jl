@@ -19,6 +19,24 @@ matplotlib.rc("font", family = "normal",
     size = 16
 )
 
+function plot_lines(df, label, color)
+	for seed in unique(df[:seed])
+		subdf = filter(x->x[:seed]==seed, df)
+		if seed==1
+			plot(subdf[:k], subdf[:auc], label=label, c=color)
+		else
+			plot(subdf[:k], subdf[:auc], c=color)
+		end
+	end
+end
+function plot_mean_sd(df, label, color, nsd)
+	kvec = unique(df[:k])
+	means = map(k->StatsBase.mean((filter(row->row[:k]==k,df))[:auc]), kvec)
+	sds = map(k->sqrt(StatsBase.var((filter(row->row[:k]==k,df))[:auc])), kvec)
+	plot(kvec, means, label=label, c=color)
+	fill_between(kvec, means-nsd*sds, means+nsd*sds, color=color, alpha=0.3, linewidth=0)
+end
+
 # get some data
 datapath = "/home/vit/vyzkum/alfven/cdb_data/uprobe_data"
 patchsize = 128
@@ -97,23 +115,6 @@ tight_layout()
 savefig(joinpath(outpath, fname),dpi=500)
 
 # now do the comparison of knn on encoded data and on the original samples
-function plot_lines(df, label, color)
-	for seed in unique(df[:seed])
-		subdf = filter(x->x[:seed]==seed, df)
-		if seed==1
-			plot(subdf[:k], subdf[:auc], label=label, c=color)
-		else
-			plot(subdf[:k], subdf[:auc], c=color)
-		end
-	end
-end
-function plot_mean_sd(df, label, color, nsd)
-	kvec = unique(df[:k])
-	means = map(k->StatsBase.mean((filter(row->row[:k]==k,df))[:auc]), kvec)
-	sds = map(k->sqrt(StatsBase.var((filter(row->row[:k]==k,df))[:auc])), kvec)
-	plot(kvec, means, label=label, c=color)
-	fill_between(kvec, means-nsd*sds, means+nsd*sds, color=color, alpha=0.3, linewidth=0)
-end
 
 auc_patches = CSV.read("auc_patches.csv")
 auc_latent = CSV.read("auc_latent.csv")
@@ -160,12 +161,13 @@ savefig(joinpath(outpath, fname))
 
 # now plot means and sds
 figure()
-plot_mean_sd(auc_patches_unique, "full patches", "r",1)
-plot_mean_sd(auc_latent_unique, "latent", "b",1)
+plot_mean_sd(auc_patches_unique, "original space", "r",1)
+plot_mean_sd(auc_latent_unique, "latent space", "b",1)
 ylim([0.5, 1.0])
 xlabel("k")
 ylabel("AUC")
-legend(frameon=false)
+title("kNN fit, 10 crossvalidation splits")
+legend(frameon=false,loc=4)
 tight_layout()
 fname = "knn_patches_vs_latent_means_unique.pdf"
 savefig(joinpath(outpath, fname))
@@ -196,3 +198,9 @@ legend(frameon=false)
 tight_layout()
 fname = "knn_patches_vs_latent_means_all.pdf"
 savefig(joinpath(outpath, fname))
+
+# blank plot
+figure()
+fname = "blank.pdf"
+savefig(joinpath(outpath, fname))
+

@@ -82,5 +82,5 @@ for seed in seedvec
 	push!(auc_latent, DataFrame(seed=fill(seed, length(kvec)),k=kvec, auc=aucs))
 end
 auc_latent=vcat(auc_latent...)
-fname = "auc_latent_unique_31.csv"
+fname = "auc_latent_unique.csv"
 CSV.write(fname, auc_latent)
