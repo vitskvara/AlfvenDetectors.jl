@@ -223,13 +223,25 @@ function fit_knn(mf, data, shotnos, labels, tstarts, fstarts)
     return df_exp
 end
 
-function eval_save(mf, ff, data, shotnos, labels, tstarts, fstarts, savepath)
-    println("processing model $mf")
-    df_exp = ff(mf, data, shotnos, labels, tstarts, fstarts)
-    # now save it all
-    csv_name = df_exp[:S1_model][1]*"_"*df_exp[:S2_model][1]*"_"*
+function create_csv_filename(mf, s2_model_name)
+    model, exp_args, model_args, model_kwargs, history = load_model(mf)
+    csv_name = exp_args["modelname"]*"_"*s2_model_name*"_"*
         reduce(*,split(split(mf,"_")[end],".")[1:end-1])* # this extracts the timestamp
         "_"*split(mf, "_")[occursin.("nepochs", split(mf, "_"))][1]*".csv" 
-    # this extracts the number of epochs
-    CSV.write(joinpath(savepath,csv_name), df_exp)
+        # this extracts the number of epochs
+    return csv_name
+end
+
+
+function eval_save(mf, ff, s2_model_name, data, shotnos, labels, tstarts, fstarts, savepath)
+    println("processing model $mf")
+    # create the filename
+    csv_name = create_csv_filename(mf, s2_model_name)
+    if !isfile(joinpath(savepath,csv_name))
+        df_exp = ff(mf, data, shotnos, labels, tstarts, fstarts)
+        CSV.write(joinpath(savepath,csv_name), df_exp)
+    else
+        println("$(csv_name) already present, skipping")
+    end
+    return csv_name
 end

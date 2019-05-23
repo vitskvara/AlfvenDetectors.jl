@@ -1,7 +1,8 @@
-using AlfvenDetectors
-using ValueHistories
 using Distributed
-
+using AlfvenDetectors
+@everywhere begin
+    using ValueHistories
+end
 # savepath
 hostname = gethostname()
 if hostname == "vit-ThinkPad-E470"
@@ -41,5 +42,5 @@ println("loaded validation data of size $(size(data)), with $(sum(labels)) posit
 
 # get the motherfrickin model file and do the magic
 # possibly paralelize this
-pmap(mf->AlfvenDetectors.eval_save(mf, AlfvenDetectors.fit_knn, data, shotnos, labels, 
-	tstarts, fstarts, savepath), models)
+pmap(mf->AlfvenDetectors.eval_save(mf, AlfvenDetectors.fit_knn, "KNN", data, shotnos, labels, 
+	tstarts, fstarts, savepath), models[1:2])
