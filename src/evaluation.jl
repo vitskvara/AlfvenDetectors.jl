@@ -210,7 +210,7 @@ function fit_knn(mf, data, shotnos, labels, tstarts, fstarts)
     fxy(m,x,y) = AlfvenDetectors.fit!(m,x,y);
     #kvec = collect(1:2:31)
     asf_name = "as_mean"
-    asf_args = map(x->[x],collect(1:2:3))
+    asf_args = map(x->[x],collect(1:2:31))
 
     # this contains the fitted aucs and some other data
     df_exp = fit_fs_model(s1_model, s2_model, fx, fxy, asf_name, asf_args, data, shotnos, 
