@@ -365,8 +365,8 @@ function split_patches(α::Real, shotnos, labels, tstarts, fstarts; seed = nothi
 	# restart the seed
 	Random.seed!()
 	if 0 < Nused < Npatches 
-		return map(x->x[1:Nused], [shotnos, labels, tstarts, fstarts]), used_inds[1:Nused],
-			map(x->x[Nused+1:end], [shotnos, labels, tstarts, fstarts]), used_inds[Nused+1:end]
+		return map(x->x[1:Nused], (shotnos, labels, tstarts, fstarts)), used_inds[1:Nused],
+			map(x->x[Nused+1:end], (shotnos, labels, tstarts, fstarts)), used_inds[Nused+1:end]
 	else
 		@warn "split_patches(...) not returning anything since one of the sets is empty, Nused=$Nused, Npatches=$Npatches"
 		return fill(nothing, 4), nothing, fill(nothing, 4), nothing
@@ -412,8 +412,8 @@ function split_patches_unique(α::Real, shotnos, labels, tstarts, fstarts; seed 
 	# restart the seed
 	Random.seed!()
 	if 0 < sum(traininds) < Npatches
-		return map(x->x[traininds], [shotnos, labels, tstarts, fstarts]), used_inds[traininds],
-			map(x->x[testinds], [shotnos, labels, tstarts, fstarts]), used_inds[testinds]
+		return map(x->x[traininds], (shotnos, labels, tstarts, fstarts)), used_inds[traininds],
+			map(x->x[testinds], (shotnos, labels, tstarts, fstarts)), used_inds[testinds]
 	else
 		@warn "split_patches_unique(...) not returning anything since one of the sets is empty, Nused=$(sum(traininds)), Npatches=$Npatches"
 		return fill(nothing, 4), nothing, fill(nothing, 4), nothing
@@ -429,7 +429,7 @@ function select_training_patches(α::Real; seed = nothing)
 	@assert 0 <=  α <= 1
 	# get the information on the patches
 	shotnos, patch_labels, tstarts, fstarts = labeled_patches()
-	return split_patches(α, shotnos, patch_labels, tstarts, fstarts; seed=seed)[1]
+	return split_patches_unique(α, shotnos, patch_labels, tstarts, fstarts; seed=seed)[1]
 end
 
 """
