@@ -43,4 +43,4 @@ println("loaded validation data of size $(size(data)), with $(sum(labels)) posit
 # get the motherfrickin model file and do the magic
 # possibly paralelize this
 pmap(mf->AlfvenDetectors.eval_save(mf, AlfvenDetectors.fit_knn, "KNN", data, shotnos, labels, 
-	tstarts, fstarts, savepath), models[1:2])
+	tstarts, fstarts, savepath), models)
