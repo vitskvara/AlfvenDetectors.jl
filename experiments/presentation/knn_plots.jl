@@ -102,9 +102,9 @@ println("AUC (kNN 5) = $auc")
 fname = "anomalous_patches.png"
 sortinds=sortperm(as,rev=true)
 figure(figsize=(8,4))
-for i in 1:4
+for (i,j) in enumerate([1,2,3,4])
 	subplot(2,2,i)
-	pcolormesh(test[1][:,:,1,sortinds[i]],cmap=cmap)
+	pcolormesh(test[1][:,:,1,sortinds[j]],cmap=cmap)
 	ax = gca()
 	ax.get_xaxis().set_visible(false)
 	ax.get_yaxis().set_visible(false)

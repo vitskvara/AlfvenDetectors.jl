@@ -13,7 +13,7 @@ df = CSV.read(infile)
 
 # now, average the auc over seeds
 byargs = filter(x->!(x in [:seed, :auc]), names(df))
-seed_avg = by(df, byargs, auc = :auc => StatsBase.mean)
+seed_avg = by(df, byargs, auc = :auc => StatsBase.mean, auc_sd = :auc => x->sqrt(StatsBase.var(x)))
 
 # find the best model of them all
 function print_find_maxauc(df)
@@ -32,7 +32,7 @@ saf, sai, saa = print_find_maxauc(seed_avg)
 
 # also, average over ks
 byargs = filter(x->!(x in [:seed, :auc, :asf_arg]), names(df))
-seed_k_avg = by(df, byargs, auc = :auc => StatsBase.mean)
+seed_k_avg = by(df, byargs, auc = :auc => StatsBase.mean, auc_sd = :auc => x->sqrt(StatsBase.var(x)))
 skaf, skai, skaa = print_find_maxauc(seed_k_avg)
 # is this the best model?
 # waae_8_16_16_32_lambda-10.0_gamma-0.0_sigma-0.01/1/ConvWAAE_channels-[16,16,32]_patchsize-128_nepochs-50_2019-05-21T16:54:44.912.bson
@@ -40,3 +40,7 @@ skaf, skai, skaa = print_find_maxauc(seed_k_avg)
 # now do some nice plots
 figure()
 scatter([eval(Meta.parse(k))[1] for k in seed_avg[:asf_arg]], seed_avg[:auc])
+
+
+showall(seed_avg[[:S1_model, :asf_arg, :auc, :auc_sd, :gamma, :lambda, :sigma]])
+seed_k_avg[[:S1_model, :auc, :auc_sd, :gamma, :lambda, :sigma]]

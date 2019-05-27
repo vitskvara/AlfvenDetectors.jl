@@ -55,32 +55,40 @@ else
 	model = Flux.testmode!(GenerativeModels.construct_model(mf))
 end
 
-seedvec = collect(1:10)
-auc_latent = []
-for seed in seedvec
-	println("processing $seed...")
-	#seed = model_data[:experiment_args]["seed"];
-	train_info, train_inds, test_info, test_inds = AlfvenDetectors.split_patches_unique(0.5, shotnos, 
-		labels, tstarts, fstarts; seed=seed);
-	train = (data[:,:,:,train_inds], train_info[2]);
-	test = (data[:,:,:,test_inds], test_info[2]);
+function compute_auc(splitf)
+	seedvec = collect(1:10)
+	auc_latent = []
+	for seed in seedvec
+		println("processing $seed...")
+		#seed = model_data[:experiment_args]["seed"];
+		train_info, train_inds, test_info, test_inds = splitf(0.5, shotnos, 
+			labels, tstarts, fstarts; seed=seed);
+		train = (data[:,:,:,train_inds], train_info[2]);
+		test = (data[:,:,:,test_inds], test_info[2]);
 
-	# test the separation by fitting kNN
-	knn_model = AlfvenDetectors.KNN(:KDTree);
-	fx(m,x) = nothing # there is no point in fitting the unlabeled samples
-	fxy(m,x,y) = AlfvenDetectors.fit!(m,x,y) ;
-	kvec = collect(1:2:31)
-	aucs=[]
-	for k in kvec
-		asf(m,x) = AlfvenDetectors.as_mean(m,x,k);
-		fsmodel = AlfvenDetectors.FewShotModel(model, knn_model, fx, fxy, asf);
-		AlfvenDetectors.fit!(fsmodel, train[1], train[1], train[2]);
-		as = AlfvenDetectors.anomaly_score(fsmodel, test[1]);
-		auc = EvalCurves.auc(EvalCurves.roccurve(as, test[2])...)
-		push!(aucs, auc)
+		# test the separation by fitting kNN
+		knn_model = AlfvenDetectors.KNN(:KDTree);
+		fx(m,x) = nothing # there is no point in fitting the unlabeled samples
+		fxy(m,x,y) = AlfvenDetectors.fit!(m,x,y) ;
+		kvec = collect(1:2:51)
+		aucs=[]
+		for k in kvec
+			asf(m,x) = AlfvenDetectors.as_mean(m,x,k);
+			fsmodel = AlfvenDetectors.FewShotModel(model, knn_model, fx, fxy, asf);
+			AlfvenDetectors.fit!(fsmodel, train[1], train[1], train[2]);
+			as = AlfvenDetectors.anomaly_score(fsmodel, test[1]);
+			auc = EvalCurves.auc(EvalCurves.roccurve(as, test[2])...)
+			push!(aucs, auc)
+		end
+		push!(auc_latent, DataFrame(seed=fill(seed, length(kvec)),k=kvec, auc=aucs))
 	end
-	push!(auc_latent, DataFrame(seed=fill(seed, length(kvec)),k=kvec, auc=aucs))
+	auc_latent=vcat(auc_latent...)
 end
-auc_latent=vcat(auc_latent...)
+
+auc_latent = compute_auc(AlfvenDetectors.split_patches)
+fname = "auc_latent.csv"
+CSV.write(fname, auc_latent)
+
+auc_latent = compute_auc(AlfvenDetectors.split_patches_unique)
 fname = "auc_latent_unique.csv"
 CSV.write(fname, auc_latent)

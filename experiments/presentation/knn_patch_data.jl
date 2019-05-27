@@ -31,30 +31,38 @@ else
 end
 
 # now do the same with raw data and kNN
-auc_patches=[]
-for seed in 1:10
-	train_info, train_inds, test_info, test_inds = AlfvenDetectors.split_patches_unique(0.5, shotnos, labels, tstarts, 
-		fstarts; seed=seed);
-	# now vectorize the inputs
-	train = (reshape(data[:,:,:,train_inds],:,length(train_info[2])), train_info[2]);
-	test = (reshape(data[:,:,:,test_inds],:,length(test_info[2])), test_info[2]);
+function compute_auc(splitf)
+	auc_patches=[]
+	for seed in 1:10
+		train_info, train_inds, test_info, test_inds = splitf(0.5, shotnos, labels, tstarts, 
+			fstarts; seed=seed);
+		# now vectorize the inputs
+		train = (reshape(data[:,:,:,train_inds],:,length(train_info[2])), train_info[2]);
+		test = (reshape(data[:,:,:,test_inds],:,length(test_info[2])), test_info[2]);
 
-	# do the knn classification
-	knn_model = AlfvenDetectors.KNN(:BruteTree);
-	println("fit $seed")
-	# precompilation
-	@time AlfvenDetectors.fit!(knn_model,train[1],train[2]) ;
-	kvec = collect(1:2:31)
-	aucs = []
-	println("predict $seed")
-	@time for k in kvec
-		as = AlfvenDetectors.as_mean(knn_model,test[1],k);
-		auc = EvalCurves.auc(EvalCurves.roccurve(as, test[2])...)
-		push!(aucs, auc)
+		# do the knn classification
+		knn_model = AlfvenDetectors.KNN(:BruteTree);
+		println("fit $seed")
+		# precompilation
+		@time AlfvenDetectors.fit!(knn_model,train[1],train[2]) ;
+		kvec = collect(1:2:51)
+		aucs = []
+		println("predict $seed")
+		@time for k in kvec
+			as = AlfvenDetectors.as_mean(knn_model,test[1],k);
+			auc = EvalCurves.auc(EvalCurves.roccurve(as, test[2])...)
+			push!(aucs, auc)
+		end
+		df = DataFrame(seed=fill(seed, length(aucs)), k=kvec, auc=aucs)
+		push!(auc_patches, df)
 	end
-	df = DataFrame(seed=fill(seed, length(aucs)), k=kvec, auc=aucs)
-	push!(auc_patches, df)
+	auc_patches = vcat(auc_patches...)
 end
-auc_patches = vcat(auc_patches...)
+
+auc_patches = compute_auc(AlfvenDetectors.split_patches)
+fname = "auc_patches.csv"
+CSV.write(fname, auc_patches)
+
+auc_patches = compute_auc(AlfvenDetectors.split_patches_unique)
 fname = "auc_patches_unique.csv"
 CSV.write(fname, auc_patches)
