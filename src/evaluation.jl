@@ -286,7 +286,7 @@ function fit_svae(mf, data, shotnos, labels, tstarts, fstarts)
     β = 0.1 # ratio between reconstruction error and the distance between p(z) and q(z)
     γ = 0.1 # importance ratio between anomalies and normal data in mem_loss
     batchsize = 128
-    nbatches = 10000 # 200
+    nbatches = 20000 # 200
     sigma = 0.1 # width of imq kernel
     fx(m,x)=AlfvenDetectors.fit!(m, x, batchsize, nbatches, β, sigma, η=0.00001,cbtime=1);
     sigma = 0.01
