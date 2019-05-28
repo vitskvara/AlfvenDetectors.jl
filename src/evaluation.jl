@@ -241,7 +241,7 @@ function fit_gmm(mf, data, shotnos, labels, tstarts, fstarts)
     # GMM model
     s2_model_name = "GMMModel"
     df_exps = []
-    for Nclust in collect(2:8)
+    for Nclust in collect(2:2:8)
         s2_args = [Nclust]
         s2_kwargs = Dict(
             :kind => :diag,
