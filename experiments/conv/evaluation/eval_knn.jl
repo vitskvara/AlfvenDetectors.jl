@@ -26,6 +26,7 @@ mkpath(savepath)
 # models and their adresses
 exdirs1 = joinpath.(modelpath,readdir(modelpath));
 exdirs2 = vcat(map(x->joinpath.(x,readdir(x)), exdirs1)...);
+filter!(x->length(readdir(x))!=0,exdirs2)
 models = vcat(map(x->joinpath.(x,readdir(x)[end]), exdirs2)...);
 Nmodels = length(models)
 println("Found a total of $(Nmodels) saved models.")
