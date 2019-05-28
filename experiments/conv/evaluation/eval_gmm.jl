@@ -1,5 +1,5 @@
+using Distributed
 @everywhere begin
-	using Distributed
 	using AlfvenDetectors
     using ValueHistories
     using StatsBase
