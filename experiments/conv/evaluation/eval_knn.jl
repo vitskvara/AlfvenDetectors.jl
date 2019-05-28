@@ -1,6 +1,6 @@
-using Distributed
-using AlfvenDetectors
 @everywhere begin
+	using Distributed
+	using AlfvenDetectors
     using ValueHistories
     using StatsBase
 end
@@ -26,12 +26,7 @@ mkpath(savepath)
 # models and their adresses
 exdirs1 = joinpath.(modelpath,readdir(modelpath));
 exdirs2 = vcat(map(x->joinpath.(x,readdir(x)), exdirs1)...);
-if hostname == "vit-ThinkPad-E470"
-	# on laptotp, only go through the most trained models
-	global models = vcat(map(x->joinpath.(x,readdir(x)[end]), exdirs2)...);
-else
-	global models = vcat(map(x->joinpath.(x,readdir(x)), exdirs2)...);
-end
+models = vcat(map(x->joinpath.(x,readdir(x)[end]), exdirs2)...);
 Nmodels = length(models)
 println("Found a total of $(Nmodels) saved models.")
 
@@ -45,3 +40,15 @@ println("loaded validation data of size $(size(data)), with $(sum(labels)) posit
 # possibly paralelize this
 pmap(mf->AlfvenDetectors.eval_save(mf, AlfvenDetectors.fit_knn, "KNN", data, shotnos, labels, 
 	tstarts, fstarts, savepath), models)
+
+if hostname != "vit-ThinkPad-E470"
+	# on laptotp, only go through the most trained models
+	models = vcat(map(x->joinpath.(x,readdir(x)), exdirs2)...);
+	Nmodels = length(models)
+	println("Found a total of $(Nmodels) saved models.")
+
+	# get the motherfrickin model file and do the magic
+	# possibly paralelize this
+	pmap(mf->AlfvenDetectors.eval_save(mf, AlfvenDetectors.fit_knn, "KNN", data, shotnos, labels, 
+		tstarts, fstarts, savepath), models)
+end
