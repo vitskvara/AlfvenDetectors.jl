@@ -40,7 +40,7 @@ println("loaded validation data of size $(size(data)), with $(sum(labels)) posit
 
 # get the motherfrickin model file and do the magic
 # possibly paralelize this
-map(mf->AlfvenDetectors.eval_save(mf, AlfvenDetectors.fit_svae, "SVAE", data, shotnos, labels, 
+pmap(mf->AlfvenDetectors.eval_save(mf, AlfvenDetectors.fit_svae, "SVAE", data, shotnos, labels, 
 	tstarts, fstarts, savepath), models)
 
 if hostname != "vit-ThinkPad-E470"

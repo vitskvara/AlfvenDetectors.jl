@@ -291,7 +291,7 @@ function fit_svae(mf, data, shotnos, labels, tstarts, fstarts)
     fx(m,x)=AlfvenDetectors.fit!(m, x, batchsize, nbatches, β, sigma, η=0.00001,cbtime=1);
     sigma = 0.01
     batchsize = 128 # this batchsize must be smaller than the size of the labeled training data
-    nbatches = 200 # 50
+    nbatches = 1000 # 50
     fxy(m,x,y)=AlfvenDetectors.fit!(m,x,y, batchsize, nbatches, β, sigma, γ, η=0.0001, cbtime=1);
     # finally construct the anomaly score function
     asfs = [AlfvenDetectors.as_logpxgivenz]
