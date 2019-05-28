@@ -265,6 +265,48 @@ function fit_gmm(mf, data, shotnos, labels, tstarts, fstarts)
     return vcat(df_exps...)
 end
 
+function fit_svae(mf, data, shotnos, labels, tstarts, fstarts)
+    s1_model, exp_args, model_args, model_kwargs, history = AlfvenDetectors.load_model(mf)
+
+    # S2 model for SVAE
+    s2_model_name = "SVAEMem"
+    inputdim = exp_args["ldimsize"]
+    hiddenDim = 32
+    latentDim = 4
+    numLayers = 3
+    # params for memory
+    memorySize = 64
+    α = 0.1 # threshold in the memory that does not matter to us at the moment!
+    k = 64
+    labelCount = 1
+    s2_args = (inputdim, hiddenDim, latentDim, numLayers, memorySize, k, labelCount, α)
+    s2_kwargs = Dict()
+    s2_model = eval(Meta.parse("AlfvenDetectors."*s2_model_name))(s2_args...; s2_kwargs...);
+    β = 0.1 # ratio between reconstruction error and the distance between p(z) and q(z)
+    γ = 0.1 # importance ratio between anomalies and normal data in mem_loss
+    batchsize = 64
+    nbatches = 10000 # 200
+    sigma = 0.1 # width of imq kernel
+    fx(m,x)=AlfvenDetectors.fit!(m, x, batchsize, nbatches, β, sigma, η=0.0001,cbtime=1);
+    sigma = 0.01
+    batchsize = 64 # this batchsize must be smaller than the size of the labeled training data
+    nbatches = 200 # 50
+    fxy(m,x,y)=AlfvenDetectors.fit!(m,x,y, batchsize, nbatches, β, sigma, γ, η=0.0001, cbtime=1);
+    # finally construct the anomaly score function
+    asfs = [AlfvenDetectors.as_logpxgivenz]
+    asf_args = [[]]
+
+    # this contains the fitted aucs and some other data
+    df_exp = AlfvenDetectors.fit_fs_model(s1_model, s2_model, fx, fxy, asfs, asf_args, data, shotnos, 
+        labels, tstarts, fstarts)
+
+    df_exp = AlfvenDetectors.add_info(df_exp, exp_args, history, s2_model_name, s2_args, s2_kwargs, 
+        mf)
+
+    return df_exp
+end
+
+
 
 function create_csv_filename(mf, s2_model_name)
     model, exp_args, model_args, model_kwargs, history = load_model(mf)

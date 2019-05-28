@@ -39,6 +39,7 @@ patch = data[:,:,1,1]
 modelpath = "/home/vit/vyzkum/alfven/experiments/conv/uprobe/benchmarks"
 modelpath = joinpath(modelpath, "waae_8_16_16_32_lambda-10.0_gamma-0.0_sigma-0.01/1")
 #modelpath = joinpath(modelpath, "ae_8_16_16_32/2")
+#modelpath = joinpath(modelpath, "ae_64_16_16/2")
 models = readdir(modelpath)
 #imode = 46
 imodel = length(models)
@@ -53,18 +54,20 @@ Zt = AlfvenDetectors.fit!(umap_model, Z);
 
 
 # make a plot of a single (interesting) patch
-ipatch = 153
-patch = data[:,:,1,ipatch]
-# without labels
-figure(figsize=figsize)
-pcolormesh(patch,cmap=cmap)
-ax = gca()
-ax.get_xaxis().set_visible(false)
-ax.get_yaxis().set_visible(false)
-ax.get_xaxis().set_ticks([])
-ax.get_yaxis().set_ticks([])
-fname="patch_in.png"
-savefig(joinpath(outpath, fname),dpi=300)
+ipatches = [20, 153, 120]
+for ipatch in ipatches
+	patch = data[:,:,1,ipatch]
+	# without labels
+	figure(figsize=figsize)
+	pcolormesh(patch,cmap=cmap)
+	ax = gca()
+	ax.get_xaxis().set_visible(false)
+	ax.get_yaxis().set_visible(false)
+	ax.get_xaxis().set_ticks([])
+	ax.get_yaxis().set_ticks([])
+	fname="patch_in_$(ipatch).png"
+	savefig(joinpath(outpath, fname),dpi=300)
+end
 close()
 
 # with xlabel
@@ -80,17 +83,20 @@ savefig(joinpath(outpath, fname),dpi=300)
 close()
 
 # now the reconstruction
-rpatch = model(data[:,:,:,ipatch:ipatch]).data[:,:,1,1]
-# w/o labels
-figure(figsize=figsize)
-pcolormesh(rpatch,cmap=cmap)
-ax = gca()
-ax.get_xaxis().set_visible(false)
-ax.get_yaxis().set_visible(false)
-ax.get_xaxis().set_ticks([])
-ax.get_yaxis().set_ticks([])
-fname="patch_out.png"
-savefig(joinpath(outpath, fname),dpi=300)
+for ipatch in ipatches
+	rpatch = model(data[:,:,:,ipatch:ipatch]).data[:,:,1,1]
+	# w/o labels
+	figure(figsize=figsize)
+	pcolormesh(rpatch,cmap=cmap)
+	ax = gca()
+	ax.get_xaxis().set_visible(false)
+	ax.get_yaxis().set_visible(false)
+	ax.get_xaxis().set_ticks([])
+	ax.get_yaxis().set_ticks([])
+	fname="patch_out_$(ipatch).png"
+	savefig(joinpath(outpath, fname),dpi=300)
+	close()
+end
 close()
 
 # with xlabel

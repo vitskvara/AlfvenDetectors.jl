@@ -161,8 +161,8 @@ savefig(joinpath(outpath, fname))
 
 # now plot means and sds
 figure()
-plot_mean_sd(auc_patches_unique, "original space", "r",1)
-plot_mean_sd(auc_latent_unique, "latent space", "b",1)
+plot_mean_sd(auc_patches_unique, "16384D original space", "r",1)
+plot_mean_sd(auc_latent_unique, "8D latent space", "b",1)
 ylim([0.5, 1.0])
 xlabel("k")
 ylabel("AUC")
