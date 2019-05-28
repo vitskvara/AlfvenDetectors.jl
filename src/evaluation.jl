@@ -178,6 +178,7 @@ function fit_fs_model(s1_model, s2_model, fx, fxy, asfs, asf_args, data, shotnos
             catch e
                 # in case anything (fit or asf) gors wrong
                 global df_asf_arg = DataFrame(as_function=String[], auc=Float64[],asf_arg=Array{Any,1}(undef,0))
+                println(e)
                 nothing
             end
             push!(dfs_asf_arg, df_asf_arg)
@@ -277,19 +278,19 @@ function fit_svae(mf, data, shotnos, labels, tstarts, fstarts)
     # params for memory
     memorySize = 64
     α = 0.1 # threshold in the memory that does not matter to us at the moment!
-    k = 64
+    k = 128
     labelCount = 1
     s2_args = (inputdim, hiddenDim, latentDim, numLayers, memorySize, k, labelCount, α)
     s2_kwargs = Dict()
     s2_model = eval(Meta.parse("AlfvenDetectors."*s2_model_name))(s2_args...; s2_kwargs...);
     β = 0.1 # ratio between reconstruction error and the distance between p(z) and q(z)
     γ = 0.1 # importance ratio between anomalies and normal data in mem_loss
-    batchsize = 64
+    batchsize = 128
     nbatches = 10000 # 200
     sigma = 0.1 # width of imq kernel
-    fx(m,x)=AlfvenDetectors.fit!(m, x, batchsize, nbatches, β, sigma, η=0.0001,cbtime=1);
+    fx(m,x)=AlfvenDetectors.fit!(m, x, batchsize, nbatches, β, sigma, η=0.00001,cbtime=1);
     sigma = 0.01
-    batchsize = 64 # this batchsize must be smaller than the size of the labeled training data
+    batchsize = 128 # this batchsize must be smaller than the size of the labeled training data
     nbatches = 200 # 50
     fxy(m,x,y)=AlfvenDetectors.fit!(m,x,y, batchsize, nbatches, β, sigma, γ, η=0.0001, cbtime=1);
     # finally construct the anomaly score function
