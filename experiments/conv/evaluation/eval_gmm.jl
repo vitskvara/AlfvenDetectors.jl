@@ -1,6 +1,7 @@
 using Distributed
 @everywhere begin
 	using AlfvenDetectors
+	using GenerativeModels
     using ValueHistories
     using StatsBase
 end
@@ -30,6 +31,11 @@ filter!(x->length(readdir(x))!=0,exdirs2)
 models = vcat(map(x->joinpath.(x,readdir(x)[end]), exdirs2)...);
 Nmodels = length(models)
 println("Found a total of $(Nmodels) saved models.")
+
+# do a reverse run as well
+if length(ARGS) > 0
+	global models = reverse(models)
+end
 
 # get data
 patchsize = 128
