@@ -137,52 +137,65 @@ function load_model(mf)
     return model, exp_args, model_args, model_kwargs, history
 end
 
-function fit_fs_model(s1_model, s2_model, fx, fxy, asf_name, asf_args, data, shotnos, labels, 
+function fit_fs_model(s1_model, s2_model, fx, fxy, asfs, asf_args, data, shotnos, labels, 
     tstarts, fstarts)
-    # now iterate over anoamly score function params and seeds
-    dfs_asf_arg = []
-    for asf_arg in asf_args
+    # iterate over seeds
+    dfs_seed = []
+    for seed in 1:10
         println("")
-        println("processing $(asf_arg)...")
-        asf(m,x) = eval(Meta.parse("AlfvenDetectors."*asf_name))(m,x,asf_arg...);
+        println(" seed=$seed")
 
         # train/test data
         # this is not entirely correct, since the seed should probably be the same as 
         # the one that the s1 model was trained with
         # however for now we can ignore this
         # seed = exp_args["seed"];
-        dfs_seed = []
-        for seed in 1:10
-            print(" seed=$seed")
-            train_info, train_inds, test_info, test_inds = 
-            AlfvenDetectors.split_patches_unique(0.5, 
-                shotnos, labels, tstarts, fstarts; seed=seed);
-            train = (data[:,:,:,train_inds], train_info[2]);
-            test = (data[:,:,:,test_inds], test_info[2]);
+        train_info, train_inds, test_info, test_inds = 
+        AlfvenDetectors.split_patches_unique(0.5, 
+            shotnos, labels, tstarts, fstarts; seed=seed);
+        train = (data[:,:,:,train_inds], train_info[2]);
+        test = (data[:,:,:,test_inds], test_info[2]);
 
+        # now iterate over anomaly score function params and seeds
+        dfs_asf_arg = []
+        for asf_arg in asf_args
+            print("processing $(asf_arg) ")
             # now the few-shot model
-            fsmodel = AlfvenDetectors.FewShotModel(s1_model, s2_model, fx, fxy, asf);
-            AlfvenDetectors.fit!(fsmodel, train[1], train[1], train[2]);
-            as = AlfvenDetectors.anomaly_score(fsmodel, test[1]);
-            auc = EvalCurves.auc(EvalCurves.roccurve(as, test[2])...)
-            df_seed = DataFrame(seed=seed, auc=auc)
-            push!(dfs_seed, df_seed)
+            fsmodel = AlfvenDetectors.FewShotModel(s1_model, s2_model, fx, fxy, nothing);
+            try
+                AlfvenDetectors.fit!(fsmodel, train[1], train[1], train[2]);
+                # iterate over anomaly score functions
+                dfs_asf = []
+                for asf in asfs
+                    as = AlfvenDetectors.anomaly_score(fsmodel, (m,x)->asf(m,x,asf_arg...), test[1]);
+                    auc = EvalCurves.auc(EvalCurves.roccurve(as, test[2])...)
+                    asf_name = string(split(string(asf),".")[end])
+                    df_asf = DataFrame(as_function=asf_name, auc=auc)
+                    push!(dfs_asf, df_asf)
+                end
+                global df_asf_arg = vcat(dfs_asf...)
+                df_asf_arg[:asf_arg] = fill(asf_arg,size(df_asf_arg,1))
+            catch e
+                # in case anything (fit or asf) gors wrong
+                global df_asf_arg = DataFrame(as_function=String[], auc=Float64[],asf_arg=Array{Any,1}(undef,0))
+                nothing
+            end
+            push!(dfs_asf_arg, df_asf_arg)
         end
-        dfs_seed = vcat(dfs_seed...)
-        dfs_seed[:asf_arg] = fill(asf_arg,size(dfs_seed,1)) 
-        push!(dfs_asf_arg, dfs_seed)
+        df_seed = vcat(dfs_asf_arg...)
+        df_seed[:seed] = seed
+        push!(dfs_seed, df_seed)
     end
-    df_exp = vcat(dfs_asf_arg...)
+    df_exp = vcat(dfs_seed...)
     return df_exp
 end
 
-function add_info(df_exp, exp_args, history, s2_model_name, s2_args, s2_kwargs, asf_name, mf)
+function add_info(df_exp, exp_args, history, s2_model_name, s2_args, s2_kwargs, mf)
     Nrows = size(df_exp,1)
     df_exp[:S1_model] = exp_args["modelname"]
     df_exp[:S2_model] = s2_model_name
     df_exp[:S2_model_args] = fill(s2_args, Nrows)
     df_exp[:S2_model_kwargs] = s2_kwargs
-    df_exp[:as_function] = asf_name
     df_exp[:S1_file] = joinpath(split(mf,"/")[end-2:end]...)
     df_exp[:ldim] = exp_args["ldimsize"]
     df_exp[:lambda] = exp_args["lambda"]
@@ -208,17 +221,16 @@ function fit_knn(mf, data, shotnos, labels, tstarts, fstarts)
     s2_model = eval(Meta.parse("AlfvenDetectors."*s2_model_name))(s2_args...; s2_kwargs...);
     fx(m,x) = nothing # there is no point in fitting the unlabeled samples
     fxy(m,x,y) = AlfvenDetectors.fit!(m,x,y);
-    #kvec = collect(1:2:31)
-    asf_name = "as_mean"
+    asfs = [AlfvenDetectors.as_mean]
     asf_args = map(x->[x],collect(1:2:31))
 
     # this contains the fitted aucs and some other data
-    df_exp = fit_fs_model(s1_model, s2_model, fx, fxy, asf_name, asf_args, data, shotnos, 
+    df_exp = fit_fs_model(s1_model, s2_model, fx, fxy, asfs, asf_args, data, shotnos, 
         labels, tstarts, fstarts)
 
     # now add parameters of both S1 and S2 models
 
-    df_exp = add_info(df_exp, exp_args, history, s2_model_name, s2_args, s2_kwargs, asf_name, mf)
+    df_exp = add_info(df_exp, exp_args, history, s2_model_name, s2_args, s2_kwargs, mf)
 
     return df_exp
 end
@@ -229,27 +241,25 @@ function fit_gmm(mf, data, shotnos, labels, tstarts, fstarts)
     # GMM model
     s2_model_name = "GMMModel"
     df_exps = []
-    for Nclust in collect(2:12)
+    for Nclust in collect(2:8)
         s2_args = [Nclust]
         s2_kwargs = Dict(
             :kind => :diag,
             :method => :kmeans)
         s2_model = eval(Meta.parse("AlfvenDetectors."*s2_model_name))(s2_args...; s2_kwargs...);
-        fx(m,x) = AlfvenDetectors.fit!(m,x) # there is no point in fitting the unlabeled samples
+        fx(m,x) = AlfvenDetectors.fit!(m,x)
         fxy(m,x,y) = AlfvenDetectors.fit!(m,x,y);
-        for asf_name in ["as_max_ll_mse", "as_mean_ll_mse", "as_med_ll_mse", "as_ll_maxarg"]
-            asf_args = [1]
+        asfs = [AlfvenDetectors.as_max_ll_mse, AlfvenDetectors.as_mean_ll_mse, 
+            AlfvenDetectors.as_med_ll_mse, AlfvenDetectors.as_ll_maxarg]
+        asf_args = [[1]]
 
-            # this contains the fitted aucs and some other data
-            df_exp = AlfvenDetectors.fit_fs_model(s1_model, s2_model, fx, fxy, asf_name, asf_args, data, 
-                shotnos, labels, tstarts, fstarts)
+        # this contains the fitted aucs and some other data
+        df_exp = AlfvenDetectors.fit_fs_model(s1_model, s2_model, fx, fxy, asfs, asf_args, data, 
+            shotnos, labels, tstarts, fstarts)
 
-            # now add parameters of both S1 and S2 models
-
-            df_exp = AlfvenDetectors.add_info(df_exp, exp_args, history, s2_model_name, s2_args, s2_kwargs, 
-                asf_name, mf)
-            push!(df_exps, df_exp)
-        end
+        df_exp = AlfvenDetectors.add_info(df_exp, exp_args, history, s2_model_name, s2_args, s2_kwargs, 
+            mf)
+        push!(df_exps, df_exp)
     end
 
     return vcat(df_exps...)

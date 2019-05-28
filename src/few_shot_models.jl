@@ -48,7 +48,10 @@ function anomaly_score(m::FewShotModel,X,args...;encoding_batchsize=128,kwargs..
 	Z = encode(m, X, encoding_batchsize)
 	return m.asf(m.clust_model, Z, args...; kwargs...)
 end
-
+function anomaly_score(m::FewShotModel,asf,X,args...;encoding_batchsize=128,kwargs...)
+	Z = encode(m, X, encoding_batchsize)
+	return asf(m.clust_model, Z, args...; kwargs...)
+end
 #####################
 ####### GMMS ########
 #####################
