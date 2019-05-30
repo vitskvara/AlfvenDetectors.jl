@@ -35,8 +35,10 @@ modelpath = "/home/vit/vyzkum/alfven/experiments/conv/uprobe/benchmarks"
 #modelpath = joinpath(modelpath, "waae_8_16_16_32_lambda-1.0_gamma-0.0_sigma-0.01/1")
 modelpath = joinpath(modelpath, "waae_8_16_16_32_lambda-10.0_gamma-0.0_sigma-0.01/1")
 models = readdir(modelpath)
+s = "nepochs-40"
+imodel = collect(1:length(models))[map(x->occursin(s,x),models)][1]
 #imode = 46
-imodel = length(models)
+#imodel = length(models)
 mf = joinpath(modelpath,models[imodel])
 
 # or load it directly

@@ -8,7 +8,7 @@ C2=$5
 C3=$6
 BETA=$7
 
-cmd="julia ../run_experiment.jl VAE $LDIM $NCONV $C1 $C2 $C3
+cmd="julia ../../run_experiment.jl VAE $LDIM $NCONV $C1 $C2 $C3
     --scaling 2 2 1 --gpu --memory-efficient --memorysafe
 	--ndense=3 --hdim=64 --positive-patch-ratio=0.1 
 	--savepath=benchmarks/vae_${LDIM}_${C1}_${C1}_${C3}_beta-${BETA}/$SEED

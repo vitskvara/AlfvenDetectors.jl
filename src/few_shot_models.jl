@@ -20,6 +20,7 @@ import GenerativeModels: encode, fit!
 Produce an encoding of X.
 """
 encode(m::FewShotModel,X,args...) = Flux.Tracker.data(encode(m.ae,X,args...))
+# normalize the data here?
 
 """
 	fit!(FewShotModel,ff, X[, Y, args...][; encoding_batchsize, kwargs...])	
@@ -29,6 +30,7 @@ be fit unsupervisedly.
 """
 function fit!(m::FewShotModel,ff,X::AbstractArray, args...;encoding_batchsize::Int=128)
 	Z = encode(m, X, encoding_batchsize)
+	# normalize the data here?
 	ff(m.clust_model, Z, args...)
 end
 fitx!(m::FewShotModel,X::AbstractArray) = fit!(m,m.fitx,X)
@@ -40,15 +42,17 @@ function fit!(m::FewShotModel,X_unlabeled::AbstractArray,X_labeled::AbstractArra
 end
 
 """
-	anomaly_score(FewShotModel,X,args...;kwargs...)	
+	anomaly_score(FewShotModel[,anomaly_score_function],X,args...;kwargs...)	
 
-Produce the anomaly score given X.
+Produce the anomaly score given X. If anomaly_score_function is not given,
+the internal one is going to be used.
 """
-function anomaly_score(m::FewShotModel,X,args...;encoding_batchsize=128,kwargs...)
+function anomaly_score(m::FewShotModel,X::AbstractArray,args...;encoding_batchsize=128,kwargs...)
 	Z = encode(m, X, encoding_batchsize)
+	# normalize the data here?
 	return m.asf(m.clust_model, Z, args...; kwargs...)
 end
-function anomaly_score(m::FewShotModel,asf,X,args...;encoding_batchsize=128,kwargs...)
+function anomaly_score(m::FewShotModel,asf,X::AbstractArray,args...;encoding_batchsize=128,kwargs...)
 	Z = encode(m, X, encoding_batchsize)
 	return asf(m.clust_model, Z, args...; kwargs...)
 end

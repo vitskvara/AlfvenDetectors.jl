@@ -41,8 +41,10 @@ modelpath = joinpath(modelpath, "waae_8_16_16_32_lambda-10.0_gamma-0.0_sigma-0.0
 #modelpath = joinpath(modelpath, "ae_8_16_16_32/2")
 #modelpath = joinpath(modelpath, "ae_64_16_16/2")
 models = readdir(modelpath)
+s = "nepochs-40"
+imodel = collect(1:length(models))[map(x->occursin(s,x),models)][1]
 #imode = 46
-imodel = length(models)
+#imodel = length(models)
 mf = joinpath(modelpath,models[imodel])
 model, exp_args, model_args, model_kwargs, history = AlfvenDetectors.load_model(mf)
 
