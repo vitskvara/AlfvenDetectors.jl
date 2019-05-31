@@ -11,6 +11,8 @@ df = CSV.read(infile)
 # filter out the data from the 64D AE
 df=filter(row->row[:ldim]==8,df)
 
+# rename the models so that the names actually hold
+
 #names(df)
 # Symbol[:seed, :auc, :asf_arg, :S1_model, :S2_model, :S2_model_args, :S2_model_kwargs, :as_function,
 # :S1_file, :ldim, :lambda, :gamma, :beta, :sigma, :batchsize, :S1_iterations]
