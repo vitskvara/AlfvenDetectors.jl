@@ -4,6 +4,15 @@ using DataFrames
 using StatsBase
 using Base.Iterators
 
+# plot params
+outpath = "/home/vit/vyzkum/alfven/experiments/eval/conv/uprobe/benchmarks/plots"
+cmap = "plasma" # colormap
+matplotlib.rc("font", family = "normal",
+    #weight = "bold",
+    size = 10
+)
+mkpath(outpath)
+
 # load the data from the merged csv
 infile = "/home/vit/vyzkum/alfven/experiments/eval/conv/uprobe/benchmarks/all_experiments.csv"
 df = CSV.read(infile)
@@ -72,6 +81,36 @@ for (s2string, s2model) in zip(s2strings, s2models)
 	end
 end
 println(presentation_s)
+
+# try to look at the means and histograms of the aucs for the individual problems
+idf = 0
+isubs = vcat(collect(1:3:15), collect(2:3:15), collect(3:3:15))
+figure(figsize=(6,10))
+for (s2string, s2model) in zip(s2strings, s2models)
+	for (s1reg, s1f, f) in zip(s1regs, s1filters, filters)
+		global idf += 1
+		isub = isubs[idf]
+		subdf = subdfs[idf]	
+		subplot(5,3,isub)
+		if (idf-1)%5 == 0
+			title(s2string*"\n\n"*s1reg)
+		else
+			title(s1reg)
+		end
+		hist(subdf[:auc],20)
+		xlim([0,1])
+		# also draw the mean
+		ax = gca()
+		xl = ax.get_ylim()
+		μ = mean(subdf[:auc])
+		plot([μ,μ],xl,c="k",label="$(round(μ,digits=3))")
+		legend()
+	end
+	tight_layout()
+end
+fname = "auc_hist_over_models.pdf"
+savefig(joinpath(outpath, fname))
+
 
 
 # also, average over ks
