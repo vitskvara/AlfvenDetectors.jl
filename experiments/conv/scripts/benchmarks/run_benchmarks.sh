@@ -30,9 +30,9 @@ BETA=0.001
 GAMMA=0.1
 ./run_aae_benchmark.sh "$SEED" "$LDIM" "$NCONV" "$C1" "$C2" "$C3" "$LAMBDA"
 GAMMA=1.0
-./run_benchmark.sh "$SEED" "$LDIM" "$NCONV" "$C1" "$C2" "$C3" "$LAMBDA"
+./run_aae_benchmark.sh "$SEED" "$LDIM" "$NCONV" "$C1" "$C2" "$C3" "$LAMBDA"
 GAMMA=10.0
-./run_benchmark.sh "$SEED" "$LDIM" "$NCONV" "$C1" "$C2" "$C3" "$LAMBDA"
+./run_aae_benchmark.sh "$SEED" "$LDIM" "$NCONV" "$C1" "$C2" "$C3" "$LAMBDA"
 
 # this is WAE
 SIGMA=0.01
@@ -41,7 +41,7 @@ LAMBDA=0.1
 LAMBDA=1.0
 ./run_wae_benchmark.sh "$SEED" "$LDIM" "$NCONV" "$C1" "$C2" "$C3" "$LAMBDA" "$SIGMA"
 LAMBDA=10.0
-./run_benchmark.sh "$SEED" "$LDIM" "$NCONV" "$C1" "$C2" "$C3" "$LAMBDA" "$SIGMA"
+./run_wae_benchmark.sh "$SEED" "$LDIM" "$NCONV" "$C1" "$C2" "$C3" "$LAMBDA" "$SIGMA"
 
 SIGMA=0.1
 LAMBDA=0.1

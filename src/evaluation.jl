@@ -137,6 +137,33 @@ function load_model(mf)
     return model, exp_args, model_args, model_kwargs, history
 end
 
+function get_semilabeled_data(datapath, nshots, patchsize, measurement_type, readfun, seed, use_alfven_shots, 
+    positive_patch_ratio)
+    # get unlabeled data
+    available_shots = readdir(datapath)
+    training_shots = AlfvenDetectors.select_training_shots(nshots, available_shots)
+    println("Using $(training_shots)\n")
+    shots = joinpath.(datapath, training_shots)
+    if measurement_type == "uprobe"
+        data = collect_conv_signals(shots, readfun, patchsize; 
+            warns=false, type="valid", memorysafe=true)
+    else
+        data = collect_conv_signals(shots, readfun, patchsize, coils; 
+            warns=false, type="valid", memorysafe=true)
+    end
+    xdim = size(data)
+    # now add some given amount of patches in the simillar manner in which the network was trained
+    shotnos, patch_labels, tstarts, fstarts = select_positive_training_patches(0.5, seed=seed)
+    Nadded = floor(Int, xdim[4]*positive_patch_ratio/(1-positive_patch_ratio))
+    # now that we know how many samples to add, we can sample the appropriate number of them with some added noise
+    added_patches = collect_training_patches(datapath, shotnos, tstarts, fstarts,
+        Nadded, readfun, patchsize; δ = 0.02, seed=seed, memorysafe = true)
+    data = cat(data, added_patches, dims=4)
+    println("Done, loaded additional $(size(added_patches,4)) positively labeled patches.")
+
+    return data
+end
+
 function fit_fs_model(s1_model, s2_model, fx, fxy, asfs, asf_args, data, shotnos, labels, 
     tstarts, fstarts)
     # iterate over seeds

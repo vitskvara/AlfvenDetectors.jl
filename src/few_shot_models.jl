@@ -35,8 +35,7 @@ function fit!(m::FewShotModel,ff,X::AbstractArray, args...;encoding_batchsize::I
 end
 fitx!(m::FewShotModel,X::AbstractArray) = fit!(m,m.fitx,X)
 fitxy!(m::FewShotModel,X::AbstractArray, Y::AbstractVector) = fit!(m,m.fitxy,X,Y)
-function fit!(m::FewShotModel,X_unlabeled::AbstractArray,X_labeled::AbstractArray,
-	Y::AbstractVector)
+function fit!(m::FewShotModel,X_unlabeled::AbstractArray,X_labeled::AbstractArray,Y::AbstractVector)
 	fitx!(m,X_unlabeled)
 	fitxy!(m,X_labeled,Y)
 end

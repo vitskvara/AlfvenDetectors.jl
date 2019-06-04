@@ -80,13 +80,13 @@ if isdir(datapath)
 	@test fstarts[test_inds] == test_info[4]
 
 	# split patches unique
-	train_info, train_inds, test_info, test_inds = AlfvenDetectors.split_patches_unique(0.0, shotnos, 
+	train_info, train_inds, test_info, test_inds = AlfvenDetectors.split_unique_patches(0.0, shotnos, 
 			labels, tstarts, fstarts; seed=1);
 	@test train_info[1] == train_inds == nothing
-	train_info, train_inds, test_info, test_inds = AlfvenDetectors.split_patches_unique(1.0, shotnos, 
+	train_info, train_inds, test_info, test_inds = AlfvenDetectors.split_unique_patches(1.0, shotnos, 
 			labels, tstarts, fstarts; seed=1);
 	@test train_info[1] == train_inds == nothing
-	train_info, train_inds, test_info, test_inds = AlfvenDetectors.split_patches_unique(0.5, shotnos, 
+	train_info, train_inds, test_info, test_inds = AlfvenDetectors.split_unique_patches(0.5, shotnos, 
 			labels, tstarts, fstarts);
 	@test shotnos[train_inds] == train_info[1]
 	@test labels[train_inds] == train_info[2]
@@ -110,25 +110,26 @@ if isdir(datapath)
 
 	# test the data preparation functions
 	available_shots = readdir(datapath)
-	shotlist = AlfvenDetectors.select_training_shots(5, available_shots; seed = 1)
-	@test length(shotlist) == 5
-	shotlist2 = AlfvenDetectors.select_training_shots(11, available_shots; seed = 1)
-	@test length(shotlist2) == 11
-	@test shotlist == shotlist2[1:5]
-	shotlist3 = AlfvenDetectors.select_training_shots(11, available_shots; seed = 2)
-	@test length(shotlist3) == 11
-	@test shotlist2 != shotlist3
-
-	
-	# select_training_patches(α::Real; seed = nothing)
-	@test AlfvenDetectors.select_training_patches(0.0) == [nothing, nothing, nothing, nothing]
-	patchdata = AlfvenDetectors.select_training_patches(0.1)
-	@test length(patchdata) == 4
-	@test length(patchdata[1]) == length(patchdata[2]) == length(patchdata[3]) == length(patchdata[4]) != 0
-	patchdata = AlfvenDetectors.select_positive_training_patches(0.1)
-	@test length(patchdata) == 4
-	@test length(patchdata[1]) == length(patchdata[2]) == length(patchdata[3]) == length(patchdata[4]) != 0
-	
+	shotlist = AlfvenDetectors.split_shots(5, available_shots; seed = 1)
+	@test length(shotlist) == 2
+	@test length(shotlist[1])  == 5
+	@test length(shotlist[2])  == length(available_shots) - 5
+	@test intersect(shotlist[1], shotlist[2]) == []	
+	shotlist2 = AlfvenDetectors.split_shots(11, available_shots; seed = 1)
+	@test length(shotlist2[1]) == 11
+	@test shotlist[1] == shotlist2[1][1:5]
+	@test length(shotlist2[2])  == length(available_shots) - 11
+	shotlist3 = AlfvenDetectors.split_shots(9, available_shots; 
+		test_train_patches_shotnos=(train_info[1], test_info[1]),
+		seed = 1)
+	@test length(shotlist3[1]) == 9
+	@test length(shotlist3[2])  == length(available_shots) - 9
+	@test intersect(shotlist3[1], shotlist3[2]) == []	
+	# the training shots must not contain data from the testing patches
+	@test !any(map(x->any(occursin.(string(x), shotlist3[1])), test_info[1]))
+	# but they should contain some data from the training patches
+	@test any(map(x->any(occursin.(string(x), shotlist3[1])), train_info[1]))
+		
 	# msc amplitude + AE
 	rawdata = hcat(AlfvenDetectors.collect_signals(shots, AlfvenDetectors.readmscampphase, coils; type="flattop")...)
 	if usegpu

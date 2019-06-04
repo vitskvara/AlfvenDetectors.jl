@@ -243,43 +243,25 @@ if svpth != ""
 end 
 mkpath(savepath)
 
-# get the list of training shots
-println("Loading basic training data...\n")
-available_shots = readdir(datapath)
-training_shots = AlfvenDetectors.select_training_shots(nshots, available_shots; seed=seed, use_alfven_shots=!noalfven)
-println("Using $(training_shots)\n")
-shots = joinpath.(datapath, training_shots)
+# decide the type of reading function
+collect_fun(x) = (measurement_type == "uprobe") ?
+	AlfvenDetectors.collect_conv_signals(x, readfun, patchsize; 
+		warns=warnings, type=iptrunc, memorysafe=memorysafe) :
+	AlfvenDetectors.collect_conv_signals(shots, readfun, patchsize, coils; 
+		warns=warnings, type=iptrunc, memorysafe=memorysafe)
 
-# if test token is given, only run with a limited number of shots
+# collect all the data
+data, training_shotnos = AlfvenDetectors.collect_training_data(datapath, collect_fun, nshots,
+	readfun, positive_patch_ratio, patchsize; seed=seed, use_alfven_shots=!noalfven)
+# if test token is given, only run with a limited number of patches
 if test
-	shots = shots[1:min(nshots,2)]
-end
-
-if measurement_type == "uprobe"
-	data = AlfvenDetectors.collect_conv_signals(shots, readfun, patchsize; 
-		warns=warnings, type=iptrunc, memorysafe=memorysafe)
-else
-	data = AlfvenDetectors.collect_conv_signals(shots, readfun, patchsize, coils; 
-		warns=warnings, type=iptrunc, memorysafe=memorysafe)
+	data = data[:,:,:,1:256]
 end
 xdim = size(data)
 
 # put all data into gpu only if you want to be fast and not care about memory clogging
 # otherwise that is done in the train function now per batch
 # data = data |> gpu
-
-# load the labeled patches
-if positive_patch_ratio > 0
-	println("Loading labeled patch data...")
-	shotnos, patch_labels, tstarts, fstarts = AlfvenDetectors.select_positive_training_patches(0.5, seed=seed)
-	Nadded = floor(Int, xdim[4]*positive_patch_ratio/(1-positive_patch_ratio))
-	# now that we know how many samples to add, we can sample the appropriate number of them with some added noise
-	added_patches = AlfvenDetectors.collect_training_patches(datapath, shotnos, tstarts, fstarts,
-		Nadded, readfun, patchsize; δ = 0.02, seed=seed, memorysafe = true)
-	println("Done, loaded additional $(size(added_patches,4)) positively labeled patches.")
-	data = cat(data, added_patches, dims=4)
-	xdim = size(data)
-end
 
 # pz
 if pz_components == 1

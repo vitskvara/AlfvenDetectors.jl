@@ -32,7 +32,7 @@ models = vcat(map(x->joinpath.(x,readdir(x)[end]), exdirs2)...);
 Nmodels = length(models)
 println("Found a total of $(Nmodels) saved models.")
 
-# get data
+# get labeled data
 patchsize = 128
 data, shotnos, labels, tstarts, fstarts = AlfvenDetectors.get_validation_data(patchsize);
 println("loaded validation data of size $(size(data)), with $(sum(labels)) positively labeled "*
