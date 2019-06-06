@@ -388,11 +388,11 @@ function split_unique_patches(α::Real, shotnos, labels, tstarts, fstarts; seed 
 end
 
 """
-	split_shots(nshots, available_shots[; testing_patches_shotnos, seed, use_alfven_shots])
+	split_shots(nshots, available_shots[, testing_patches_shotnos][; seed, use_alfven_shots])
 
 Select a list of training shots.
 """
-function split_shots(nshots::Int, available_shots::AbstractVector; test_train_patches_shotnos=nothing,
+function split_shots(nshots::Int, available_shots::AbstractVector, test_train_patches_shotnos=nothing;
 	seed = nothing, use_alfven_shots=true)
 	# get the list of labeled shots
 	labeled_shots, labels = AlfvenDetectors.labeled_data()
@@ -401,10 +401,16 @@ function split_shots(nshots::Int, available_shots::AbstractVector; test_train_pa
 	labeled_shots = labeled_shots[labels.==label]
 	labels = labels[labels.==label]
 	# also, filter the two lists so there is no intersection
-	labeled_shots = filter(x->any(map(y->occursin(string(y), x),labeled_shots)), available_shots)
+	labeled_shots = filter(x->any(map(y->occursin(string(y), x), labeled_shots)), available_shots)
 	available_shots = filter(x->!any(map(y->occursin(string(y),x),labeled_shots)), available_shots)
+	# shuffle the available shots	
+	Navailable = length(available_shots)
+	(seed != nothing) ? Random.seed!(seed) : nothing
+	available_shots = available_shots[sample(1:Navailable, Navailable, replace=false)]
+	# restart the seed
+	Random.seed!()
+	# now select the training shots from the labeled set
 	Nlabeled = length(labeled_shots)
-	# original training subset ["10370", "10514", "10800", "10866", "10870", "10893"]
 	# initialize the pseudorandom generator so that the training set is fixed
 	# and select half of the set at most, then add the remaining 
 	if test_train_patches_shotnos == nothing
@@ -415,16 +421,15 @@ function split_shots(nshots::Int, available_shots::AbstractVector; test_train_pa
 		# restart the seed
 		Random.seed!()
 	# if test/train patches are used, then do the splitting of the labeled shots according to 
-	# this previous split
+	# this previous split - exclude the testing patch shots from the training set
 	else
 		trainp_shots = test_train_patches_shotnos[1]
-		testp_shots = test_train_patches_shotnos[1]
-		train_inds = filter(i->any(map(x->occursin(string(x), labeled_shots[i]),trainp_shots)),
+		testp_shots = test_train_patches_shotnos[2]
+		train_inds = filter(i->!any(map(x->occursin(string(x), string(labeled_shots[i])),testp_shots)),
 			collect(1:Nlabeled))
 		train_shots = labeled_shots[train_inds]
 		Nlabeledout = length(train_shots)
 	end
-	Navailable = length(available_shots)
 	# now check if the labeled shots are actually avaiable and then select the requested amount
 	# also return the second part of the dataset as testing shots
 	if nshots <= Nlabeledout
@@ -435,23 +440,28 @@ function split_shots(nshots::Int, available_shots::AbstractVector; test_train_pa
 	else 
 		# if more than the half of labeled shots are requested, select the rest from the available shots
 		# but discard those that are labeled
-		(seed != nothing) ? Random.seed!(seed) : nothing
-		outinds = sample(1:Navailable, nshots-Nlabeledout, replace=false)		
-		# restart the seed
-		Random.seed!()
+		if test_train_patches_shotnos == nothing
+			train_available_shots = available_shots[1:(nshots-Nlabeledout)]
+			test_available_shots = available_shots[(nshots-Nlabeledout+1):end]
+		else
+			train_available_shots = 
+				filter(y->!any(map(x->occursin(string(x), y),testp_shots)), available_shots)[1:(nshots-Nlabeledout)]
+			test_available_shots = filter(x->!(x in train_available_shots),available_shots)
+		end
 		outshots = vcat(
 			train_shots,
-			available_shots[outinds]
+			train_available_shots
 			),
 			vcat(labeled_shots[filter(i-> !(i in train_inds), collect(1:length(labeled_shots)))],
-				available_shots[filter(i-> !(i in outinds), collect(1:Navailable))])
+				test_available_shots)
+				
 	end
 	return outshots
 end
 
 """
 	collect_training_patches(datapath, shotnos, tstarts, fstarts, N, readfun, patchsize[; 
-	δ, seed, kwargs...])
+	δ, seed, get_data_kwargs...])
 
 This function will return the 4D tensor of N randomly selected patches with added noise of magnitude δ.
 """
@@ -473,6 +483,12 @@ function collect_training_patches(datapath, shotnos, tstarts, fstarts, N, readfu
 	return patches, shotnos[sample_inds], tstarts[sample_inds], fstarts[sample_inds]
 end
 
+"""
+	collect_training_data(datapath, collect_fun, nshots, readfun,
+		positive_patch_ratio, patchsize[; seed, use_alfven_shots])
+
+Returns training data for the convolutional run script.
+"""
 function collect_training_data(datapath, collect_fun, nshots, readfun,
 	positive_patch_ratio, patchsize; seed=nothing, use_alfven_shots=true)
 	# load labeled patches information and split them to train/test
@@ -486,8 +502,8 @@ function collect_training_data(datapath, collect_fun, nshots, readfun,
 	# get the list of training shots
 	println("\nLoading basic training data...")
 	available_shots = readdir(datapath)
-	training_shots, testing_shots = AlfvenDetectors.split_shots(nshots, available_shots; 
-		test_train_patches_shotnos=(train_info[1], test_info[1]) ,seed=seed, use_alfven_shots=use_alfven_shots)
+	training_shots, testing_shots = AlfvenDetectors.split_shots(nshots, available_shots, 
+		(train_info[1], test_info[1]); seed=seed, use_alfven_shots=use_alfven_shots)
 	println("Using $(training_shots)\n")
 	shots = joinpath.(datapath, training_shots)
 
@@ -503,6 +519,13 @@ function collect_training_data(datapath, collect_fun, nshots, readfun,
 		tstarts = train_info[3][train_info[2].==1]
 		fstarts = train_info[4][train_info[2].==1]
 		patch_labels = train_info[2][train_info[2].==1]
+		# also, get only the available shot data
+		available_inds = 
+			filter(i->any(occursin.(string(shotnos[i]), available_shots)),1:length(shotnos))
+		shotnos = shotnos[available_inds]
+		patch_labels = patch_labels[available_inds]
+		tstarts = tstarts[available_inds]
+		fstarts = fstarts[available_inds]
 		# get the number of patches to be added
 		Nadded = floor(Int, xdim[4]*positive_patch_ratio/(1-positive_patch_ratio))
 		# now that we know how many samples to add, we can sample the appropriate number of them with some added noise

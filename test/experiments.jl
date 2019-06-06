@@ -87,7 +87,7 @@ if isdir(datapath)
 			labels, tstarts, fstarts; seed=1);
 	@test train_info[1] == train_inds == nothing
 	train_info, train_inds, test_info, test_inds = AlfvenDetectors.split_unique_patches(0.5, shotnos, 
-			labels, tstarts, fstarts);
+			labels, tstarts, fstarts; seed=1);
 	@test shotnos[train_inds] == train_info[1]
 	@test labels[train_inds] == train_info[2]
 	@test tstarts[train_inds] == train_info[3]
@@ -102,11 +102,12 @@ if isdir(datapath)
 	
 	# get a patch
 	ipatch = 10
+	patchsize = 128
 	patch, t, f = AlfvenDetectors.get_patch(datapath, shotnos[ipatch], tstarts[ipatch],
-		fstarts[ipatch], 128, AlfvenDetectors.readnormlogupsd)
-	@test size(patch) == (128,128)
-	@test length(t) == 128
-	@test length(f) == 128
+		fstarts[ipatch], patchsize, AlfvenDetectors.readnormlogupsd)
+	@test size(patch) == (patchsize,patchsize)
+	@test length(t) == patchsize
+	@test length(f) == patchsize
 
 	# test the data preparation functions
 	available_shots = readdir(datapath)
@@ -119,8 +120,7 @@ if isdir(datapath)
 	@test length(shotlist2[1]) == 11
 	@test shotlist[1] == shotlist2[1][1:5]
 	@test length(shotlist2[2])  == length(available_shots) - 11
-	shotlist3 = AlfvenDetectors.split_shots(9, available_shots; 
-		test_train_patches_shotnos=(train_info[1], test_info[1]),
+	shotlist3 = AlfvenDetectors.split_shots(9, available_shots, (train_info[1], test_info[1]),
 		seed = 1)
 	@test length(shotlist3[1]) == 9
 	@test length(shotlist3[2])  == length(available_shots) - 9
@@ -129,7 +129,25 @@ if isdir(datapath)
 	@test !any(map(x->any(occursin.(string(x), shotlist3[1])), test_info[1]))
 	# but they should contain some data from the training patches
 	@test any(map(x->any(occursin.(string(x), shotlist3[1])), train_info[1]))
-		
+
+	# collect noisy patches
+	available_inds = filter(i->any(occursin.(string(train_info[1][i]), available_shots)),1:length(train_info[1]))
+	noisy_patches, noisy_shotnos, noisy_tstarts, noisy_fstarts =
+		AlfvenDetectors.collect_training_patches(datapath, 
+			train_info[1][available_inds], train_info[3][available_inds], train_info[4][available_inds], 10, 
+			AlfvenDetectors.readnormlogupsd, patchsize; δ = 0.02, seed = nothing, memorysafe=true)
+	@test size(noisy_patches,4) == length(noisy_shotnos) == length(noisy_tstarts) == length(noisy_fstarts) == 10
+	@test size(noisy_patches) == (patchsize,patchsize,1,10)
+
+	# also test the whole frikkin loading of training data for experiments
+	collect_fun(x) = 
+		AlfvenDetectors.collect_conv_signals(x, readfun, patchsize, memorysafe=true)
+ 	data, train_shots = AlfvenDetectors.collect_training_data(datapath, collect_fun, 12, readfun,
+		0.1, patchsize; seed=1, use_alfven_shots=true)
+ 	@test size(data,1) == size(data,2) == patchsize
+ 	@test !any(map(x->any(occursin.(string(x), train_shots)), test_info[1]))
+ 	@test any(map(x->any(occursin.(string(x), train_shots)), train_info[1]))
+
 	# msc amplitude + AE
 	rawdata = hcat(AlfvenDetectors.collect_signals(shots, AlfvenDetectors.readmscampphase, coils; type="flattop")...)
 	if usegpu

@@ -100,9 +100,31 @@ function pretty_params(params)
     return s
 end
 
+"""
+    load_model(file)
 
-# data
-function get_validation_data(patchsize)
+Loads the model, parameters and training history from a file.
+"""
+function load_model(mf)
+    model_data = BSON.load(mf)
+    exp_args = model_data[:experiment_args]
+    model_args = model_data[:model_args]
+    model_kwargs = model_data[:model_kwargs]
+    history = model_data[:history]
+    if haskey(model_data, :model)
+        model = model_data[:model]
+    else
+        model = Flux.testmode!(GenerativeModels.construct_model(mf))
+    end
+    return model, exp_args, model_args, model_kwargs, history
+end
+
+"""
+    get_labeled_validation_data(patchsize)
+
+Get labeled patch data for validation.
+"""
+function get_labeled_validation_data(patchsize)
     patch_f = joinpath(dirname(pathof(AlfvenDetectors)), 
         "../experiments/conv/data/labeled_patches_$patchsize.bson")
     if isfile(patch_f)
@@ -122,23 +144,13 @@ function get_validation_data(patchsize)
     return data, shotnos, labels, tstarts, fstarts
 end
 
-# now load the first stage model
-function load_model(mf)
-    model_data = BSON.load(mf)
-    exp_args = model_data[:experiment_args]
-    model_args = model_data[:model_args]
-    model_kwargs = model_data[:model_kwargs]
-    history = model_data[:history]
-    if haskey(model_data, :model)
-        model = model_data[:model]
-    else
-        model = Flux.testmode!(GenerativeModels.construct_model(mf))
-    end
-    return model, exp_args, model_args, model_kwargs, history
-end
+"""
+    get_unlabeled_validation_data
+"""
+function get_unlabeled_validation_data(datapath, nshots, patchsize, measurement_type, readfun, 
+    use_alfven_shots, positive_patch_ratio; seed=nothing)
+    # first get labeled data
 
-function get_semilabeled_data(datapath, nshots, patchsize, measurement_type, readfun, seed, use_alfven_shots, 
-    positive_patch_ratio)
     # get unlabeled data
     available_shots = readdir(datapath)
     training_shots = AlfvenDetectors.select_training_shots(nshots, available_shots)
