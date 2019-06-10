@@ -19,6 +19,7 @@ using MLDataPattern
 using FewShotAnomalyDetection
 using CSV
 using DataFrames
+using ProgressMeter
 
 #using PyPlot
 

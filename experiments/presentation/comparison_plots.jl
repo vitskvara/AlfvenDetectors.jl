@@ -55,6 +55,7 @@ s1filters = ["AE", "VAE", "WAE", "AAE", "WAAE"]
 filters = (nothing, nothing, nothing, nothing, nothing)
 
 subdfs = []
+result_dfs = []
 global presentation_s = ""
 for (s2string, s2model) in zip(s2strings, s2models)
 	for (s1reg, s1f, f) in zip(s1regs, s1filters, filters)
@@ -66,12 +67,15 @@ for (s2string, s2model) in zip(s2strings, s2models)
 			end
 		end
 		subdf = filter(ff,seed_avg)
-		_, _, _, _, ss = print_find_maxauc(subdf)
+		_, _, auc, sd, ss = print_find_maxauc(subdf)
+		push!(result_dfs, DataFrame(:S1_reg => s1reg, :S2_model => s2string, :auc => auc, :sd => sd))
 		global presentation_s *= "$s1reg & $s2string & $ss \\\\ \n"
 		push!(subdfs, subdf)
 	end
 end
 println(presentation_s)
+result_df = vcat(result_dfs...);
+showall(result_df)
 
 
 # also, average over ks

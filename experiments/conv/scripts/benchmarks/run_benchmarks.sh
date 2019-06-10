@@ -4,7 +4,7 @@
 
 SEED=$1
 echo "using seed $SEED"
-LDIM=8
+LDIM=64
 NCONV=3
 C1=16
 C2=16

@@ -12,14 +12,14 @@ mutable struct FewShotModel{AE, C, FX, FXY, AS}
 	asf::AS
 end
 
-import GenerativeModels: encode, fit!
+import GenerativeModels: encode_untracked, fit!
 
 """
 	encode(FewShotModel,X,args...)
 
 Produce an encoding of X.
 """
-encode(m::FewShotModel,X,args...) = Flux.Tracker.data(encode(m.ae,X,args...))
+encode(m::FewShotModel,X,args...) = encode_untracked(m.ae,X,args...)
 # normalize the data here?
 
 """
@@ -33,11 +33,11 @@ function fit!(m::FewShotModel,ff,X::AbstractArray, args...;encoding_batchsize::I
 	# normalize the data here?
 	ff(m.clust_model, Z, args...)
 end
-fitx!(m::FewShotModel,X::AbstractArray) = fit!(m,m.fitx,X)
-fitxy!(m::FewShotModel,X::AbstractArray, Y::AbstractVector) = fit!(m,m.fitxy,X,Y)
-function fit!(m::FewShotModel,X_unlabeled::AbstractArray,X_labeled::AbstractArray,Y::AbstractVector)
-	fitx!(m,X_unlabeled)
-	fitxy!(m,X_labeled,Y)
+fitx!(m::FewShotModel,X::AbstractArray;kwargs...) = fit!(m,m.fitx,X;kwargs...)
+fitxy!(m::FewShotModel,X::AbstractArray, Y::AbstractVector;kwargs...) = fit!(m,m.fitxy,X,Y;kwargs...)
+function fit!(m::FewShotModel,X_unlabeled::AbstractArray,X_labeled::AbstractArray,Y::AbstractVector;kwargs...)
+	fitx!(m,X_unlabeled;kwargs...)
+	fitxy!(m,X_labeled,Y;kwargs...)
 end
 
 """
@@ -315,8 +315,8 @@ Observations are columns of X.
 function fit!(m::SVAEMem, X::AbstractArray, batchsize::Int, nbatches::Int, β, σ;
 	η=1e-5, cbtime=5)
 	opt = Flux.Optimise.ADAM(η)
-	cb = Flux.throttle(() -> println("SVAE: $(trainRepresentation(m, X[:,1:batchsize], 
-		β, σ))"), cbtime)
+	p = Progress(nbatches, 0.3)
+	cb() = ProgressMeter.next!(p; showvalues = [(:SVAE, trainRepresentation(m, X[:,1:batchsize], β, σ))])
 	# there is a hack with RandomBatches because so far I can't manage to get them to work 
 	# without the tuple - I have to find a different sampling iterator
 	Flux.train!((x) -> trainRepresentation(m, getobs(x), β, σ), 
@@ -353,8 +353,11 @@ function fit!(m::SVAEMem, X::AbstractArray, Y::AbstractVector, batchsize::Int, n
 	# now train the encoder with memory
 	opt = ADAM(η)
 	# learn with labels
-	cb = Flux.throttle(() -> println("SVAE mem loss: $(trainWithAnomalies(m, X[:,1:batchsize], 
-		Y[1:batchsize], β, σ, γ))"), cbtime)
+	p = Progress(nbatches, 0.3)
+	cb() = ProgressMeter.next!(p; showvalues = [(Symbol("SVAE mem loss"), 
+		trainWithAnomalies(m, X[:,1:batchsize], Y[1:batchsize], β, σ, γ))])
+#	cb = Flux.throttle(() -> println("SVAE mem loss: $(trainWithAnomalies(m, X[:,1:batchsize], 
+#		Y[1:batchsize], β, σ, γ))"), cbtime)
 	Flux.train!((x,y)->trainWithAnomalies(m,x,y,β,σ,γ), 
 		Flux.params(m.svae), 
 		RandomBatches((X, Y), size = batchsize, count = nbatches), opt, cb = cb)

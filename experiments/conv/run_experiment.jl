@@ -247,7 +247,7 @@ mkpath(savepath)
 collect_fun(x) = (measurement_type == "uprobe") ?
 	AlfvenDetectors.collect_conv_signals(x, readfun, patchsize; 
 		warns=warnings, type=iptrunc, memorysafe=memorysafe) :
-	AlfvenDetectors.collect_conv_signals(shots, readfun, patchsize, coils; 
+	AlfvenDetectors.collect_conv_signals(x, readfun, patchsize, coils; 
 		warns=warnings, type=iptrunc, memorysafe=memorysafe)
 
 # collect all the data
@@ -305,6 +305,7 @@ if occursin("AAE", modelname)
 	model_kwargs[:hdim] = hdim
 	insert!(model_args, 3, :disc_nlayers => disc_nlayers)
 	push!(model_args, :pz => pz)
+	fit_kwargs[:γ] = gamma
 end
 if occursin("WAE", modelname)
 	model_kwargs[:kernel] = kernel

@@ -147,79 +147,90 @@ end
 """
     get_unlabeled_validation_data
 """
-function get_unlabeled_validation_data(datapath, nshots, patchsize, measurement_type, readfun, 
-    use_alfven_shots, positive_patch_ratio; seed=nothing)
-    # first get labeled data
-
-    # get unlabeled data
+function get_unlabeled_validation_data(datapath, nshots, test_train_patches_shotnos, patchsize, 
+    measurement_type, use_alfven_shots, warns, iptrunc, memorysafe; seed=nothing)
     available_shots = readdir(datapath)
-    training_shots = AlfvenDetectors.select_training_shots(nshots, available_shots)
-    println("Using $(training_shots)\n")
+    training_shots, testing_shots = AlfvenDetectors.split_shots(nshots, available_shots, 
+        test_train_patches_shotnos; seed=seed, use_alfven_shots=use_alfven_shots)
+    println("loading data from")
+    println(training_shots)
     shots = joinpath.(datapath, training_shots)
-    if measurement_type == "uprobe"
-        data = collect_conv_signals(shots, readfun, patchsize; 
-            warns=false, type="valid", memorysafe=true)
-    else
-        data = collect_conv_signals(shots, readfun, patchsize, coils; 
-            warns=false, type="valid", memorysafe=true)
+    # decide the type of reading function
+    if measurement_type == "mscamp"
+        readfun = AlfvenDetectors.readmscamp
+    elseif measurement_type == "mscphase"
+        readfun = AlfvenDetectors.readnormmscphase
+    elseif measurement_type == "mscampphase"
+        readfun = AlfvenDetectors.readmscampphase
+    elseif measurement_type == "uprobe"
+        readfun = AlfvenDetectors.readnormlogupsd
     end
-    xdim = size(data)
-    # now add some given amount of patches in the simillar manner in which the network was trained
-    shotnos, patch_labels, tstarts, fstarts = select_positive_training_patches(0.5, seed=seed)
-    Nadded = floor(Int, xdim[4]*positive_patch_ratio/(1-positive_patch_ratio))
-    # now that we know how many samples to add, we can sample the appropriate number of them with some added noise
-    added_patches = collect_training_patches(datapath, shotnos, tstarts, fstarts,
-        Nadded, readfun, patchsize; δ = 0.02, seed=seed, memorysafe = true)
-    data = cat(data, added_patches, dims=4)
-    println("Done, loaded additional $(size(added_patches,4)) positively labeled patches.")
-
-    return data
+    data = (measurement_type == "uprobe") ?
+        AlfvenDetectors.collect_conv_signals(shots, readfun, patchsize; 
+            warns=warns, type=iptrunc, memorysafe=true) :
+        AlfvenDetectors.collect_conv_signals(shots, readfun, patchsize, coils; 
+            warns=warns, type=iptrunc, memorysafe=true)
+    println("Done.")
+    return data, shots
 end
 
-function fit_fs_model(s1_model, s2_model, fx, fxy, asfs, asf_args, data, shotnos, labels, 
-    tstarts, fstarts)
+function fit_fs_model(s1_model, s2_model, fx, fxy, asfs, asf_args, patch_data, shotnos, labels, 
+    tstarts, fstarts, datapath, unlabeled_nshots, exp_args)
     # iterate over seeds
     dfs_seed = []
     for seed in 1:10
         println("")
         println(" seed=$seed")
 
-        # train/test data
-        # this is not entirely correct, since the seed should probably be the same as 
-        # the one that the s1 model was trained with
-        # however for now we can ignore this
-        # seed = exp_args["seed"];
+        # train/test labeled data
         train_info, train_inds, test_info, test_inds = 
-        AlfvenDetectors.split_patches_unique(0.5, 
-            shotnos, labels, tstarts, fstarts; seed=seed);
-        train = (data[:,:,:,train_inds], train_info[2]);
-        test = (data[:,:,:,test_inds], test_info[2]);
+            AlfvenDetectors.split_unique_patches(0.5, 
+                shotnos, labels, tstarts, fstarts; seed=seed);
+        train_labeled = (patch_data[:,:,:,train_inds], train_info[2]);
+        test = (patch_data[:,:,:,test_inds], test_info[2]);
+        
+        # train unlabeled data
+        train_unlabeled_data, shotnos_unlabeled = 
+            (unlabeled_nshots > 0) ?
+            get_unlabeled_validation_data(datapath, unlabeled_nshots,
+                #  exp_args["nshots"], this causes memory problems
+                (train_info[1], test_info[1]), exp_args["patchsize"], exp_args["measurement"], 
+                !exp_args["no-alfven"], !exp_args["no-warnings"], exp_args["ip-trunc"], exp_args["memorysafe"]; 
+                seed=seed) : (test[1][:,:,:,1:1], [])
+            #Array{eltype(test[1]),4}(undef,size(test[1])[1:3]...,0), []
+        # now add the labeled training data to the unlabeled dataset as well
+        # labels are zero for unlabeled data, but it does not really come into play
+        train_unlabeled = (cat(train_unlabeled_data, train_labeled[1], dims=ndims(train_labeled[1])),
+            vcat(zeros(size(train_unlabeled_data, ndims(train_unlabeled_data))), train_labeled[2]))
+
+        # now the few-shot model
+        fsmodel = AlfvenDetectors.FewShotModel(s1_model, s2_model, fx, fxy, nothing);
+        #AlfvenDetectors.fit!(fsmodel, train_unlabeled, train_labeled[1], train_labeled[2]);
+        try
+            AlfvenDetectors.fit!(fsmodel, train_unlabeled[1], train_labeled[1], train_labeled[2]);
+        catch e 
+            df_exp = DataFrame(as_function=String[], auc=Float64[],asf_arg=Array{Any,1}(undef,0), 
+                seed=Int[])
+            println(e)
+            return df_exp
+        end
 
         # now iterate over anomaly score function params and seeds
         dfs_asf_arg = []
         for asf_arg in asf_args
             print("processing $(asf_arg) ")
-            # now the few-shot model
-            fsmodel = AlfvenDetectors.FewShotModel(s1_model, s2_model, fx, fxy, nothing);
-            try
-                AlfvenDetectors.fit!(fsmodel, train[1], train[1], train[2]);
-                # iterate over anomaly score functions
-                dfs_asf = []
-                for asf in asfs
-                    as = AlfvenDetectors.anomaly_score(fsmodel, (m,x)->asf(m,x,asf_arg...), test[1]);
-                    auc = EvalCurves.auc(EvalCurves.roccurve(as, test[2])...)
-                    asf_name = string(split(string(asf),".")[end])
-                    df_asf = DataFrame(as_function=asf_name, auc=auc)
-                    push!(dfs_asf, df_asf)
-                end
-                global df_asf_arg = vcat(dfs_asf...)
-                df_asf_arg[:asf_arg] = fill(asf_arg,size(df_asf_arg,1))
-            catch e
-                # in case anything (fit or asf) gors wrong
-                global df_asf_arg = DataFrame(as_function=String[], auc=Float64[],asf_arg=Array{Any,1}(undef,0))
-                println(e)
-                nothing
+            # iterate over anomaly score functions
+            dfs_asf = []
+            for asf in asfs
+                as = AlfvenDetectors.anomaly_score(fsmodel, (m,x)->asf(m,x,asf_arg...), test[1]);
+                auc = EvalCurves.auc(EvalCurves.roccurve(as, test[2])...)
+                println("AUC=$auc")
+                asf_name = string(split(string(asf),".")[end])
+                df_asf = DataFrame(as_function=asf_name, auc=auc)
+                push!(dfs_asf, df_asf)
             end
+            global df_asf_arg = vcat(dfs_asf...)
+            df_asf_arg[:asf_arg] = fill(asf_arg,size(df_asf_arg,1))
             push!(dfs_asf_arg, df_asf_arg)
         end
         df_seed = vcat(dfs_asf_arg...)
@@ -251,7 +262,7 @@ function add_info(df_exp, exp_args, history, s2_model_name, s2_args, s2_kwargs, 
     return df_exp
 end
 
-function fit_knn(mf, data, shotnos, labels, tstarts, fstarts)
+function fit_knn(mf, data, shotnos, labels, tstarts, fstarts, datapath, unlabeled_nshots)
     s1_model, exp_args, model_args, model_kwargs, history = load_model(mf)
 
     # knn model
@@ -265,17 +276,16 @@ function fit_knn(mf, data, shotnos, labels, tstarts, fstarts)
     asf_args = map(x->[x],collect(1:2:31))
 
     # this contains the fitted aucs and some other data
-    df_exp = fit_fs_model(s1_model, s2_model, fx, fxy, asfs, asf_args, data, shotnos, 
-        labels, tstarts, fstarts)
+    df_exp = fit_fs_model(s1_model, s2_model, fx, fxy, asfs, asf_args, data, shotnos, labels, 
+        tstarts, fstarts, datapath, unlabeled_nshots, exp_args)
 
     # now add parameters of both S1 and S2 models
-
     df_exp = add_info(df_exp, exp_args, history, s2_model_name, s2_args, s2_kwargs, mf)
 
     return df_exp
 end
 
-function fit_gmm(mf, data, shotnos, labels, tstarts, fstarts)
+function fit_gmm(mf, data, shotnos, labels, tstarts, fstarts, datapath, unlabeled_nshots)
     s1_model, exp_args, model_args, model_kwargs, history = AlfvenDetectors.load_model(mf)
 
     # GMM model
@@ -294,30 +304,29 @@ function fit_gmm(mf, data, shotnos, labels, tstarts, fstarts)
         asf_args = [[1]]
 
         # this contains the fitted aucs and some other data
-        df_exp = AlfvenDetectors.fit_fs_model(s1_model, s2_model, fx, fxy, asfs, asf_args, data, 
-            shotnos, labels, tstarts, fstarts)
+        df_exp = fit_fs_model(s1_model, s2_model, fx, fxy, asfs, asf_args, data, 
+            shotnos, labels, tstarts, fstarts, datapath, unlabeled_nshots, exp_args)
 
-        df_exp = AlfvenDetectors.add_info(df_exp, exp_args, history, s2_model_name, s2_args, s2_kwargs, 
-            mf)
+        df_exp = add_info(df_exp, exp_args, history, s2_model_name, s2_args, s2_kwargs, mf)
         push!(df_exps, df_exp)
     end
 
     return vcat(df_exps...)
 end
 
-function fit_svae(mf, data, shotnos, labels, tstarts, fstarts)
+function fit_svae(mf, data, shotnos, labels, tstarts, fstarts, datapath, unlabeled_nshots)
     s1_model, exp_args, model_args, model_kwargs, history = AlfvenDetectors.load_model(mf)
 
     # S2 model for SVAE
     s2_model_name = "SVAEMem"
     inputdim = exp_args["ldimsize"]
     hiddenDim = 32
-    latentDim = 4
+    latentDim = 8
     numLayers = 3
     # params for memory
-    memorySize = 64
+    memorySize = 256
     α = 0.1 # threshold in the memory that does not matter to us at the moment!
-    k = 128
+    k = 256
     labelCount = 1
     s2_args = (inputdim, hiddenDim, latentDim, numLayers, memorySize, k, labelCount, α)
     s2_kwargs = Dict()
@@ -327,26 +336,23 @@ function fit_svae(mf, data, shotnos, labels, tstarts, fstarts)
     batchsize = 128
     nbatches = 20000 # 200
     sigma = 0.1 # width of imq kernel
-    fx(m,x)=AlfvenDetectors.fit!(m, x, batchsize, nbatches, β, sigma, η=0.00001,cbtime=1);
+    fx(m,x)=AlfvenDetectors.fit!(m, x, batchsize, nbatches, β, sigma, η=0.0001,cbtime=1);
     sigma = 0.01
     batchsize = 128 # this batchsize must be smaller than the size of the labeled training data
-    nbatches = 1000 # 50
+    nbatches = 100 # 50
     fxy(m,x,y)=AlfvenDetectors.fit!(m,x,y, batchsize, nbatches, β, sigma, γ, η=0.0001, cbtime=1);
     # finally construct the anomaly score function
     asfs = [AlfvenDetectors.as_logpxgivenz]
     asf_args = [[]]
 
     # this contains the fitted aucs and some other data
-    df_exp = AlfvenDetectors.fit_fs_model(s1_model, s2_model, fx, fxy, asfs, asf_args, data, shotnos, 
-        labels, tstarts, fstarts)
+    df_exp = fit_fs_model(s1_model, s2_model, fx, fxy, asfs, asf_args, data, shotnos, 
+        labels, tstarts, fstarts, datapath, unlabeled_nshots, exp_args)
 
-    df_exp = AlfvenDetectors.add_info(df_exp, exp_args, history, s2_model_name, s2_args, s2_kwargs, 
-        mf)
+    df_exp = add_info(df_exp, exp_args, history, s2_model_name, s2_args, s2_kwargs, mf)
 
     return df_exp
 end
-
-
 
 function create_csv_filename(mf, s2_model_name)
     model, exp_args, model_args, model_kwargs, history = load_model(mf)
@@ -358,12 +364,13 @@ function create_csv_filename(mf, s2_model_name)
 end
 
 
-function eval_save(mf, ff, s2_model_name, data, shotnos, labels, tstarts, fstarts, savepath)
+function eval_save(mf, ff, s2_model_name, data, shotnos, labels, tstarts, fstarts, savepath, 
+    datapath, unlabeled_nshots)
     println("processing model $mf")
     # create the filename
     csv_name = create_csv_filename(mf, s2_model_name)
     if !isfile(joinpath(savepath,csv_name))
-        df_exp = ff(mf, data, shotnos, labels, tstarts, fstarts)
+        df_exp = ff(mf, data, shotnos, labels, tstarts, fstarts, datapath, unlabeled_nshots)
         CSV.write(joinpath(savepath,csv_name), df_exp)
     else
         println("$(csv_name) already present, skipping")

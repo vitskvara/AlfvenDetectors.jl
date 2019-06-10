@@ -6,8 +6,70 @@ using Flux
 using GenerativeModels
 using GaussianMixtures
 using EvalCurves
+using ValueHistories
+
+hostname = gethostname()
+if hostname == "vit-ThinkPad-E470"
+    datapath = "/home/vit/vyzkum/alfven/cdb_data/uprobe_data"
+elseif hostname == "tarbik.utia.cas.cz"
+    datapath = "/home/skvara/work/alfven/cdb_data/uprobe_data"
+elseif occursin("soroban", hostname)
+    datapath = "/compass/home/skvara/no-backup/uprobe_data"
+else
+    datapath = ""
+end
 
 @testset "evaluation" begin
+    if datapath != ""
+        patchsize = 128
+        # data loading
+        # get labeled data
+        patch_data, shotnos, labels, tstarts, fstarts = AlfvenDetectors.get_labeled_validation_data(patchsize)
+        @test length(shotnos) == length(labels) == size(patch_data,4) == length(tstarts) == length(fstarts) > 1
+        # split patches    
+        train_info, train_inds, test_info, test_inds = 
+            AlfvenDetectors.split_unique_patches(0.5, 
+                shotnos, labels, tstarts, fstarts);
+        train_labeled = (patch_data[:,:,:,train_inds], train_info[2]);
+        test = (patch_data[:,:,:,test_inds], test_info[2]);
+        # get unlabeled data
+        unlabeled_nshots = 30
+        measurement_type = "uprobe"
+        use_alfven_shots = true
+        warns = true
+        iptrunc = "valid"
+        memorysafe = true
+        train_unlabeled, shotnos_unlabeled = AlfvenDetectors.get_unlabeled_validation_data(datapath, 
+            unlabeled_nshots, (train_info[1], test_info[1]), patchsize, 
+            measurement_type, use_alfven_shots, warns, iptrunc, memorysafe)
+        # test for exclusivity of testing labels
+        @test !any(map(x->any(occursin.(string(x), shotnos_unlabeled)), test_info[1]))
+        @test any(map(x->any(occursin.(string(x), shotnos_unlabeled)), train_info[1]))
+
+        # setup fs model
+        mf = "data/conv_ae_model_new.bson"
+        s1_model, exp_args, model_args, model_kwargs, history = AlfvenDetectors.load_model(mf)
+
+        # knn model
+        s2_model_name = "KNN"
+        s2_args = [:BruteTree]
+        s2_kwargs = Dict()
+        s2_model = eval(Meta.parse("AlfvenDetectors."*s2_model_name))(s2_args...; s2_kwargs...);
+        fx(m,x) = nothing # there is no point in fitting the unlabeled samples
+        fxy(m,x,y) = AlfvenDetectors.fit!(m,x,y);
+        asfs = [AlfvenDetectors.as_mean]
+        asf_args = map(x->[x],collect(1:2:31))
+
+        # create the model
+        fsmodel = AlfvenDetectors.FewShotModel(s1_model, s2_model, fx, fxy, nothing);
+        AlfvenDetectors.fit!(fsmodel, train_unlabeled, train_labeled[1], train_labeled[2];
+            encoding_batchsize=128);
+
+        df_exp = fit_fs_model(s1_model, s2_model, fx, fxy, asfs, asf_args, patch_data, shotnos, labels, 
+            tstarts, fstarts, datapath, unlabeled_nshots, exp_args)
+
+    end
+
 	# setup fake data
 	Random.seed!(12345)
 	data = randn(Float32,128,128,1,8);

@@ -132,6 +132,8 @@ using EvalCurves
 	model = AlfvenDetectors.FewShotModel(ae_model, clust_model, fx, fxy, asf)
 	Z = AlfvenDetectors.encode(model, X)
 	@test size(Z) == (ldim, N)
+	@test !(typeof(Z) <: TrackedArray)
+	@test !(typeof(AlfvenDetectors.encode(model, X,3)) <: TrackedArray)
 	@test !AlfvenDetectors.is_fitted(model.clust_model)
 	# next, fit the clustering model
 	#fit!(model,X) # this will only fit the gmm with all 

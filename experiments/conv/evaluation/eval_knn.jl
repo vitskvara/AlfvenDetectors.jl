@@ -1,50 +1,16 @@
-using Distributed
-@everywhere begin
-	using AlfvenDetectors
-	using GenerativeModels
-    using ValueHistories
-    using StatsBase
-end
-# savepath
-hostname = gethostname()
-if hostname == "vit-ThinkPad-E470"
-	datapath = "/home/vit/vyzkum/alfven/cdb_data/uprobe_data"
-	modelpath = "/home/vit/vyzkum/alfven/experiments/conv/uprobe/benchmarks"
-	savepath = "/home/vit/vyzkum/alfven/experiments/eval/conv/uprobe/benchmarks/individual_experiments"
-elseif hostname == "tarbik.utia.cas.cz"
-	datapath = "/home/skvara/work/alfven/cdb_data/uprobe_data"
-	modelpath = "/home/skvara/work/alfven/experiments/conv/uprobe/benchmarks"
-	savepath = "/home/skvara/work/alfven/experiments/eval/conv/uprobe/benchmarks/individual_experiments"
-elseif occursin("soroban", hostname)
-	datapath = "/compass/home/skvara/no-backup/uprobe_data"
-	modelpath = "/compass/home/skvara/alfven/experiments/conv/uprobe/benchmarks"
-	savepath = "/compass/home/skvara/alfven/experiments/eval/conv/uprobe/benchmarks/individual_experiments"
-end
-mkpath(savepath)
+include("eval_base.jl")
 
-# MAIN 
-
-# models and their adresses
-exdirs1 = joinpath.(modelpath,readdir(modelpath));
-exdirs2 = vcat(map(x->joinpath.(x,readdir(x)), exdirs1)...);
-filter!(x->length(readdir(x))!=0,exdirs2)
-models = vcat(map(x->joinpath.(x,readdir(x)[end]), exdirs2)...);
-Nmodels = length(models)
-println("Found a total of $(Nmodels) saved models.")
-
-# get labeled data
-patchsize = 128
-data, shotnos, labels, tstarts, fstarts = AlfvenDetectors.get_validation_data(patchsize);
-println("loaded validation data of size $(size(data)), with $(sum(labels)) positively labeled "*
- "samples and $(length(labels)-sum(labels)) negatively labeled samples")
+# set the same number of unlabeled shots used for training the second stage - same for all models
+unlabeled_nshots = 0
 
 # get the motherfrickin model file and do the magic
 # possibly paralelize this
+# go through the final models (highest number of epochs) first
 pmap(mf->AlfvenDetectors.eval_save(mf, AlfvenDetectors.fit_knn, "KNN", data, shotnos, labels, 
-	tstarts, fstarts, savepath), models)
+	tstarts, fstarts, savepath, datapath, unlabeled_nshots), models)
 
 if hostname != "vit-ThinkPad-E470"
-	# on laptotp, only go through the most trained models
+	# outside of laptop, go through the rest of the models as well
 	models = vcat(map(x->joinpath.(x,readdir(x)), exdirs2)...);
 	Nmodels = length(models)
 	println("Found a total of $(Nmodels) saved models.")
@@ -52,5 +18,5 @@ if hostname != "vit-ThinkPad-E470"
 	# get the motherfrickin model file and do the magic
 	# possibly paralelize this
 	pmap(mf->AlfvenDetectors.eval_save(mf, AlfvenDetectors.fit_knn, "KNN", data, shotnos, labels, 
-		tstarts, fstarts, savepath), models)
+		tstarts, fstarts, savepath, datapath, unlabeled_nshots), models)
 end
