@@ -144,7 +144,7 @@ function fitsave_unsupervised(data, model, batchsize, outer_nepochs, inner_nepoc
 
 	tall = @timed for epoch in 1:outer_nepochs
 		verb ? println("outer epoch counter: $epoch/$outer_nepochs") : nothing
-		restime = @timed GenerativeModels.fit!(model, data, batchsize, inner_nepochs; 
+		restime = @timed GenModels.fit!(model, data, batchsize, inner_nepochs; 
 			usegpu = usegpu, verb = verb, history = history, cbit=1, opt=opt, η = eta,
 			fit_kwargs...)
 		t += restime[2]
@@ -161,7 +161,7 @@ function fitsave_unsupervised(data, model, batchsize, outer_nepochs, inner_nepoc
 				filename = join(fs, "_")
 			end
 			cpumodel = model |> cpu
-			GenerativeModels.save_model(joinpath(savepath, filename), cpumodel, 
+			GenModels.save_model(joinpath(savepath, filename), cpumodel, 
 				modelname=modelname, history = history, time = t, tstart = string(tstart), 
 				model_args=model_args, model_kwargs=model_kwargs, 
 				experiment_args=experiment_args)
@@ -171,7 +171,7 @@ function fitsave_unsupervised(data, model, batchsize, outer_nepochs, inner_nepoc
 	end
 	# save the final version
 	cpumodel = model |> cpu
-	GenerativeModels.save_model(joinpath(savepath, filename), cpumodel, 
+	GenModels.save_model(joinpath(savepath, filename), cpumodel, 
 				modelname=modelname, history = history, time = t, tstart = string(tstart), 
 				model_args=model_args, model_kwargs=model_kwargs, 
 				experiment_args=experiment_args, timeall=tall[2])

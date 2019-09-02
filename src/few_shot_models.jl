@@ -12,7 +12,7 @@ mutable struct FewShotModel{AE, C, FX, FXY, AS}
 	asf::AS
 end
 
-import GenerativeModels: encode_untracked, fit!
+import GenModels: encode_untracked, fit!
 
 """
 	encode(FewShotModel,X,args...)

@@ -232,11 +232,11 @@ git-tree-sha1 = "9b892cfc95da04ca9eff2387bc66f6baddeed606"
 uuid = "cc18c42c-b769-54ff-9e2a-b28141a64aae"
 version = "0.3.0"
 
-[[GenerativeModels]]
+[[GenModels]]
 deps = ["Adapt", "BSON", "Flux", "ProgressMeter", "Random", "SparseArrays", "StatsBase", "ValueHistories"]
 git-tree-sha1 = "66a51cc89546bce3e34be0e7fd4e4e3d30df20a7"
 repo-rev = "master"
-repo-url = "https://github.com/vitskvara/GenerativeModels.jl.git"
+repo-url = "https://github.com/vitskvara/GenModels.jl.git"
 uuid = "316c64c6-6a49-11e9-07fe-e73d6c9df589"
 version = "0.1.0"
 

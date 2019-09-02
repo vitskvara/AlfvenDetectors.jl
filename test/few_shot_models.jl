@@ -3,7 +3,7 @@ using Test
 using Random
 using BSON
 using Flux
-using GenerativeModels
+using GenModels
 using GaussianMixtures
 using EvalCurves
 

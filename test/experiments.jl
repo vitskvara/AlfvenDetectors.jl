@@ -3,7 +3,7 @@ using Test
 using ValueHistories
 using Pkg
 using Flux
-using GenerativeModels
+using GenModels
 
 verb = true
 
@@ -171,7 +171,7 @@ if isdir(datapath)
 		fit_kwargs = Dict(
 			)
 
-		model = GenerativeModels.construct_model(modelname, model_args...; model_kwargs...)
+		model = GenModels.construct_model(modelname, model_args...; model_kwargs...)
 		model, history, t = AlfvenDetectors.fitsave_unsupervised(data, model, batchsize, 
 			outer_nepochs, inner_nepochs,
 			model_args, model_kwargs, fit_kwargs, 
@@ -202,7 +202,7 @@ if isdir(datapath)
 			:beta => 1.0,
 			:L => 1
 			)
-		model = GenerativeModels.construct_model(modelname, model_args...; model_kwargs...)
+		model = GenModels.construct_model(modelname, model_args...; model_kwargs...)
 		model, history, t = AlfvenDetectors.fitsave_unsupervised(data, model, batchsize, 
 			outer_nepochs, inner_nepochs,
 			model_args, model_kwargs, fit_kwargs, 
@@ -232,7 +232,7 @@ if isdir(datapath)
 			:beta => 1.0,
 			:L => 1
 			)
-		model = GenerativeModels.construct_model(modelname, model_args...; model_kwargs...)
+		model = GenModels.construct_model(modelname, model_args...; model_kwargs...)
 		model, history, t = AlfvenDetectors.fitsave_unsupervised(data, model, batchsize, 
 			outer_nepochs, inner_nepochs,
 			model_args, model_kwargs, fit_kwargs, 
@@ -267,7 +267,7 @@ if isdir(datapath)
 		fit_kwargs = Dict(
 			:L => 1
 			)
-		model = GenerativeModels.construct_model(modelname, model_args...; model_kwargs...)
+		model = GenModels.construct_model(modelname, model_args...; model_kwargs...)
 		model, history, t = AlfvenDetectors.fitsave_unsupervised(convdata, model, batchsize, 
 			outer_nepochs, inner_nepochs,
 			model_args, model_kwargs, fit_kwargs, 

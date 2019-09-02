@@ -3,7 +3,7 @@ using Test
 using Random
 using BSON
 using Flux
-using GenerativeModels
+using GenModels
 using GaussianMixtures
 using EvalCurves
 using ValueHistories
@@ -83,7 +83,7 @@ end
 	channels = (2,4,6)
 	scaling = [(2,2),(2,2),(1,1)]
 	batchnorm = true
-	s1_model = GenerativeModels.ConvAE(insize, latentdim, nconv, kernelsize, channels, scaling;
+	s1_model = GenModels.ConvAE(insize, latentdim, nconv, kernelsize, channels, scaling;
 		batchnorm = batchnorm)
 
 	# setup valdiation data

@@ -1,5 +1,5 @@
 using AlfvenDetectors
-using GenerativeModels
+using GenModels
 using BSON
 using ValueHistories
 using PyPlot
@@ -50,7 +50,7 @@ model, exp_args, model_args, model_kwargs, history = AlfvenDetectors.load_model(
 
 # get the latent representation
 batchsize = 64
-Z = GenerativeModels.encode(model, data, batchsize).data
+Z = GenModels.encode(model, data, batchsize).data
 umap_model = AlfvenDetectors.UMAP(2, n_neighbors=5, min_dist=0.4)
 Zt = AlfvenDetectors.fit!(umap_model, Z);
 
