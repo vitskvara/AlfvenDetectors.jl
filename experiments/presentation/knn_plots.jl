@@ -10,14 +10,23 @@ using EvalCurves
 using PyPlot
 using DataFrames
 using CSV
+using PyCall
 
 # plot params
-outpath = "/home/vit/Dropbox/vyzkum/alfven/iaea2019/presentation/images"
+#outpath = "/home/vit/Dropbox/vyzkum/alfven/iaea2019/presentation/images"
+outpath = "./images"
+mkpath(outpath)
+
 cmap = "plasma" # colormap
 matplotlib.rc("font", family = "normal",
     weight = "bold",
     size = 16
 )
+# setup the plots
+PyCall.PyDict(matplotlib["rcParams"])["font.size"] = 16
+PyCall.PyDict(matplotlib["rcParams"])["text.usetex"] = true
+PyCall.PyDict(matplotlib["rcParams"])["font.family"] = "serif"
+
 
 function plot_lines(df, label, color)
 	for seed in unique(df[:seed])
@@ -133,8 +142,8 @@ savefig(joinpath(outpath, fname))
 
 # now plot means and sds
 figure()
-plot_mean_sd(auc_patches, "full patches", "r",1)
-plot_mean_sd(auc_latent, "latent", "b",1)
+plot_mean_sd(auc_patches, "patch space", "r",1)
+plot_mean_sd(auc_latent, "latent space", "b",1)
 ylim([0.5, 1.0])
 xlabel("k")
 ylabel("AUC")
@@ -161,12 +170,14 @@ savefig(joinpath(outpath, fname))
 
 # now plot means and sds
 figure()
-plot_mean_sd(auc_patches_unique, "original space (\$d=\$$(128^2))", "r",1)
-plot_mean_sd(auc_latent_unique, "latent space (\$d=8\$)", "b",1)
+plot_mean_sd(auc_patches_unique, "patch space", "r",1)
+plot_mean_sd(auc_latent_unique, "latent space", "b",1)
+#plot_mean_sd(auc_patches_unique, "original space (\$d=\$$(128^2))", "r",1)
+#plot_mean_sd(auc_latent_unique, "latent space (\$d=8\$)", "b",1)
 ylim([0.5, 1.0])
 xlabel("k")
 ylabel("AUC")
-title("kNN fit, 10 crossvalidation splits")
+#title("kNN fit, 10 crossvalidation splits")
 legend(frameon=false,loc=4)
 tight_layout()
 fname = "knn_patches_vs_latent_means_unique.pdf"

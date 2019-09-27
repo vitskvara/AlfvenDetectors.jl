@@ -333,13 +333,13 @@ function fit_svae(mf, data, shotnos, labels, tstarts, fstarts, datapath, unlabel
     s2_model = eval(Meta.parse("AlfvenDetectors."*s2_model_name))(s2_args...; s2_kwargs...);
     β = 0.1 # ratio between reconstruction error and the distance between p(z) and q(z)
     γ = 0.1 # importance ratio between anomalies and normal data in mem_loss
-    batchsize = 128
+    batchsize = 256
     nbatches = 20000 # 200
     sigma = 0.1 # width of imq kernel
-    fx(m,x)=AlfvenDetectors.fit!(m, x, batchsize, nbatches, β, sigma, η=0.0001,cbtime=1);
+    fx(m,x)=AlfvenDetectors.fit!(m, x, batchsize, nbatches, β, sigma, η=0.00001,cbtime=1);
     sigma = 0.01
     batchsize = 128 # this batchsize must be smaller than the size of the labeled training data
-    nbatches = 100 # 50
+    nbatches = 200 # 50
     fxy(m,x,y)=AlfvenDetectors.fit!(m,x,y, batchsize, nbatches, β, sigma, γ, η=0.0001, cbtime=1);
     # finally construct the anomaly score function
     asfs = [AlfvenDetectors.as_logpxgivenz]

@@ -1,5 +1,6 @@
 using PyPlot
 using AlfvenDetectors
+using PyCall
 
 # setup
 outpath = "/home/vit/Dropbox/vyzkum/alfven/iaea2019/presentation/images"
@@ -19,6 +20,8 @@ matplotlib.rc("font", family = "normal",
     weight = "bold",
     size = 16
 )
+PyCall.PyDict(matplotlib["rcParams"])["text.usetex"] = true
+PyCall.PyDict(matplotlib["rcParams"])["font.family"] = "serif"
 
 # plot the whole shot
 fname = "whole_psd_$(shotno).png"
