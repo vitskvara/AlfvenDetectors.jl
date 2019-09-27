@@ -2,7 +2,7 @@ using AlfvenDetectors
 using Flux
 using ValueHistories
 using StatsBase
-using GenerativeModels
+using GenModels
 using Dates
 using BSON
 using Random
@@ -59,7 +59,7 @@ history = model_data[:history]
 if haskey(model_data, :model)
 	model = model_data[:model]
 else
-	model = Flux.testmode!(GenerativeModels.construct_model(mf))
+	model = Flux.testmode!(GenModels.construct_model(mf))
 end
 
 if plotstuff
@@ -72,7 +72,7 @@ if plotstuff
 
 	# look at the Z space
 	batchsize = 128
-	Zqz = GenerativeModels.encode(model, data, batchsize).data;
+	Zqz = GenModels.encode(model, data, batchsize).data;
 	ldim = size(Zqz,1)
 	if :pz in fieldnames(typeof(model))
 		Zpz = model.pz(1000);

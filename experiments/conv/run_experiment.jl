@@ -5,7 +5,7 @@ using ArgParse
 using DelimitedFiles
 using Random
 using StatsBase
-using GenerativeModels
+using GenModels
 using Pkg
 
 # use argparse to extract the command line arguments
@@ -199,7 +199,7 @@ hdim = parsed_args["hdim"]
 hdim = (hdim==nothing ? nothing : Meta.parse(hdim))
 disc_nlayers = parsed_args["disc-nlayers"]
 disc_nlayers = (disc_nlayers==nothing ? nlayers : Meta.parse(disc_nlayers))
-kernel = eval(Meta.parse("GenerativeModels."*parsed_args["kernel"]))
+kernel = eval(Meta.parse("GenModels."*parsed_args["kernel"]))
 sigma = parsed_args["sigma"]
 pz_components = parsed_args["pz-components"]
 lambda = parsed_args["lambda"]
@@ -265,7 +265,7 @@ xdim = size(data)
 
 # pz
 if pz_components == 1
-	pz = (usegpu ? GenerativeModels.randn_gpu : randn)
+	pz = (usegpu ? GenModels.randn_gpu : randn)
 else
 	pz = eval(Meta.parse(pz_type))(ldim, pz_components; seed=seed, gpu=usegpu)
 end
@@ -329,8 +329,8 @@ filename_kwargs = Dict(
 filename = AlfvenDetectors.create_filename(modelname, [], Dict(), Dict(), 
 	filename_kwargs...)
 # create the model
-model = GenerativeModels.construct_model(modelname, [x[2] for x in model_args]...; model_kwargs...)
+model = GenModels.construct_model(modelname, [x[2] for x in model_args]...; model_kwargs...)
 model, history, t = AlfvenDetectors.fitsave_unsupervised(data, model, batchsize, 
 	outer_nepochs, inner_nepochs, model_args, model_kwargs, fit_kwargs, savepath; 
-	modelname = "GenerativeModels."*modelname, optname=optimiser, eta=eta, 
+	modelname = "GenModels."*modelname, optname=optimiser, eta=eta, 
 	usegpu=usegpu, savepoint=savepoint, filename=filename, experiment_args=parsed_args)

@@ -9,7 +9,7 @@ using Dates # for experiments
 using BSON
 using DelimitedFiles
 using Random
-using GenerativeModels
+using GenModels
 using Combinatorics
 using GaussianMixtures
 using Distances

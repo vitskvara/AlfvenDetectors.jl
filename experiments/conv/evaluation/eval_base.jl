@@ -1,7 +1,7 @@
 using Distributed
 @everywhere begin
 	using AlfvenDetectors
-	using GenerativeModels
+	using GenModels
     using ValueHistories
     using StatsBase
 end

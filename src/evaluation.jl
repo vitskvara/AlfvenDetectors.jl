@@ -114,7 +114,7 @@ function load_model(mf)
     if haskey(model_data, :model)
         model = model_data[:model]
     else
-        model = Flux.testmode!(GenerativeModels.construct_model(mf))
+        model = Flux.testmode!(GenModels.construct_model(mf))
     end
     return model, exp_args, model_args, model_kwargs, history
 end

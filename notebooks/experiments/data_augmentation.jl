@@ -4,7 +4,7 @@ using BSON
 using Flux
 using ValueHistories
 using StatsBase
-using GenerativeModels
+using GenModels
 
 datapath = "/home/vit/vyzkum/alfven/cdb_data/uprobe_data"
 shots = joinpath.(datapath, readdir(datapath))
@@ -79,11 +79,11 @@ noalfven_loss = []
 batchsize = 64
 for (model, params) in zip(model_list, model_params_list)
     if occursin("VAE", params[:model])
-        push!(alfven_loss, GenerativeModels.loss(model, alfvendata[:,:,:,1:batchsize], 1, 1.0).data)
-        push!(noalfven_loss, GenerativeModels.loss(model, noalfvendata[:,:,:,1:batchsize], 1, 1.0).data)
+        push!(alfven_loss, GenModels.loss(model, alfvendata[:,:,:,1:batchsize], 1, 1.0).data)
+        push!(noalfven_loss, GenModels.loss(model, noalfvendata[:,:,:,1:batchsize], 1, 1.0).data)
     else
-        push!(alfven_loss, GenerativeModels.loss(model, alfvendata[:,:,:,1:batchsize]).data)
-        push!(noalfven_loss, GenerativeModels.loss(model, noalfvendata[:,:,:,1:batchsize]).data)
+        push!(alfven_loss, GenModels.loss(model, alfvendata[:,:,:,1:batchsize]).data)
+        push!(noalfven_loss, GenModels.loss(model, noalfvendata[:,:,:,1:batchsize]).data)
     end
 end
 
@@ -127,8 +127,8 @@ for filename in filenames
     push!(submodels, model)
     is,ls = get(model_data[:history], :loss)
     push!(subflosses, ls[end])
-    push!(subalosses, GenerativeModels.loss(model, alfvendata[:,:,:,1:batchsize]).data)
-    push!(subnalosses, GenerativeModels.loss(model, noalfvendata[:,:,:,1:batchsize]).data)
+    push!(subalosses, GenModels.loss(model, alfvendata[:,:,:,1:batchsize]).data)
+    push!(subnalosses, GenModels.loss(model, noalfvendata[:,:,:,1:batchsize]).data)
 end
 
 isample = 15

@@ -1,7 +1,7 @@
 using AlfvenDetectors
 using BSON
 using PyPlot
-using GenerativeModels
+using GenModels
 using ValueHistories
 using Flux
 using Random

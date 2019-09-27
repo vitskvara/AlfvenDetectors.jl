@@ -2,7 +2,7 @@ using AlfvenDetectors
 using Flux
 using ValueHistories
 using StatsBase
-using GenerativeModels
+using GenModels
 using Dates
 using BSON
 using Random
@@ -54,7 +54,7 @@ history = model_data[:history]
 if haskey(model_data, :model)
 	model = model_data[:model]
 else
-	model = Flux.testmode!(GenerativeModels.construct_model(mf))
+	model = Flux.testmode!(GenModels.construct_model(mf))
 end
 
 function compute_auc(splitf)

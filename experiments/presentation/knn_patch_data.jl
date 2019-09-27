@@ -2,7 +2,7 @@ using AlfvenDetectors
 using Flux
 using ValueHistories
 using StatsBase
-using GenerativeModels
+using GenModels
 using Dates
 using BSON
 using Random
