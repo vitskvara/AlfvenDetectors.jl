@@ -201,14 +201,6 @@ repo-url = "https://github.com/vitskvara/EvalCurves.jl.git"
 uuid = "f38dcc0d-dce9-59d8-8cbc-ed225c093724"
 version = "0.0.0"
 
-[[FewShotAnomalyDetection]]
-deps = ["Adapt", "DiffRules", "Distributions", "EvalCurves", "Flux", "LinearAlgebra", "NNlib", "Pkg", "Random", "SpecialFunctions", "Statistics"]
-git-tree-sha1 = "1e7c729ed81d2385dfb0e6daef332d4be7bf0e58"
-repo-rev = "master"
-repo-url = "https://github.com/vitskvara/FewShotAnomalyDetection.jl.git"
-uuid = "b4ceb2a0-2ec9-11e9-33d8-bb6e5932b8f0"
-version = "0.1.0"
-
 [[FileIO]]
 deps = ["Pkg"]
 git-tree-sha1 = "351f001a78aa1b7ad2696e386e110b5abd071c71"

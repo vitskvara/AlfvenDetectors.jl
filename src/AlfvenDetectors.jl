@@ -16,7 +16,7 @@ using Distances
 using NearestNeighbors
 using EvalCurves
 using MLDataPattern
-using FewShotAnomalyDetection
+#using FewShotAnomalyDetection
 using CSV
 using DataFrames
 using ProgressMeter

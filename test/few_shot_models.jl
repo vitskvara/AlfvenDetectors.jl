@@ -157,38 +157,38 @@ using EvalCurves
 	@test EvalCurves.auc(EvalCurves.roccurve(as, Ytst)...) == 1
 
 	# and finally with the SVAE model
-	inputdim = 2
-	hiddenDim = 32
-	latentDim = 2
-	numLayers = 3
-	# params for memory
-	memorySize = 128
-	α = 0.1 # threshold in the memory that does not matter to us at the moment!
-	k = 128
-	labelCount = 1
-	clust_model = AlfvenDetectors.SVAEMem(inputdim, hiddenDim, latentDim, numLayers, 
-		memorySize, k, labelCount, α)
-	# construct the fit functions
-	β = 0.1 # ratio between reconstruction error and the distance between p(z) and q(z)
-	γ = 0.1 # importance ratio between anomalies and normal data in mem_loss
-	batchsize = 64
-	nbatches = 200
-	σ = 0.1 # width of imq kernel
-	fx(m,x)=AlfvenDetectors.fit!(m, x, batchsize, nbatches, β, σ, η=0.0001,cbtime=1);
-	σ = 0.01
-	batchsize = 10 # this batchsize must be smaller than the size of the labeled training data
-	nbatches = 50
-	fxy(m,x,y)=AlfvenDetectors.fit!(m,x,y, batchsize, nbatches, β, σ, γ, η=0.0001, cbtime=1);
-	# finally construct the anomaly score function
-	asf(m,x) = AlfvenDetectors.as_logpxgivenz(m,x)
-	# create the whole few shot model
-	model = AlfvenDetectors.FewShotModel(ae_model, clust_model, fx, fxy, asf);
-	#@test !AlfvenDetectors.is_fitted(model.clust_model)
-	AlfvenDetectors.fit!(model, X, Xtrl, Ytr);
-	#@test AlfvenDetectors.is_fitted(model.clust_model)
-	as = AlfvenDetectors.anomaly_score(model, Xtstl)
-	auc = EvalCurves.auc(EvalCurves.roccurve(as, Ytst)...)
-	@test auc  >= 0
-	println(auc)
+	#inputdim = 2
+	#hiddenDim = 32
+	#latentDim = 2
+	#numLayers = 3
+	## params for memory
+	#memorySize = 128
+	#α = 0.1 # threshold in the memory that does not matter to us at the moment!
+	#k = 128
+	#labelCount = 1
+	#clust_model = AlfvenDetectors.SVAEMem(inputdim, hiddenDim, latentDim, numLayers, 
+	#	memorySize, k, labelCount, α)
+	## construct the fit functions
+	#β = 0.1 # ratio between reconstruction error and the distance between p(z) and q(z)
+	#γ = 0.1 # importance ratio between anomalies and normal data in mem_loss
+	#batchsize = 64
+	#nbatches = 200
+	#σ = 0.1 # width of imq kernel
+	#fx(m,x)=AlfvenDetectors.fit!(m, x, batchsize, nbatches, β, σ, η=0.0001,cbtime=1);
+	#σ = 0.01
+	#batchsize = 10 # this batchsize must be smaller than the size of the labeled training data
+	#nbatches = 50
+	#fxy(m,x,y)=AlfvenDetectors.fit!(m,x,y, batchsize, nbatches, β, σ, γ, η=0.0001, cbtime=1);
+	## finally construct the anomaly score function
+	#asf(m,x) = AlfvenDetectors.as_logpxgivenz(m,x)
+	## create the whole few shot model
+	#model = AlfvenDetectors.FewShotModel(ae_model, clust_model, fx, fxy, asf);
+	##@test !AlfvenDetectors.is_fitted(model.clust_model)
+	#AlfvenDetectors.fit!(model, X, Xtrl, Ytr);
+	##@test AlfvenDetectors.is_fitted(model.clust_model)
+	#as = AlfvenDetectors.anomaly_score(model, Xtstl)
+	#auc = EvalCurves.auc(EvalCurves.roccurve(as, Ytst)...)
+	#@test auc  >= 0
+	#println(auc)
 end
 Random.seed!()
