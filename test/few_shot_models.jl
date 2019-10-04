@@ -59,34 +59,34 @@ using EvalCurves
 
 	# SVAEMem
 	# params for svae
-	inputdim = xdim
-	hiddenDim = 32
-	latentDim = 2
-	numLayers = 3
-	nonlinearity = "relu"
-	layerType = "Dense"
+	#inputdim = xdim
+	#hiddenDim = 32
+	#latentDim = 2
+	#numLayers = 3
+	#nonlinearity = "relu"
+	#layerType = "Dense"
 	# params for memory
-	memorySize = 20
-	α = 0.1 # threshold in the memory that does not matter to us at the moment!
-	k = 20
-	labelCount = 1
-	clust_alg = AlfvenDetectors.SVAEMem(inputdim, hiddenDim, latentDim, numLayers, 
-		memorySize, k, labelCount, α; nonlinearity=nonlinearity, layerType=layerType)
-	β = 0.1 # ratio between reconstruction error and the distance between p(z) and q(z)
-	γ = 0.1 # importance ratio between anomalies and normal data in mem_loss
-	batchsize = 64
-	nbatches = 500
-	σ = 0.1 # width of imq kernel
-	AlfvenDetectors.fit!(clust_alg, X, batchsize, nbatches, β, σ, η=0.001,cbtime=1);
-	σ = 0.01
-	batchsize = 64
-	nbatches = 50
-	AlfvenDetectors.fit!(clust_alg, X[:,1:200], Y[1:200], batchsize, nbatches, β, σ, γ, η=0.001, cbtime=1);
-	as = AlfvenDetectors.as_logpxgivenz(clust_alg, Xtst)
+	#memorySize = 20
+	#α = 0.1 # threshold in the memory that does not matter to us at the moment!
+	#k = 20
+	#labelCount = 1
+	#clust_alg = AlfvenDetectors.SVAEMem(inputdim, hiddenDim, latentDim, numLayers, 
+	#	memorySize, k, labelCount, α; nonlinearity=nonlinearity, layerType=layerType)
+	#β = 0.1 # ratio between reconstruction error and the distance between p(z) and q(z)
+	#γ = 0.1 # importance ratio between anomalies and normal data in mem_loss
+	#batchsize = 64
+	#nbatches = 500
+	#σ = 0.1 # width of imq kernel
+	#AlfvenDetectors.fit!(clust_alg, X, batchsize, nbatches, β, σ, η=0.001,cbtime=1);
+	#σ = 0.01
+	#batchsize = 64
+	#nbatches = 50
+	#AlfvenDetectors.fit!(clust_alg, X[:,1:200], Y[1:200], batchsize, nbatches, β, σ, γ, η=0.001, cbtime=1);
+	#as = AlfvenDetectors.as_logpxgivenz(clust_alg, Xtst)
 	# for some reason, fitting the model on this data does not really work
 	# maybe the input data should be 3D?
-	@test EvalCurves.auc(EvalCurves.roccurve(as, Y)...) >= 0
-	println(EvalCurves.auc(EvalCurves.roccurve(as, Y)...))
+	#@test EvalCurves.auc(EvalCurves.roccurve(as, Y)...) >= 0
+	#println(EvalCurves.auc(EvalCurves.roccurve(as, Y)...))
 
 
 	# tests of the few shot learning structure
