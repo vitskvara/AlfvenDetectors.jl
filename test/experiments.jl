@@ -14,8 +14,6 @@ elseif hostname == "tarbik.utia.cas.cz"
 	datapath = "/home/skvara/work/alfven/cdb_data/data_sample"
 elseif hostname == "soroban-node-03"
 	datapath = "/compass/Shared/Exchange/Havranek/Link to Alfven"
-elseif hostname == "gpu-node"
-	datapath = "/compass/Shared/Exchange/Havranek/Link to Alfven"
 else 
 	datapath = "xyz"
 end
@@ -28,9 +26,7 @@ end
 
 # only run the test if the needed data is present
 
-if !isdir(datapath)
-	@warn("data not found, not running experiment tests")
-else
+if isdir(datapath)
 	savepath = joinpath(dirname(@__FILE__), "tmp")
 	mkpath(savepath)
 

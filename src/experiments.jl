@@ -265,7 +265,7 @@ end
 Get a patch of given size starting at fstart and tstart coordinates.
 """
 function get_patch(datapath, shot, tstart, fstart, patchsize, readfun, coil=nothing; kwargs...)
-	file = joinpath(datapath, filter(x->occursin("$shot.h5", x), readdir(datapath))[1])
+	file = joinpath(datapath, filter(x->occursin(string(shot), x), readdir(datapath))[1])
 	if coil == nothing
 		data = get_signal(file, readfun; kwargs...)
 	else
