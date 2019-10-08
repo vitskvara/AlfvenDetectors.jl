@@ -245,18 +245,24 @@ function labeled_data()
 end
 
 """
-    labeled_patches()
+    labeled_patches([; only_negative, only_positive])
 
 Get the information on the few hand-labeled shots.
 """
-function labeled_patches()
+function labeled_patches(;only_positive = false, only_negative = false)
     f = joinpath(dirname(pathof(AlfvenDetectors)), "../experiments/conv/data/labeled_patches.csv")
     data,header = readdlm(f, ',', Float32, header=true)
     shots = Int.(data[:,1])
     labels = Int.(data[:,4])
 	tstarts = data[:,2]
     fstarts = data[:,3]
-    return shots, labels, tstarts, fstarts
+    if only_positive
+    	return shots[labels.==1], labels[labels.==1], tstarts[labels.==1], fstarts[labels.==1]
+    elseif only_negative
+    	return shots[labels.==0], labels[labels.==0], tstarts[labels.==0], fstarts[labels.==0]
+    else
+	    return shots, labels, tstarts, fstarts
+	end
 end
 
 """
@@ -271,7 +277,7 @@ function get_patch(datapath, shot, tstart, fstart, patchsize, readfun, coil=noth
 	else
 		data = get_signal(file, readfun, coil; kwargs...)
 	end
-	if readfun == AlfvenDetectors.readnormlogupsd
+	if readfun in [AlfvenDetectors.readnormlogupsd, AlfvenDetectors.readlogupsd, AlfvenDetectors.readupsd]
 		t = get_signal(file, AlfvenDetectors.readtupsd; kwargs...)
 		f = AlfvenDetectors.readfupsd(file)
 	else
@@ -307,7 +313,7 @@ add_noise(patch::AbstractArray, δ::Real) = patch + randn(Float, size(patch))*Fl
 """
 	split_patches(α, shotnos, labels, tstarts, fstarts[, seed])
 
-Splits the supplied information in a trainig/testing ratio given by α.
+Splits the supplied information in a training/testing ratio given by α.
 """
 function split_patches(α::Real, shotnos, labels, tstarts, fstarts; seed = nothing)
 	Npatches = length(shotnos)
@@ -537,4 +543,94 @@ function collect_training_data(datapath, collect_fun, nshots, readfun,
 	end
 
 	return data, training_shots
+end
+
+"""
+	function test_train_oneclass(datapath; α=0.8, seed = nothing)
+
+Split the labeled positive patches info into traning and testing parts.
+"""
+function test_train_oneclass(datapath; α=0.8, seed = nothing)
+	println("\nLoading information on the labeled patches...")
+	shotnos, patch_labels, tstarts, fstarts = labeled_patches(only_positive=true)
+
+	# iterate only over shot data that are actually available
+	available_shots = readdir(datapath)
+    available_inds = filter(i->any(occursin.(string(shotnos[i]), available_shots)),1:length(shotnos))
+    shotnos, patch_labels, tstarts, fstarts = map(x->x[available_inds], 
+    	(shotnos, patch_labels, tstarts, fstarts))
+	
+	# do the test/train split
+	train_info, train_inds, test_info, test_inds =  
+		split_patches(α, shotnos, patch_labels, tstarts, fstarts; 
+			seed = seed)
+	Ntrain = length(train_inds)
+	Ntest = length(test_inds)
+	println("Done, found $(Ntrain) training patches and $(Ntest) testing patches.\n")
+	return train_info, train_inds, test_info, test_inds
+end
+
+"""
+	collect_training_data_oneclass(datapath, Npatches, readfun, patchsize; 
+		α = 0.8, seed=nothing)
+
+Returns training data for the oneclass run script.
+"""
+function collect_training_data_oneclass(datapath, Npatches, readfun, patchsize; 
+		α = 0.8, seed=nothing)
+	# load labeled patches information and split them to train/test
+	train_info, train_inds, test_info, test_inds = test_train_oneclass(datapath, α = α, seed = seed)
+	Ntrain = length(train_inds)
+
+	# shift the starts
+	(seed == nothing) ? nothing : Random.seed!(seed)
+	sample_inds = sample(1:Ntrain, Npatches)
+	starts = map(i -> shift_patch(train_info[3][i], train_info[4][i]; patchsize=patchsize), sample_inds) 
+	shotnos = train_info[1][sample_inds]
+	tstarts = [x[1] for x in starts]
+	fstarts = [x[2] for x in starts]
+	Random.seed!()
+
+	# now get the final data and add some noise to them
+	patches_out, shotnos_out, tstarts_out, fstarts_out = 
+	  AlfvenDetectors.collect_training_patches(datapath, shotnos, tstarts, fstarts,
+		Npatches, readfun, patchsize; δ = 0.02, seed=seed, memorysafe = true)
+
+	return patches_out, shotnos_out, tstarts_out, fstarts_out
+end
+
+"""
+	collect_testing_data_oneclass(datapath, readfun, patchsize; α = 0.8, seed=nothing)
+
+Returns teting data for the oneclass run script.
+"""
+function collect_training_data_oneclass(datapath, Npatches, readfun, patchsize; 
+		α = 0.8, seed=nothing)
+	# load labeled patches information and split them to train/test
+	train_info, train_inds, test_info, test_inds = test_train_oneclass(datapath, α = α, seed = seed)
+	Ntest = length(test_info)
+
+	# now get the final data and add some noise to them
+	patches_out, shotnos_out, tstarts_out, fstarts_out = 
+	  AlfvenDetectors.collect_training_patches(datapath, test_info[1], test_info[3], test_info[4],
+		Npatches, readfun, patchsize; δ = 0.02, seed=seed, memorysafe = true)
+
+	return patches_out, shotnos_out, tstarts_out, fstarts_out
+end
+
+"""
+	shift_patch(tstart::Real, fstart::Real; patchsize=128, seed=nothing)
+
+Randomly shift the position of a patch - modifies the f and t coordinates by up to a quarter 
+of the ranges given by patchsize.
+"""
+function shift_patch(tstart::Real, fstart::Real; patchsize=128, seed=nothing)
+	# default f nad t ranges for patchsize = 128
+	# trange = 0.00650239f0
+	# frange = 620117.25f0
+	(seed == nothing) ? nothing : Random.seed!(seed)
+	tstart = tstart + (rand(typeof(tstart)) - 0.5) * 0.00650239f0 * patchsize/128 * 1/4
+	fstart = fstart + (rand(typeof(fstart)) - 0.5) * 620117.25f0 * patchsize/128 * 1/4
+	Random.seed!()
+	return tstart, fstart
 end

@@ -58,9 +58,21 @@ if isdir(datapath)
 	# get the labeled data information
 	shotnos, labels = AlfvenDetectors.labeled_data()
 	@test length(shotnos) == length(labels) == 40
+	shotnos, labels, tstarts, fstarts = AlfvenDetectors.labeled_patches(only_positive=true)
+	@test length(shotnos) == length(labels) == length(tstarts) == length(fstarts) == sum(labels) > 0
+	shotnos, labels, tstarts, fstarts = AlfvenDetectors.labeled_patches(only_negative=true)
+	@test length(shotnos) == length(labels) == length(tstarts) == length(fstarts) > 0
+	@test sum(labels) == 0
 	shotnos, labels, tstarts, fstarts = AlfvenDetectors.labeled_patches()
-	@test length(shotnos) == length(labels) == length(tstarts) == length(fstarts) == 371
-	
+	@test length(shotnos) == length(labels) == length(tstarts) == length(fstarts) == 362
+	# this is to ensure that there are no duplicities in the data
+	data = [[shotnos[i], labels[i], tstarts[i], fstarts[i]] for i in 1:length(shotnos)]
+	@test length(unique(data)) == length(data)
+	data = cat(data..., dims=2)
+	samelengths = [sum(all(data .== data[:,i], dims = 1)) for i in 1:size(data,2)]
+	data_w_inds = vcat(data, collect(1:size(data,2))')
+	@test size(data_w_inds[:,samelengths .!= 1]',1) == 0
+
 	# split patches
 	train_info, train_inds, test_info, test_inds = AlfvenDetectors.split_patches(0.0, shotnos, 
 			labels, tstarts, fstarts; seed=1);
@@ -79,7 +91,7 @@ if isdir(datapath)
 	@test tstarts[test_inds] == test_info[3]
 	@test fstarts[test_inds] == test_info[4]
 
-	# split patches unique
+	# split patches unique - according to the shot number
 	train_info, train_inds, test_info, test_inds = AlfvenDetectors.split_unique_patches(0.0, shotnos, 
 			labels, tstarts, fstarts; seed=1);
 	@test train_info[1] == train_inds == nothing
@@ -147,6 +159,35 @@ if isdir(datapath)
  	@test size(data,1) == size(data,2) == patchsize
  	@test !any(map(x->any(occursin.(string(x), train_shots)), test_info[1]))
  	@test any(map(x->any(occursin.(string(x), train_shots)), train_info[1]))
+
+ 	# test the shift function
+ 	shotno = 10004
+ 	fname = joinpath(datapath, filter(x-> occursin(string(shotno), x), readdir(datapath))[1])
+ 	patch_info = AlfvenDetectors.labeled_patches()
+	patch_info = map(x->x[patch_info[1].==shotno],patch_info)
+	patchsize = 128
+	tpatch, fpatch = patch_info[3][1], patch_info[4][1]
+	patch, t, f = AlfvenDetectors.get_patch(datapath, shotno, tpatch,
+		fpatch, patchsize, AlfvenDetectors.readnormlogupsd)
+	trange = t[end]-t[1] # trange = 0.00650239f0
+	frange = f[end]-f[1] # frange = 620117.25f0
+	tshifted, fshifted = AlfvenDetectors.shift_patch(tpatch, fpatch)
+	@test tshifted != tpatch
+	@test abs(tshifted - tpatch) <= trange/4
+	@test fshifted != fpatch
+	@test abs(fshifted - fpatch) <= frange/4	
+	
+	# test the data collection functions for one class experiments
+	train_info, train_inds, test_info, test_inds = AlfvenDetectors.test_train_oneclass(datapath; α=0.8, seed = 1)
+	tri = [(train_info[1][i], train_info[2][i], train_info[3][i], train_info[4][i]) for i in 1:length(train_info[1])]
+	tsti = [(test_info[1][i], test_info[2][i], test_info[3][i], test_info[4][i]) for i in 1:length(test_info[1])]
+	@test length(intersect(tri, tsti)) == 0
+
+	Npatches = 50
+	training_patches, training_shotnos, training_tstarts, training_fstarts = 
+		AlfvenDetectors.collect_training_data_oneclass(datapath, Npatches, AlfvenDetectors.readnormlogupsd,
+		patchsize; α = 0.8, seed=1)
+	@test size(training_patches, 4) == Npatches == length(training_shotnos) == length(training_tstarts) == length(training_fstarts)
 
 	# msc amplitude + AE
 	rawdata = hcat(AlfvenDetectors.collect_signals(shots, AlfvenDetectors.readmscampphase, coils; type="flattop")...)
