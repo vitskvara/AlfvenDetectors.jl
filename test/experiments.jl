@@ -10,9 +10,10 @@ verb = true
 hostname = gethostname()
 if hostname == "vit-ThinkPad-E470"
 	datapath = "/home/vit/vyzkum/alfven/cdb_data/data_sample"
+	#datapath = "/home/vit/vyzkum/alfven/cdb_data/uprobe_data"
 elseif hostname == "tarbik.utia.cas.cz"
 	datapath = "/home/skvara/work/alfven/cdb_data/data_sample"
-elseif hostname == "soroban-node-03"
+elseif hostname in ["soroban-node-02", "soroban-node-03", "gpu-node"]
 	datapath = "/compass/Shared/Exchange/Havranek/Link to Alfven"
 else 
 	datapath = "xyz"
@@ -184,11 +185,21 @@ if isdir(datapath)
 	@test length(intersect(tri, tsti)) == 0
 
 	Npatches = 50
-	training_patches, training_shotnos, training_tstarts, training_fstarts = 
+	training_patches, training_shotnos, training_labels, training_tstarts, training_fstarts = 
 		AlfvenDetectors.collect_training_data_oneclass(datapath, Npatches, AlfvenDetectors.readnormlogupsd,
 		patchsize; α = 0.8, seed=1)
-	@test size(training_patches, 4) == Npatches == length(training_shotnos) == length(training_tstarts) == length(training_fstarts)
+	@test size(training_patches, 4) == Npatches == length(training_shotnos) == length(training_labels) == length(training_tstarts) == length(training_fstarts)
+	@test sum(training_labels) == Npatches
 
+	testing_patches, testing_shotnos, testing_labels, testing_tstarts, testing_fstarts = 
+		AlfvenDetectors.collect_testing_data_oneclass(datapath, AlfvenDetectors.readnormlogupsd,
+		patchsize; α = 0.8, seed=1)
+	@test 0 < size(testing_patches, 4) == length(testing_shotnos) == length(testing_labels) == length(testing_tstarts) == length(testing_fstarts)
+	@test 0 < sum(testing_labels) < length(testing_labels)
+	println("$(sum(testing_labels))")
+	println("$(length(testing_labels))")
+	
+	
 	# msc amplitude + AE
 	rawdata = hcat(AlfvenDetectors.collect_signals(shots, AlfvenDetectors.readmscampphase, coils; type="flattop")...)
 	if usegpu

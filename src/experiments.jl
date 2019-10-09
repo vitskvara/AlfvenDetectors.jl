@@ -546,6 +546,16 @@ function collect_training_data(datapath, collect_fun, nshots, readfun,
 end
 
 """
+	filter_available_shots(datapath, shotnos)
+
+Filter only the shots available on the current machine.
+"""
+function filter_available_shots(datapath, shotnos)
+	available_shots = readdir(datapath)
+    available_inds = filter(i->any(occursin.(string(shotnos[i]), available_shots)),1:length(shotnos))
+end
+
+"""
 	function test_train_oneclass(datapath; α=0.8, seed = nothing)
 
 Split the labeled positive patches info into traning and testing parts.
@@ -555,8 +565,7 @@ function test_train_oneclass(datapath; α=0.8, seed = nothing)
 	shotnos, patch_labels, tstarts, fstarts = labeled_patches(only_positive=true)
 
 	# iterate only over shot data that are actually available
-	available_shots = readdir(datapath)
-    available_inds = filter(i->any(occursin.(string(shotnos[i]), available_shots)),1:length(shotnos))
+    available_inds = filter_available_shots(datapath, shotnos)
     shotnos, patch_labels, tstarts, fstarts = map(x->x[available_inds], 
     	(shotnos, patch_labels, tstarts, fstarts))
 	
@@ -596,7 +605,7 @@ function collect_training_data_oneclass(datapath, Npatches, readfun, patchsize;
 	  AlfvenDetectors.collect_training_patches(datapath, shotnos, tstarts, fstarts,
 		Npatches, readfun, patchsize; δ = 0.02, seed=seed, memorysafe = true)
 
-	return patches_out, shotnos_out, tstarts_out, fstarts_out
+	return patches_out, shotnos_out, ones(Npatches), tstarts_out, fstarts_out
 end
 
 """
@@ -604,18 +613,30 @@ end
 
 Returns teting data for the oneclass run script.
 """
-function collect_training_data_oneclass(datapath, Npatches, readfun, patchsize; 
+function collect_testing_data_oneclass(datapath, readfun, patchsize; 
 		α = 0.8, seed=nothing)
 	# load labeled patches information and split them to train/test
 	train_info, train_inds, test_info, test_inds = test_train_oneclass(datapath, α = α, seed = seed)
-	Ntest = length(test_info)
+	Ntest = length(test_inds)
 
-	# now get the final data and add some noise to them
-	patches_out, shotnos_out, tstarts_out, fstarts_out = 
-	  AlfvenDetectors.collect_training_patches(datapath, test_info[1], test_info[3], test_info[4],
-		Npatches, readfun, patchsize; δ = 0.02, seed=seed, memorysafe = true)
+	# now load info on the negative patches
+	shotnos_0, labels_0, tstarts_0, fstarts_0 = labeled_patches(only_negative=true)
+	shotnos_out = vcat(test_info[1], shotnos_0)
+	labels_out = vcat(test_info[2], labels_0)
+	tstarts_out = vcat(test_info[3], tstarts_0)
+	fstarts_out = vcat(test_info[4], fstarts_0)
 
-	return patches_out, shotnos_out, tstarts_out, fstarts_out
+	# filter available shots
+    available_inds = filter_available_shots(datapath, shotnos_out)
+    shotnos_out, labels_out, tstarts_out, fstarts_out = map(x->x[available_inds], 
+    	(shotnos_out, labels_out, tstarts_out, fstarts_out))
+
+	# get the final data
+	patches_out = map(x->get_patch(datapath, x[1], x[2], x[3], patchsize, readfun; 
+		memorysafe=true)[1], zip(shotnos_out, tstarts_out, fstarts_out))
+	patches_out = cat(patches_out..., dims=4)
+	
+	return patches_out, shotnos_out, labels_out, tstarts_out, fstarts_out
 end
 
 """
