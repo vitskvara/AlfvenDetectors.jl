@@ -226,7 +226,7 @@ if hostname == "vit-ThinkPad-E470"
 elseif hostname == "tarbik.utia.cas.cz"
 	datapath = "/home/skvara/work/alfven/cdb_data/uprobe_data"
 	savepath = "/home/skvara/work/alfven/experiments/conv/$measurement_type"
-elseif occursin("soroban", hostname)
+elseif occursin("soroban", hostname) || hostname == "gpu-node"
 #	datapath = "/compass/Shared/Exchange/Havranek/Link to Alfven"
 	datapath = "/compass/home/skvara/no-backup/uprobe_data"
 	savepath = "/compass/home/skvara/alfven/experiments/conv/$measurement_type"
@@ -254,10 +254,12 @@ collect_fun(x) = (measurement_type == "uprobe") ?
 data, training_shotnos = AlfvenDetectors.collect_training_data(datapath, collect_fun, nshots,
 	readfun, positive_patch_ratio, patchsize; seed=seed, use_alfven_shots=!noalfven)
 # if test token is given, only run with a limited number of patches
+println("Total size of data: $(size(data))")
 if test
 	data = data[:,:,:,1:256]
 end
 xdim = size(data)
+
 
 # put all data into gpu only if you want to be fast and not care about memory clogging
 # otherwise that is done in the train function now per batch

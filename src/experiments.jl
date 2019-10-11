@@ -325,7 +325,7 @@ function split_patches(α::Real, shotnos, labels, tstarts, fstarts; seed = nothi
 	# now return the data using given α
 	Nused = floor(Int, Npatches*α)
 	# restart the seed
-	Random.seed!()
+	(seed == nothing) ? nothing : Random.seed!()
 	if 0 < Nused < Npatches 
 		return map(x->x[1:Nused], (shotnos, labels, tstarts, fstarts)), used_inds[1:Nused],
 			map(x->x[Nused+1:end], (shotnos, labels, tstarts, fstarts)), used_inds[Nused+1:end]
@@ -353,7 +353,7 @@ function split_unique_shotnos(shotnos,α;seed=nothing)
 	trushots = ushotnos[1:Ntrushots]
 	tstushots = ushotnos[Ntrushots+1:end]
 
-	Random.seed!()
+	(seed == nothing) ? nothing : Random.seed!()
 	return trushots, tstushots
 end
 
@@ -383,7 +383,7 @@ function split_unique_patches(α::Real, shotnos, labels, tstarts, fstarts; seed 
 		map(x->any(occursin.(string.(tstshots0), string(x))),shotnos)
 	
 	# restart the seed
-	Random.seed!()
+	(seed == nothing) ? nothing : Random.seed!()
 	if 0 < sum(traininds) < Npatches
 		return map(x->x[traininds], (shotnos, labels, tstarts, fstarts)), used_inds[traininds],
 			map(x->x[testinds], (shotnos, labels, tstarts, fstarts)), used_inds[testinds]
@@ -414,7 +414,7 @@ function split_shots(nshots::Int, available_shots::AbstractVector, test_train_pa
 	(seed != nothing) ? Random.seed!(seed) : nothing
 	available_shots = available_shots[sample(1:Navailable, Navailable, replace=false)]
 	# restart the seed
-	Random.seed!()
+	(seed == nothing) ? nothing : Random.seed!()
 	# now select the training shots from the labeled set
 	Nlabeled = length(labeled_shots)
 	# initialize the pseudorandom generator so that the training set is fixed
@@ -425,7 +425,7 @@ function split_shots(nshots::Int, available_shots::AbstractVector, test_train_pa
 		train_inds = sample(1:Nlabeled, Nlabeledout, replace=false)
 		train_shots = labeled_shots[train_inds]
 		# restart the seed
-		Random.seed!()
+		(seed == nothing) ? nothing : Random.seed!()
 	# if test/train patches are used, then do the splitting of the labeled shots according to 
 	# this previous split - exclude the testing patch shots from the training set
 	else
@@ -485,7 +485,7 @@ function collect_training_patches(datapath, shotnos, tstarts, fstarts, N, readfu
 	patches = add_noise.(patches,δ)
 	# and return them as a 4D tensor
 	patches = cat(patches...,dims=4)
-	Random.seed!()
+	(seed == nothing) ? nothing : Random.seed!()
 	return patches, shotnos[sample_inds], tstarts[sample_inds], fstarts[sample_inds]
 end
 
@@ -594,11 +594,11 @@ function collect_training_data_oneclass(datapath, Npatches, readfun, patchsize;
 	# shift the starts
 	(seed == nothing) ? nothing : Random.seed!(seed)
 	sample_inds = sample(1:Ntrain, Npatches)
+	(seed == nothing) ? nothing : Random.seed!()
 	starts = map(i -> shift_patch(train_info[3][i], train_info[4][i]; patchsize=patchsize), sample_inds) 
 	shotnos = train_info[1][sample_inds]
 	tstarts = [x[1] for x in starts]
 	fstarts = [x[2] for x in starts]
-	Random.seed!()
 
 	# now get the final data and add some noise to them
 	patches_out, shotnos_out, tstarts_out, fstarts_out = 
@@ -652,6 +652,6 @@ function shift_patch(tstart::Real, fstart::Real; patchsize=128, seed=nothing)
 	(seed == nothing) ? nothing : Random.seed!(seed)
 	tstart = tstart + (rand(typeof(tstart)) - 0.5) * 0.00650239f0 * patchsize/128 * 1/4
 	fstart = fstart + (rand(typeof(fstart)) - 0.5) * 620117.25f0 * patchsize/128 * 1/4
-	Random.seed!()
+	(seed == nothing) ? nothing : Random.seed!() # otherwise this will run out of random seeds soon
 	return tstart, fstart
 end

@@ -158,7 +158,7 @@ Read a signal from .h5 file using Python h5py library. Is memory safe but slower
 """
 function readsignal_py(filepath::String, signal::String; warns=true)
 	# first init the h5py pointer if possible
-	_init_h5py()
+	(h5py == PyNULL()) ? _init_h5py() : nothing
 	(h5py == PyNULL()) ? (return NaN) : nothing # this should happen if h5py is not available
 	try
 		file = h5py.File(filepath,"r")

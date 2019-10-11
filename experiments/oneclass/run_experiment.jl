@@ -110,9 +110,9 @@ s = ArgParseSettings()
 		default = 200
 		arg_type = Int
 		help = "how often should an intermediate state of the model be saved"
-	"--memorysafe"
+	"--not-memorysafe"
 		action = :store_true
-		help = "if set, use a memory safe loading of hdf5 file which is slower but enables loading of larger datasets (requires h5py Python library)"
+		help = "if not set, use a memory safe loading of hdf5 file which is slower but enables loading of larger datasets (requires h5py Python library)"
 	"--seed"
 		arg_type = Int
 		default = 1
@@ -174,7 +174,7 @@ test = parsed_args["test"]
 iptrunc = parsed_args["ip-trunc"]
 svpth = parsed_args["savepath"]
 savepoint = parsed_args["savepoint"]
-memorysafe = parsed_args["memorysafe"]
+memorysafe = !(parsed_args["not-memorysafe"])
 seed = parsed_args["seed"]
 ndense = parsed_args["ndense"]
 hdim = parsed_args["hdim"]
@@ -219,12 +219,15 @@ if svpth != ""
 end 
 mkpath(savepath)
 
+println(memorysafe)
+
 # collect all the data
 data, shotnos, labels, tstarts, fstarts = 
 	AlfvenDetectors.collect_training_data_oneclass(datapath, npatches, readfun, patchsize; 
 		α = 0.8, seed=seed)
 
 # if test token is given, only run with a limited number of patches
+println("Total size of data: $(size(data))")
 if test
 	data = data[:,:,:,1:min(256,size(data,4))]
 end
