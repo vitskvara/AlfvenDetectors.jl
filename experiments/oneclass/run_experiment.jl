@@ -7,6 +7,8 @@ using Random
 using StatsBase
 using GenModels
 using CuArrays
+using JLD2
+using FileIO
 
 # init - via argparse
 # get the model name, zdim, nlayers, channels, kernelsize, batchsize, learning rate, beta, gamma, lambda, 
@@ -49,11 +51,11 @@ s = ArgParseSettings()
     	arg_type = Int
     	nargs = '+'
     "--npatches"
-    	default = 1000
+    	default = 10000
     	arg_type = Int
     	help = "number of patches used for training"
 	"--batchsize"
-		default = 128
+		default = 100
 		arg_type = Int
 		help = "batch size"
 	"--batchnorm"
@@ -107,7 +109,7 @@ s = ArgParseSettings()
 		default = ""
 		help = "alternative saving path"
 	"--savepoint"
-		default = 200
+		default = 1
 		arg_type = Int
 		help = "how often should an intermediate state of the model be saved"
 	"--not-memorysafe"
@@ -145,6 +147,9 @@ s = ArgParseSettings()
 	"--verb"
 		action = :store_true
 		help = "show the training progress"
+	"--h5data"
+		action = :store_true
+		help = "if set, the data will be randomly created from h5 raw data, this takes a lot of memory"
 end
 parsed_args = parse_args(ARGS, s)
 modelname = "Conv"*parsed_args["modelname"]
@@ -186,6 +191,7 @@ sigma = parsed_args["sigma"]
 lambda = parsed_args["lambda"]
 gamma = parsed_args["gamma"]
 verb = parsed_args["verb"]
+h5data = parsed_args["h5data"]
 # data reading functions
 if normalize
 	readfun = AlfvenDetectors.readnormlogupsd
@@ -222,16 +228,29 @@ mkpath(savepath)
 println(memorysafe)
 
 # collect all the data
-data, shotnos, labels, tstarts, fstarts = 
-	AlfvenDetectors.collect_training_data_oneclass(datapath, npatches, readfun, patchsize; 
-		α = 0.8, seed=seed)
-
-# if test token is given, only run with a limited number of patches
-println("Total size of data: $(size(data))")
-if test
-	data = data[:,:,:,1:min(256,size(data,4))]
+if h5data
+	patches, shotnos, labels, tstarts, fstarts = 
+		AlfvenDetectors.collect_training_data_oneclass(datapath, npatches, readfun, patchsize; 
+			α = 0.8, seed=seed)
+else
+	norms = normalize ? "_normalized" : ""
+	fname = joinpath(dirname(datapath), "oneclass_data/training/$(patchsize)$(norms)/seed-$(seed).jld2")
+	isfile(fname) ? jlddata = load(fname) : error("The requested file $fname does not exist!")
+	navail = size(jlddata["patches"], 4)
+	navail < npatches ? error("not enough patches available, requested $npatches, available $navail") : nothing
+	patches, shotnos, labels, tstarts, fstarts = 
+		jlddata["patches"][:,:,:,1:npatches], 
+		jlddata["shotnos"][1:npatches],
+		jlddata["labels"][1:npatches], 
+		jlddata["tstarts"][1:npatches], 
+		jlddata["fstarts"][1:npatches]
 end
-xdim = size(data)
+# if test token is given, only run with a limited number of patches
+println("Total size of data: $(size(patches))")
+if test
+	patches = patches[:,:,:,1:min(256,size(patches,4))]
+end
+xdim = size(patches)
 
 model_args = [
 		:xdim => xdim[1:3],
@@ -290,7 +309,7 @@ filename = AlfvenDetectors.create_filename(modelname, [], Dict(), Dict(),
 	filename_kwargs...)
 # create the model
 model = GenModels.construct_model(modelname, [x[2] for x in model_args]...; model_kwargs...)
-model, history, t = AlfvenDetectors.fitsave_unsupervised(data, model, batchsize, 
+model, history, t = AlfvenDetectors.fitsave_unsupervised(patches, model, batchsize, 
 	outer_nepochs, inner_nepochs, model_args, model_kwargs, fit_kwargs, savepath; 
 	modelname = "GenModels."*modelname, optname=optimiser, eta=eta, verb = verb,
 	usegpu=usegpu, savepoint=savepoint, filename=filename, experiment_args=parsed_args)
