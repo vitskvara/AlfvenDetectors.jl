@@ -225,8 +225,6 @@ if svpth != ""
 end 
 mkpath(savepath)
 
-println(memorysafe)
-
 # collect all the data
 if h5data
 	patches, shotnos, labels, tstarts, fstarts = 
@@ -303,7 +301,8 @@ end
 filename_kwargs = Dict(
 	:patchsize => patchsize,
 	:channels => "["*reduce((x,y)->"$(x),$(y)",channels)*"]",
-	:nepochs => outer_nepochs*inner_nepochs
+	:nepochs => outer_nepochs*inner_nepochs,
+	:seed => seed
 	)
 filename = AlfvenDetectors.create_filename(modelname, [], Dict(), Dict(), 
 	filename_kwargs...)
