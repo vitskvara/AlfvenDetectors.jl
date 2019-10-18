@@ -238,6 +238,7 @@ else
 	norms = normalize ? "_normalized" : ""
 	fname = joinpath(dirname(datapath), "oneclass_data/training/$(patchsize)$(norms)/seed-$(seed).jld2")
 	isfile(fname) ? jlddata = load(fname) : error("The requested file $fname does not exist!")
+	println("Loading $fname")
 	navail = size(jlddata["patches"], 4)
 	navail < npatches ? error("not enough patches available, requested $npatches, available $navail") : nothing
 	patches, shotnos, labels, tstarts, fstarts = 
