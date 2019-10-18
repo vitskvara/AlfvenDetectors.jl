@@ -150,6 +150,9 @@ s = ArgParseSettings()
 	"--h5data"
 		action = :store_true
 		help = "if set, the data will be randomly created from h5 raw data, this takes a lot of memory"
+	"--upscale-type"
+		default = "transpose"
+		help = "upsacling type, one of [transpose, upscale]"
 end
 parsed_args = parse_args(ARGS, s)
 modelname = "Conv"*parsed_args["modelname"]
@@ -192,6 +195,7 @@ lambda = parsed_args["lambda"]
 gamma = parsed_args["gamma"]
 verb = parsed_args["verb"]
 h5data = parsed_args["h5data"]
+upscale_type = parsed_args["upscale-type"]
 # data reading functions
 if normalize
 	readfun = AlfvenDetectors.readnormlogupsd
@@ -261,7 +265,8 @@ model_args = [
 model_kwargs = Dict{Symbol, Any}(
 	:batchnorm => batchnorm,
 	:outbatchnorm => outbatchnorm,
-	:ndense => ndense
+	:ndense => ndense,
+	:upscale_type => upscale_type
 	)
 fit_kwargs = Dict{Symbol, Any}(
 		:usegpu => usegpu,
@@ -302,8 +307,7 @@ filename_kwargs = Dict(
 	:patchsize => patchsize,
 	:channels => "["*reduce((x,y)->"$(x),$(y)",channels)*"]",
 	:nepochs => outer_nepochs*inner_nepochs,
-	:seed => seed,
-	:normalized => normalize
+	:seed => seed
 	)
 filename = AlfvenDetectors.create_filename(modelname, [], Dict(), Dict(), 
 	filename_kwargs...)
