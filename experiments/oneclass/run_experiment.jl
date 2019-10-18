@@ -302,7 +302,8 @@ filename_kwargs = Dict(
 	:patchsize => patchsize,
 	:channels => "["*reduce((x,y)->"$(x),$(y)",channels)*"]",
 	:nepochs => outer_nepochs*inner_nepochs,
-	:seed => seed
+	:seed => seed,
+	:normalized => normalize
 	)
 filename = AlfvenDetectors.create_filename(modelname, [], Dict(), Dict(), 
 	filename_kwargs...)
