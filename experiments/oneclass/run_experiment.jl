@@ -7,8 +7,6 @@ using Random
 using StatsBase
 using GenModels
 using CuArrays
-using JLD2
-using FileIO
 
 # init - via argparse
 # get the model name, zdim, nlayers, channels, kernelsize, batchsize, learning rate, beta, gamma, lambda, 
@@ -54,6 +52,10 @@ s = ArgParseSettings()
     	default = 10000
     	arg_type = Int
     	help = "number of patches used for training"
+    "--nshots"
+    	default = 100
+    	arg_type = Int
+    	help = "number of shots used for training in case that the target class is without alfvens"
 	"--batchsize"
 		default = 100
 		arg_type = Int
@@ -153,6 +155,9 @@ s = ArgParseSettings()
 	"--upscale-type"
 		default = "transpose"
 		help = "upsacling type, one of [transpose, upscale]"
+	"--normal-negative"
+		action = :store_true
+		help = "if set, the normal class is represented by data without alfven samples"
 end
 parsed_args = parse_args(ARGS, s)
 modelname = "Conv"*parsed_args["modelname"]
@@ -165,6 +170,7 @@ length(kernelsize) == 1 ? kernelsize = kernelsize[1] : nothing
 scaling = parsed_args["scaling"]
 length(scaling) == 1 ? scaling = scaling[1] : nothing
 npatches = parsed_args["npatches"]
+nshots = parsed_args["nshots"]
 batchsize = parsed_args["batchsize"]
 batchnorm = parsed_args["batchnorm"]
 outbatchnorm = (parsed_args["outbatchnorm"])
@@ -196,6 +202,7 @@ gamma = parsed_args["gamma"]
 verb = parsed_args["verb"]
 h5data = parsed_args["h5data"]
 upscale_type = parsed_args["upscale-type"]
+normal_negative = parsed_args["normal-negative"]
 # data reading functions
 if normalize
 	readfun = AlfvenDetectors.readnormlogupsd
@@ -230,23 +237,20 @@ end
 mkpath(savepath)
 
 # collect all the data
-if h5data
+if normal_negative
 	patches, shotnos, labels, tstarts, fstarts = 
-		AlfvenDetectors.collect_training_data_oneclass(datapath, npatches, readfun, patchsize; 
-			α = 0.8, seed=seed)
+		AlfvenDetectors.oneclass_negative_training_data(datapath, nshots, seed, readfun, patchsize)
 else
-	norms = normalize ? "_normalized" : ""
-	fname = joinpath(dirname(datapath), "oneclass_data/training/$(patchsize)$(norms)/seed-$(seed).jld2")
-	isfile(fname) ? jlddata = load(fname) : error("The requested file $fname does not exist!")
-	println("Loading $fname")
-	navail = size(jlddata["patches"], 4)
-	navail < npatches ? error("not enough patches available, requested $npatches, available $navail") : nothing
-	patches, shotnos, labels, tstarts, fstarts = 
-		jlddata["patches"][:,:,:,1:npatches], 
-		jlddata["shotnos"][1:npatches],
-		jlddata["labels"][1:npatches], 
-		jlddata["tstarts"][1:npatches], 
-		jlddata["fstarts"][1:npatches]
+	if h5data
+		patches, shotnos, labels, tstarts, fstarts = 
+			AlfvenDetectors.collect_training_data_oneclass(datapath, npatches, readfun, patchsize; 
+				α = 0.8, seed=seed)
+	else
+		norms = normalize ? "_normalized" : ""
+		fname = joinpath(dirname(datapath), "oneclass_data/training/$(patchsize)$(norms)/seed-$(seed).jld2")
+		patches, shotnos, labels, tstarts, fstarts = 
+			AlfvenDetectors.oneclass_training_data_jld(fname, npatches)
+	end
 end
 # if test token is given, only run with a limited number of patches
 println("Total size of data: $(size(patches))")

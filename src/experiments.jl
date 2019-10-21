@@ -655,3 +655,33 @@ function shift_patch(tstart::Real, fstart::Real; patchsize=128, seed=nothing)
 	(seed == nothing) ? nothing : Random.seed!() # otherwise this will run out of random seeds soon
 	return tstart, fstart
 end
+
+function oneclass_training_data_jld(fname, npatches)
+	isfile(fname) ? jlddata = load(fname) : error("The requested file $fname does not exist!")
+	println("Loading $fname")
+	navail = size(jlddata["patches"], 4)
+	navail < npatches ? error("not enough patches available, requested $npatches, available $navail") : nothing
+	return jlddata["patches"][:,:,:,1:npatches], 
+		jlddata["shotnos"][1:npatches],
+		jlddata["labels"][1:npatches], 
+		jlddata["tstarts"][1:npatches], 
+		jlddata["fstarts"][1:npatches]
+end
+
+function oneclass_negative_training_data(datapath, nshots, seed, readfun, patchsize)
+	testing_shots = unique(AlfvenDetectors.labeled_patches()[1])
+	available_shots = readdir(datapath)
+	training_shots = filter!(x-> !any(map(y-> occursin(string(y), x), testing_shots)),available_shots)
+	# scramble them
+	navail = length(training_shots)
+	if nshots > navail
+		@warn "Requested $nshots shots for training, however only $navail available"
+		nshots = navail
+	end
+	Random.seed!(seed)
+	training_shots = sample(training_shots, nshots, replace = false)
+	Random.seed!()
+	patches = AlfvenDetectors.collect_conv_signals(joinpath.(datapath, training_shots), readfun, patchsize;
+		memorysafe = true, type="valid")
+	return patches, nothing, nothing, nothing, nothing
+end
