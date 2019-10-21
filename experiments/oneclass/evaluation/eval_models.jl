@@ -65,7 +65,7 @@ savefig(figf)
 
 # get a model
 models = readdir(modelpath)
-mf = joinpath(modelpath, models[1])
+mf = joinpath(modelpath, models[2])
 model = GenModels.construct_model(mf)
 model_data = load(mf)
 exp_args = model_data[:experiment_args]
@@ -79,16 +79,12 @@ patches = testing_data["patches"];
 positive_patches = testing_data["patches"][:,:,:,labels.==1];
 negative_patches = testing_data["patches"][:,:,:,labels.==0];
 
-function jacobian(m::GenModels.GenerativeModel, x::AbstractArray{T,4}) where T
-	(h, w, c, n) = size(x)
-	@assert n==1
-	vx = reshape(x, :)
+function jacobian(m::GenModels.GenerativeModel, z::AbstractArray{T,1}) where T
 	dec = Flux.Chain(
-			y -> reshape(y, (h, w, c, n)),
 			model.decoder,
 			y -> reshape(y, :)
 		)
-	return Flux.Tracker.jacobian(dec, vx)
+	return Flux.Tracker.jacobian(dec, z)
 end
 
 function plot_4(model, patches, scores, labels, inds)
