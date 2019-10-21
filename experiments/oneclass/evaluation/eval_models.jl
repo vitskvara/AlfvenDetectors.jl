@@ -3,63 +3,26 @@ using PyPlot
 include("eval.jl")
 
 # get the paths
-datapath = "/home/vit/vyzkum/alfven/cdb_data/uprobe_data"
-evaldatapath = "/home/vit/vyzkum/alfven/cdb_data/oneclass_data" 
-modelpath = "/home/vit/vyzkum/alfven/experiments/oneclass/waae_runs/models_eval"
-
-# settings
-seed = 1
-patchsize = 128
-readfun = AlfvenDetectors.readnormlogupsd
-testing_data = AlfvenDetectors.collect_testing_data_oneclass(datapath, readfun, patchsize; seed=seed);
-
-# get training data
-training_data = load(joinpath(trainpath, "seed-$(seed).jld2"))
-
-models = readdir(modelpath)
-#mf = joinpath(modelpath, models[end])
-#model = GenModels.construct_model(mf)
-#train_mse, test_mse, test1_mse, test0_mse, auc_mse, params = eval_model(mf, testing_data, training_data)
-
-data = []
-for (i,mf) in enumerate(models[1:10])
-	println("processing $i")
-	_data = eval_model(joinpath(modelpath,mf), testing_data, training_data)
-	push!(data, _data)
+hostname = gethostname()
+if hostname == "gpu-node"
+	evaldatapath = "/compass/home/skvara/no-backup/oneclass_data" 
+	datapath = "/compass/home/skvara/alfven/experiments/oneclass/opt_runs"
+else
+	evaldatapath = "/home/vit/vyzkum/alfven/cdb_data/oneclass_data" 
+	datapath = "/home/vit/vyzkum/alfven/experiments/oneclass/opt_runs"
 end
-for (i,mf) in enumerate(models[11:20])
-	println("processing $i")
-	_data = eval_model(joinpath(modelpath,mf), testing_data, training_data)
-	push!(data, _data)
-end
-for (i,mf) in enumerate(models[21:end])
-	println("processing $i")
-	_data = eval_model(joinpath(modelpath,mf), testing_data, training_data)
-	push!(data, _data)
-end
+modelpath = joinpath(datapath, "models")
+evalpath = joinpath(datapath, "eval")
+mkpath(evalpath)
 
-df = DataFrame(
-	:model=>Any[],
-	:channels=>Any[],
-	:nepochs=>Int[],
-	:time=>String[],
-	:train_mse=>Float64[],
-	:test_mse=>Float64[],
-	:test1_mse=>Float64[],
-	:test0_mse=>Float64[],
-	:auc_mse=>Float64[],
-	:prec_10_mse=>Float64[]
-	)
-for row in data
-	push!(df, [row[1][:model], row[1][:channels], row[1][:nepochs], row[1][:time], 
-		row[2], row[3], row[4], row[5], row[6], row[7]])
-end
 
-# wite/read thje results
-csvf = "/home/vit/vyzkum/alfven/experiments/oneclass/waae_runs/eval/models_eval.csv"
-CSV.write(csvf,df)
+f1 = "/compass/home/skvara/alfven/experiments/oneclass/eval_tuning/eval/models_eval.csv"
+f2 = "/compass/home/skvara/alfven/experiments/oneclass/opt_runs/eval/models_eval.csv"
 
-df = CSV.read(csvf)
+df1 = CSV.read(f1)
+df2 = CSV.read(f2)
+
+df = df2
 
 figure()
 subplot(321)
@@ -100,12 +63,33 @@ tight_layout()
 figf = "/home/vit/vyzkum/alfven/experiments/oneclass/waae_runs/eval/models_eval.eps"
 savefig(figf)
 
-# the model 18 is the best in terms of auc - it also has the highest difference between 
-# positive and negative scores while not having the best reconstruction
-labels = 1 .- testing_data[3]; # switch the labels here - positive class is actually the normal one
-patches = testing_data[1];
-positive_patches = patches[:,:,:,labels.==1];
-negative_patches = patches[:,:,:,labels.==0];
+# get a model
+models = readdir(modelpath)
+mf = joinpath(modelpath, models[1])
+model = GenModels.construct_model(mf)
+model_data = load(mf)
+exp_args = model_data[:experiment_args]
+seed = exp_args["seed"]
+norms = exp_args["unnormalized"] ? "" : "_normalized"
+testing_data = load(joinpath(evaldatapath, "testing/128$(norms)/seed-$(seed).jld2"));
+training_data = load(joinpath(evaldatapath, "training/128$(norms)/seed-$(seed).jld2"));
+training_patches = training_data["patches"];
+labels = 1 .- testing_data["labels"]; # switch the labels here - positive class is actually the normal one
+patches = testing_data["patches"];
+positive_patches = testing_data["patches"][:,:,:,labels.==1];
+negative_patches = testing_data["patches"][:,:,:,labels.==0];
+
+function jacobian(m::GenModels.GenerativeModel, x::AbstractArray{T,4}) where T
+	(h, w, c, n) = size(x)
+	@assert n==1
+	vx = reshape(x, :)
+	dec = Flux.Chain(
+			y -> reshape(y, (h, w, c, n)),
+			model.decoder,
+			y -> reshape(y, :)
+		)
+	return Flux.Tracker.jacobian(dec, vx)
+end
 
 function plot_4(model, patches, scores, labels, inds)
 	figure()
@@ -122,10 +106,10 @@ function plot_4(model, patches, scores, labels, inds)
 	tight_layout()
 end
 
-imodel = 18 # this model is really degenerate - it recosntructs everything into the same output
-mf = joinpath(modelpath, models[imodel])
-model = GenModels.construct_model(mf)
 scores = score_mse(model, patches)
+
+inds = [3, 4, 5, 6]
+plot_4(model, patches, scores, labels, inds)
 
 inds = [1, 2, 180, 181]
 plot_4(model, patches, scores, labels, inds)
@@ -133,9 +117,3 @@ plot_4(model, patches, scores, labels, inds)
 inds = vcat(sortperm(scores)[1:2], sortperm(scores)[end-1:end])
 plot_4(model, patches, scores, labels, inds)
 
-imodel = 17
-mf = joinpath(modelpath, models[imodel])
-model = GenModels.construct_model(mf)
-scores = score_mse(model, patches)
-
-mean(model(randn(128,128,1,1)).data)

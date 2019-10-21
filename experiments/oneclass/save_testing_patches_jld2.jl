@@ -12,7 +12,7 @@ catch e
 	global nargs = 0
 end
 seed = (nargs > 0) ? Int(Meta.parse(ARGS[1])) : 1
-normalized = true
+normalized = false
 patchsize = 128
 if normalized
 	readfun = AlfvenDetectors.readnormlogupsd

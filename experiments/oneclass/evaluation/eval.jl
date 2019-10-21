@@ -16,7 +16,7 @@ end
 
 # mse
 mse(model,x) = Flux.mse(x, model(x)).data
-mse(model,x,M) = StatsBase.mean([mse(model, x[:,:,:,((i-1 )*M+1):min(i*M, size(x,4))]) for i in 1:ceil(Int, size(x,4)/M)])
+mse(model,x,M) = mean([mse(model, x[:,:,:,((i-1 )*M+1):min(i*M, size(x,4))]) for i in 1:ceil(Int, size(x,4)/M)])
 # output var
 output_var(model, x) = var(map(i->mean(model(x[:,:,:,i:i]).data), 1:size(x,4)))
 # get auc based on plain mse
@@ -31,16 +31,16 @@ function eval_model(mf, evaldatapath)
 	# 
 	exp_args = load(mf, :experiment_args)
 	seed = exp_args["seed"]
-	norms = exp_args["unnormalized"] ? "" : _normalized
-	testing_data = load(joinpath(evaldatapath, "testing/128$(norms)/seed-$(seed).jld2"))
-	training_data = load(joinpath(evaldatapath, "training/128$(norms)/seed-$(seed).jld2"))
-	training_patches = training_data["patches"] |> gpu
+	norms = exp_args["unnormalized"] ? "" : "_normalized"
+	testing_data = load(joinpath(evaldatapath, "testing/128$(norms)/seed-$(seed).jld2"));
+	training_data = load(joinpath(evaldatapath, "training/128$(norms)/seed-$(seed).jld2"));
+	training_patches = training_data["patches"] |> gpu;
 
 	# labeled data
-	labels = 1 .- testing_data[3]; # switch the labels here - positive class is actually the normal one
-	patches = testing_data[1]; |> gpu
-	positive_patches = patches[:,:,:,labels.==1];
-	negative_patches = patches[:,:,:,labels.==0];
+	labels = 1 .- testing_data["labels"]; # switch the labels here - positive class is actually the normal one
+	patches = testing_data["patches"] |> gpu;
+	positive_patches = testing_data["patches"][:,:,:,labels.==1] |> gpu;
+	negative_patches = testing_data["patches"][:,:,:,labels.==0] |> gpu;
 	
 	# get the mses
 	M = 1
@@ -56,6 +56,6 @@ function eval_model(mf, evaldatapath)
 	# other accuracy measures
 	prec_10_mse = prec_at_k(model, patches, labels, score_mse, 10)
 
-	return  params, train_mse, test_mse, test1_mse, test0_mse, test_var, auc_mse, prec_10_mse, exp_args
+	return  mf, params, exp_args, train_mse, test_mse, test1_mse, test0_mse, test_var, auc_mse, prec_10_mse
 end
 
