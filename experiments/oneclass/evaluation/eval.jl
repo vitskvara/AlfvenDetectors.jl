@@ -53,11 +53,7 @@ function eval_model(mf, evaldatapath)
 	end
 
 	# labeled data
-	if !normal_negative
-		labels = 1 .- testing_data["labels"]; # switch the labels here - positive class is actually the normal one
-	else
-		labels = testing_data["labels"];
-	end
+	labels = testing_data["labels"];
 	patches = testing_data["patches"] |> gpu;
 	positive_patches = testing_data["patches"][:,:,:,labels.==1] |> gpu;
 	negative_patches = testing_data["patches"][:,:,:,labels.==0] |> gpu;
@@ -72,10 +68,11 @@ function eval_model(mf, evaldatapath)
 
 	# get auc	
 	auc_mse = auc(model, patches, labels, score_mse)
+	auc_mse_pos = auc(model, patches, 1 .- labels, score_mse)
 
 	# other accuracy measures
 	prec_10_mse = prec_at_k(model, patches, labels, score_mse, 10)
 
-	return  mf, params, exp_args, train_mse, test_mse, test1_mse, test0_mse, test_var, auc_mse, prec_10_mse
+	return  mf, params, exp_args, train_mse, test_mse, test1_mse, test0_mse, test_var, auc_mse, auc_mse_pos, prec_10_mse
 end
 

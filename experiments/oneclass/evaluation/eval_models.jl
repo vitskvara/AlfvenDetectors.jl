@@ -121,6 +121,7 @@ function plot_4(model, patches, scores, labels, inds)
 end
 
 scores = score_mse(model, patches)
+roc = EvalCurves.roccurve(scores, labels)
 
 inds = [3, 4, 5, 6]
 plot_4(model, patches, scores, labels, inds)

@@ -36,12 +36,13 @@ df = DataFrame(
 	:test0_mse=>Float64[],
 	:test_var=>Float64[],
 	:auc_mse=>Float64[],
+	:auc_mse_pos=>Float64[],
 	:prec_10_mse=>Float64[],
 	:file=>String[]
 	)
 for row in data
 	push!(df, [row[2][:model], row[2][:channels], row[2][:nepochs], row[3]["seed"], !(row[3]["unnormalized"]),
-		row[4], row[5], row[6], row[7], row[8], row[9], row[10], row[1]])
+		row[4], row[5], row[6], row[7], row[8], row[9], row[10], row[11], row[1]])
 end
 
 # write/read the results
