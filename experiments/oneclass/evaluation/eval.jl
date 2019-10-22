@@ -10,9 +10,9 @@ using LinearAlgebra
 using DataFrames
 using CSV
 using BSON
-if gethostname() == "gpu-node"
+#if gethostname() == "gpu-node"
 	using CuArrays
-end
+#end
 
 # mse
 mse(model,x) = Flux.mse(x, model(x)).data
@@ -28,16 +28,36 @@ function eval_model(mf, evaldatapath)
 	model = GenModels.construct_model(mf) |> gpu
 	params = AlfvenDetectors.parse_params(mf)
 
+	hostname = gethostname()
+	if occursin("soroban", hostname) || hostname == "gpu-node"
+		datapath = "/compass/home/skvara/no-backup/uprobe_data"
+	else
+		datapath = "/home/vit/vyzkum/alfven/cdb_data/uprobe_data"
+	end
+
 	# 
 	exp_args = load(mf, :experiment_args)
 	seed = exp_args["seed"]
 	norms = exp_args["unnormalized"] ? "" : "_normalized"
-	testing_data = load(joinpath(evaldatapath, "testing/128$(norms)/seed-$(seed).jld2"));
-	training_data = load(joinpath(evaldatapath, "training/128$(norms)/seed-$(seed).jld2"));
-	training_patches = training_data["patches"] |> gpu;
+	readfun = exp_args["unnormalized"] ? AlfvenDetectors.readnormlogupsd : AlfvenDetectors.readlogupsd
+	normal_negative = get(exp_args, "normal-negative", false)
+	if !(normal_negative)
+		testing_data = load(joinpath(evaldatapath, "oneclass_data/testing/128$(norms)/seed-$(seed).jld2"));
+		training_data = load(joinpath(evaldatapath, "oneclass_data/training/128$(norms)/seed-$(seed).jld2"));
+		training_patches = training_data["patches"] |> gpu;
+	else
+		testing_data = load(joinpath(evaldatapath, "oneclass_data_negative/testing/128$(norms)/data.jld2"));
+		training_data = AlfvenDetectors.oneclass_negative_training_data(datapath, 20, seed, readfun, 
+			exp_args["patchsize"])
+		training_patches = training_data[1] |> gpu;
+	end
 
 	# labeled data
-	labels = 1 .- testing_data["labels"]; # switch the labels here - positive class is actually the normal one
+	if !normal_negative
+		labels = 1 .- testing_data["labels"]; # switch the labels here - positive class is actually the normal one
+	else
+		labels = testing_data["labels"];
+	end
 	patches = testing_data["patches"] |> gpu;
 	positive_patches = testing_data["patches"][:,:,:,labels.==1] |> gpu;
 	negative_patches = testing_data["patches"][:,:,:,labels.==0] |> gpu;

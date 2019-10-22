@@ -5,10 +5,10 @@ include("eval.jl")
 # get the paths
 hostname = gethostname()
 if hostname == "gpu-node"
-	evaldatapath = "/compass/home/skvara/no-backup/oneclass_data" 
+	evaldatapath = "/compass/home/skvara/no-backup" 
 	datapath = "/compass/home/skvara/alfven/experiments/oneclass/opt_runs"
 else
-	evaldatapath = "/home/vit/vyzkum/alfven/cdb_data/oneclass_data" 
+	evaldatapath = "/home/vit/vyzkum/alfven/cdb_data" 
 	datapath = "/home/vit/vyzkum/alfven/experiments/oneclass/opt_runs"
 end
 modelpath = joinpath(datapath, "models")

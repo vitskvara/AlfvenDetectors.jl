@@ -683,5 +683,5 @@ function oneclass_negative_training_data(datapath, nshots, seed, readfun, patchs
 	Random.seed!()
 	patches = AlfvenDetectors.collect_conv_signals(joinpath.(datapath, training_shots), readfun, patchsize;
 		memorysafe = true, type="valid")
-	return patches, nothing, nothing, nothing, nothing
+	return  patches, nothing, nothing, nothing, nothing
 end

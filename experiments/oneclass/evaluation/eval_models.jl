@@ -5,24 +5,26 @@ include("eval.jl")
 # get the paths
 hostname = gethostname()
 if hostname == "gpu-node"
-	evaldatapath = "/compass/home/skvara/no-backup/oneclass_data" 
-	datapath = "/compass/home/skvara/alfven/experiments/oneclass/opt_runs"
+	evaldatapath = "/compass/home/skvara/no-backup/" 
+	basepath = "/compass/home/skvara/alfven/experiments/oneclass"
 else
-	evaldatapath = "/home/vit/vyzkum/alfven/cdb_data/oneclass_data" 
-	datapath = "/home/vit/vyzkum/alfven/experiments/oneclass/opt_runs"
+	evaldatapath = "/home/vit/vyzkum/alfven/cdb_data/"
+	basepath = "/home/vit/vyzkum/alfven/experiments/oneclass"
 end
+datapath = joinpath(basepath, "negative_runs")
 modelpath = joinpath(datapath, "models")
 evalpath = joinpath(datapath, "eval")
 mkpath(evalpath)
 
-
-f1 = "/compass/home/skvara/alfven/experiments/oneclass/eval_tuning/eval/models_eval.csv"
-f2 = "/compass/home/skvara/alfven/experiments/oneclass/opt_runs/eval/models_eval.csv"
+f1 = joinpath(basepath, "eval_tuning/eval/models_eval.csv")
+f2 = joinpath(basepath, "opt_runs/eval/models_eval.csv")
+f3 = joinpath(basepath, "negative_runs/eval/models_eval.csv")
 
 df1 = CSV.read(f1)
 df2 = CSV.read(f2)
+df3 = CSV.read(f3)
 
-df = df2
+df = df3
 
 figure()
 subplot(321)
@@ -65,16 +67,32 @@ savefig(figf)
 
 # get a model
 models = readdir(modelpath)
-mf = joinpath(modelpath, models[2])
+mf = joinpath(modelpath, models[18])
 model = GenModels.construct_model(mf)
 model_data = load(mf)
 exp_args = model_data[:experiment_args]
 seed = exp_args["seed"]
 norms = exp_args["unnormalized"] ? "" : "_normalized"
-testing_data = load(joinpath(evaldatapath, "testing/128$(norms)/seed-$(seed).jld2"));
-training_data = load(joinpath(evaldatapath, "training/128$(norms)/seed-$(seed).jld2"));
+readfun = exp_args["unnormalized"] ? AlfvenDetectors.readnormlogupsd : AlfvenDetectors.readlogupsd
+normal_negative = get(exp_args, "normal-negative", false)
+
+if !(normal_negative)
+	testing_data = load(joinpath(evaldatapath, "oneclass_data/testing/128$(norms)/seed-$(seed).jld2"));
+	training_data = load(joinpath(evaldatapath, "oneclass_data/training/128$(norms)/seed-$(seed).jld2"));
+	training_patches = training_data["patches"] |> gpu;
+else
+	testing_data = load(joinpath(evaldatapath, "oneclass_data_negative/testing/128$(norms)/data.jld2"));
+	training_data = AlfvenDetectors.oneclass_negative_training_data(datapath, 20, seed, readfun, 
+		exp_args["patchsize"])
+	training_patches = training_data[1] |> gpu;
+end
+
 training_patches = training_data["patches"];
-labels = 1 .- testing_data["labels"]; # switch the labels here - positive class is actually the normal one
+if !normal_negative
+	labels = 1 .- testing_data["labels"]; # switch the labels here - positive class is actually the normal one
+else
+	labels = testing_data["labels"];
+end
 patches = testing_data["patches"];
 positive_patches = testing_data["patches"][:,:,:,labels.==1];
 negative_patches = testing_data["patches"][:,:,:,labels.==0];
