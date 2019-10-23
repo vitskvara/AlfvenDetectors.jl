@@ -2,14 +2,16 @@ using PyPlot
 
 include("eval.jl")
 
+path = ARGS[1]
+
 # get the paths
 hostname = gethostname()
 if hostname == "gpu-node"
 	evaldatapath = "/compass/home/skvara/no-backup" 
-	datapath = "/compass/home/skvara/alfven/experiments/oneclass/opt_runs"
+	datapath = joinpath("/compass/home/skvara/alfven/experiments/oneclass", path)
 else
 	evaldatapath = "/home/vit/vyzkum/alfven/cdb_data" 
-	datapath = "/home/vit/vyzkum/alfven/experiments/oneclass/opt_runs"
+	datapath = joinpath("/home/vit/vyzkum/alfven/experiments/oneclass", path)
 end
 modelpath = joinpath(datapath, "models")
 evalpath = joinpath(datapath, "eval")
