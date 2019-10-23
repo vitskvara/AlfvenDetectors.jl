@@ -20,9 +20,17 @@ f1 = joinpath(basepath, "eval_tuning/eval/models_eval.csv")
 f2 = joinpath(basepath, "opt_runs/eval/models_eval.csv")
 f3 = joinpath(basepath, "negative_runs/eval/models_eval.csv")
 
+ft1 = joinpath(basepath, "eval_tuning/eval/models_eval_testmode.csv")
+ft2 = joinpath(basepath, "opt_runs/eval/models_eval_testmode.csv")
+ft3 = joinpath(basepath, "negative_runs/eval/models_eval_testmode.csv")
+
 df1 = CSV.read(f1)
 df2 = CSV.read(f2)
 df3 = CSV.read(f3)
+
+dft1 = CSV.read(ft1)
+dft2 = CSV.read(ft2)
+dft3 = CSV.read(ft3)
 
 df = df3
 
