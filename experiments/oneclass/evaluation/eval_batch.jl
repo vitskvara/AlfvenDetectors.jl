@@ -52,5 +52,5 @@ for row in data
 end
 
 # write/read the results
-csvf = joinpath(evalpath, "models_eval.csv") 
+csvf = joinpath(evalpath, "models_eval_testmode.csv") 
 CSV.write(csvf,df)

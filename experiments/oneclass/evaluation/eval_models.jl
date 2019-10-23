@@ -97,6 +97,8 @@ patches = testing_data["patches"];
 positive_patches = testing_data["patches"][:,:,:,labels.==1];
 negative_patches = testing_data["patches"][:,:,:,labels.==0];
 
+_data = eval_model(joinpath(modelpath,mf), evaldatapath)
+
 function jacobian(m::GenModels.GenerativeModel, z::AbstractArray{T,1}) where T
 	dec = Flux.Chain(
 			model.decoder,
@@ -122,6 +124,7 @@ end
 
 scores = score_mse(model, patches)
 roc = EvalCurves.roccurve(scores, labels)
+auroc = EvalCurves.auc(roc...)
 
 inds = [3, 4, 5, 6]
 plot_4(model, patches, scores, labels, inds)

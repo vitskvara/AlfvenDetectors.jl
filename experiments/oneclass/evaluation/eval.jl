@@ -26,6 +26,7 @@ prec_at_k(model,x,y,sf,k) = EvalCurves.precision_at_k(sf(model,x), y, k)
 
 function eval_model(mf, evaldatapath)
 	model = GenModels.construct_model(mf) |> gpu
+	Flux.testmode!(model)
 	params = AlfvenDetectors.parse_params(mf)
 
 	hostname = gethostname()
