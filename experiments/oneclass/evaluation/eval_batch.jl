@@ -1,5 +1,3 @@
-using PyPlot
-
 include("eval.jl")
 
 path = ARGS[1]
@@ -10,8 +8,8 @@ if hostname == "gpu-node"
 	evaldatapath = "/compass/home/skvara/no-backup" 
 	datapath = joinpath("/compass/home/skvara/alfven/experiments/oneclass", path)
 elseif hostname == "tarbik.utia.cas.cz"
-	datapath = "/home/skvara/work/alfven/cdb_data/uprobe_data"
-	savepath = joinpath("/home/skvara/work/alfven/experiments/oneclass", path)
+	evaldatapath = "/home/skvara/work/alfven/cdb_data"
+	datapath = joinpath("/home/skvara/work/alfven/experiments/oneclass", path)
 else
 	evaldatapath = "/home/vit/vyzkum/alfven/cdb_data" 
 	datapath = joinpath("/home/vit/vyzkum/alfven/experiments/oneclass", path)
