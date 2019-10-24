@@ -49,7 +49,7 @@ df = DataFrame(
 	:file=>String[]
 	)
 for row in data
-	push!(df, [row[2][:model], row[2][:channels], row[2][:ldim], row[2][:nepochs], row[3]["seed"], !(row[3]["unnormalized"]),
+	push!(df, [row[2][:model], row[2][:channels], row[3]["ldim"], row[2][:nepochs], row[3]["seed"], !(row[3]["unnormalized"]),
 		row[3]["normal-negative"], get(row[3], "lambda", 0), get(row[3], "gamma", 0), get(row[3], "sigma", 0),
 		row[4], row[5], row[6], row[7], row[8], row[9], row[10], row[11], row[1]])
 end

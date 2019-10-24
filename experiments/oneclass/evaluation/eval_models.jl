@@ -11,7 +11,7 @@ else
 	evaldatapath = "/home/vit/vyzkum/alfven/cdb_data/"
 	basepath = "/home/vit/vyzkum/alfven/experiments/oneclass"
 end
-datapath = joinpath(basepath, "nobatchnorm_ldim_runs")
+datapath = joinpath(basepath, "nobatchnorm_convsize_runs")
 modelpath = joinpath(datapath, "models")
 evalpath = joinpath(datapath, "eval")
 mkpath(evalpath)
