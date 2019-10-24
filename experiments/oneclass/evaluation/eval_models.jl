@@ -42,12 +42,15 @@ flnb = joinpath(basepath, "nobatchnorm_ldim_runs/eval/models_eval.csv")
 dfl = CSV.read(fl)
 dflnb = CSV.read(flnb)
 
-fl = joinpath(basepath, "ldim_runs/eval/models_eval_testmode.csv")
-flnb = joinpath(basepath, "nobatchnorm_ldim_runs/eval/models_eval.csv")
+# again
+f = joinpath(basepath, "opt_runs/eval/models_eval_testmode.csv")
+fnb = joinpath(basepath, "nobatchnorm_runs/eval/models_eval_testmode.csv")
+ft = joinpath(basepath, "opt_runs/eval/models_eval.csv")
 
 # no batchnorm is clearly superior
-dfl = CSV.read(fl)
-dflnb = CSV.read(flnb)
+df = CSV.read(f)
+dfnb = CSV.read(fnb)
+dft = CSV.read(ft)
 
 figure()
 subplot(321)
