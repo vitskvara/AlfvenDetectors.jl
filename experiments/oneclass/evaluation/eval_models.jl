@@ -11,7 +11,7 @@ else
 	evaldatapath = "/home/vit/vyzkum/alfven/cdb_data/"
 	basepath = "/home/vit/vyzkum/alfven/experiments/oneclass"
 end
-datapath = joinpath(basepath, "nobatchnorm_convsize_runs")
+datapath = joinpath(basepath, "nobatchnorm_runs")
 modelpath = joinpath(datapath, "models")
 evalpath = joinpath(datapath, "eval")
 mkpath(evalpath)
@@ -19,38 +19,16 @@ mkpath(evalpath)
 f1 = joinpath(basepath, "eval_tuning/eval/models_eval.csv")
 f2 = joinpath(basepath, "opt_runs/eval/models_eval.csv")
 f3 = joinpath(basepath, "negative_runs/eval/models_eval.csv")
-
-ft1 = joinpath(basepath, "eval_tuning/eval/models_eval_testmode.csv")
-ft2 = joinpath(basepath, "opt_runs/eval/models_eval_testmode.csv")
-ft3 = joinpath(basepath, "negative_runs/eval/models_eval_testmode.csv")
+f4 = joinpath(basepath, "nobatchnorm_runs/eval/models_eval.csv")
+f5 = joinpath(basepath, "ldim_runs/eval/models_eval.csv")
+f6 = joinpath(basepath, "nobatchnorm_convsize_runs/eval/models_eval.csv")
 
 df1 = CSV.read(f1)
 df2 = CSV.read(f2)
 df3 = CSV.read(f3)
-
-dft1 = CSV.read(ft1)
-dft2 = CSV.read(ft2)
-dft3 = CSV.read(ft3)
-
-df = df3
-
-# compare batchnorm and no batchnorm runs
-fl = joinpath(basepath, "ldim_runs/eval/models_eval_testmode.csv")
-flnb = joinpath(basepath, "nobatchnorm_ldim_runs/eval/models_eval.csv")
-
-# no batchnorm is clearly superior
-dfl = CSV.read(fl)
-dflnb = CSV.read(flnb)
-
-# again
-f = joinpath(basepath, "opt_runs/eval/models_eval_testmode.csv")
-fnb = joinpath(basepath, "nobatchnorm_runs/eval/models_eval_testmode.csv")
-ft = joinpath(basepath, "opt_runs/eval/models_eval.csv")
-
-# no batchnorm is clearly superior
-df = CSV.read(f)
-dfnb = CSV.read(fnb)
-dft = CSV.read(ft)
+df4 = CSV.read(f4)
+df5 = CSV.read(f5)
+df6 = CSV.read(f6)
 
 figure()
 subplot(321)
@@ -93,8 +71,9 @@ savefig(figf)
 
 # get a model
 models = readdir(modelpath)
-mf = joinpath(modelpath, models[2])
+mf = joinpath(modelpath, models[14])
 model = GenModels.construct_model(mf) |> gpu
+Flux.testmode!(model)
 model_data = load(mf)
 exp_args = model_data[:experiment_args]
 seed = exp_args["seed"]
@@ -157,19 +136,5 @@ plot_4(model, patches, scores, labels, inds)
 inds = vcat(sortperm(scores)[1:2], sortperm(scores)[end-1:end])
 plot_4(model, patches, scores, labels, inds)
 
-# now test the model with testmode
-tmodel = Flux.testmode!(model)
-
-tscores = score_mse(tmodel, patches)
-troc = EvalCurves.roccurve(tscores, labels)
-tauroc = EvalCurves.auc(troc...)
-
-inds = [3, 4, 5, 6]
-plot_4(tmodel, patches, tscores, labels, inds)
-
-inds = [1, 2, 300, 301]
-plot_4(tmodel, patches, tscores, labels, inds)
-
-inds = vcat(sortperm(tscores)[1:2], sortperm(tscores)[end-1:end])
-plot_4(tmodel, patches, tscores, labels, inds)
-
+figure()
+scatter(df6[!,:ldim], df6[!,:auc_mse])
