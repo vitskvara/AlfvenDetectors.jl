@@ -11,7 +11,7 @@ else
 	evaldatapath = "/home/vit/vyzkum/alfven/cdb_data/"
 	basepath = "/home/vit/vyzkum/alfven/experiments/oneclass"
 end
-datapath = joinpath(basepath, "negative_runs")
+datapath = joinpath(basepath, "eval_tuning_runs")
 modelpath = joinpath(datapath, "models")
 evalpath = joinpath(datapath, "eval")
 mkpath(evalpath)
@@ -96,16 +96,10 @@ else
 end
 
 training_patches = training_data["patches"];
-if !normal_negative
-	labels = 1 .- testing_data["labels"]; # switch the labels here - positive class is actually the normal one
-else
-	labels = testing_data["labels"];
-end
+labels = testing_data["labels"];
 patches = testing_data["patches"];
 positive_patches = testing_data["patches"][:,:,:,labels.==1];
 negative_patches = testing_data["patches"][:,:,:,labels.==0];
-
-_data = eval_model(joinpath(modelpath,mf), evaldatapath)
 
 function jacobian(m::GenModels.GenerativeModel, z::AbstractArray{T,1}) where T
 	dec = Flux.Chain(
@@ -137,9 +131,25 @@ auroc = EvalCurves.auc(roc...)
 inds = [3, 4, 5, 6]
 plot_4(model, patches, scores, labels, inds)
 
-inds = [1, 2, 180, 181]
+inds = [1, 2, 300, 301]
 plot_4(model, patches, scores, labels, inds)
 
 inds = vcat(sortperm(scores)[1:2], sortperm(scores)[end-1:end])
 plot_4(model, patches, scores, labels, inds)
+
+# now test the model with testmode
+tmodel = Flux.testmode!(model)
+
+tscores = score_mse(tmodel, patches)
+troc = EvalCurves.roccurve(tscores, labels)
+tauroc = EvalCurves.auc(troc...)
+
+inds = [3, 4, 5, 6]
+plot_4(tmodel, patches, tscores, labels, inds)
+
+inds = [1, 2, 300, 301]
+plot_4(tmodel, patches, tscores, labels, inds)
+
+inds = vcat(sortperm(tscores)[1:2], sortperm(tscores)[end-1:end])
+plot_4(tmodel, patches, tscores, labels, inds)
 

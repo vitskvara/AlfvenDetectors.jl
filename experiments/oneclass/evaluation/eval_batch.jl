@@ -9,6 +9,9 @@ hostname = gethostname()
 if hostname == "gpu-node"
 	evaldatapath = "/compass/home/skvara/no-backup" 
 	datapath = joinpath("/compass/home/skvara/alfven/experiments/oneclass", path)
+elseif hostname == "tarbik.utia.cas.cz"
+	datapath = "/home/skvara/work/alfven/cdb_data/uprobe_data"
+	savepath = joinpath("/home/skvara/work/alfven/experiments/oneclass", path)
 else
 	evaldatapath = "/home/vit/vyzkum/alfven/cdb_data" 
 	datapath = joinpath("/home/vit/vyzkum/alfven/experiments/oneclass", path)
@@ -52,5 +55,5 @@ for row in data
 end
 
 # write/read the results
-csvf = joinpath(evalpath, "models_eval_testmode.csv") 
+csvf = joinpath(evalpath, "models_eval.csv") 
 CSV.write(csvf,df)
