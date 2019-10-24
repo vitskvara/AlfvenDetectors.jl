@@ -11,7 +11,7 @@ else
 	evaldatapath = "/home/vit/vyzkum/alfven/cdb_data/"
 	basepath = "/home/vit/vyzkum/alfven/experiments/oneclass"
 end
-datapath = joinpath(basepath, "eval_tuning_runs")
+datapath = joinpath(basepath, "nobatchnorm_ldim_runs")
 modelpath = joinpath(datapath, "models")
 evalpath = joinpath(datapath, "eval")
 mkpath(evalpath)
@@ -33,6 +33,21 @@ dft2 = CSV.read(ft2)
 dft3 = CSV.read(ft3)
 
 df = df3
+
+# compare batchnorm and no batchnorm runs
+fl = joinpath(basepath, "ldim_runs/eval/models_eval_testmode.csv")
+flnb = joinpath(basepath, "nobatchnorm_ldim_runs/eval/models_eval.csv")
+
+# no batchnorm is clearly superior
+dfl = CSV.read(fl)
+dflnb = CSV.read(flnb)
+
+fl = joinpath(basepath, "ldim_runs/eval/models_eval_testmode.csv")
+flnb = joinpath(basepath, "nobatchnorm_ldim_runs/eval/models_eval.csv")
+
+# no batchnorm is clearly superior
+dfl = CSV.read(fl)
+dflnb = CSV.read(flnb)
 
 figure()
 subplot(321)
@@ -75,8 +90,8 @@ savefig(figf)
 
 # get a model
 models = readdir(modelpath)
-mf = joinpath(modelpath, models[18])
-model = GenModels.construct_model(mf)
+mf = joinpath(modelpath, models[2])
+model = GenModels.construct_model(mf) |> gpu
 model_data = load(mf)
 exp_args = model_data[:experiment_args]
 seed = exp_args["seed"]
@@ -95,9 +110,8 @@ else
 	training_patches = training_data[1] |> gpu;
 end
 
-training_patches = training_data["patches"];
 labels = testing_data["labels"];
-patches = testing_data["patches"];
+patches = testing_data["patches"]  |> gpu;
 positive_patches = testing_data["patches"][:,:,:,labels.==1];
 negative_patches = testing_data["patches"][:,:,:,labels.==0];
 
@@ -132,6 +146,9 @@ inds = [3, 4, 5, 6]
 plot_4(model, patches, scores, labels, inds)
 
 inds = [1, 2, 300, 301]
+plot_4(model, patches, scores, labels, inds)
+
+inds = [1, 2, 180, 181]
 plot_4(model, patches, scores, labels, inds)
 
 inds = vcat(sortperm(scores)[1:2], sortperm(scores)[end-1:end])
