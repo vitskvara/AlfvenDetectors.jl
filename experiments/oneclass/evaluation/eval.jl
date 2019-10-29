@@ -32,6 +32,8 @@ function eval_model(mf, evaldatapath)
 	hostname = gethostname()
 	if occursin("soroban", hostname) || hostname == "gpu-node"
 		datapath = "/compass/home/skvara/no-backup/uprobe_data"
+	elseif hostname == "tarbik.utia.cas.cz"
+		datapath = "/home/skvara/work/alfven/cdb_data/uprobe_data"
 	else
 		datapath = "/home/vit/vyzkum/alfven/cdb_data/uprobe_data"
 	end
