@@ -1,5 +1,5 @@
 #!/bin/bash
-for SEED in {1..2}
+for SEED in {3..5}
 do
 ~/julia-1.1.1/bin/julia ../run_experiment.jl AE 128 2 32 64 --kernelsize=5 --savepath=unsupervised/models --eta=0.0001 --nepochs=50 --resblock --verb --savepoint=10 --unnormalized --seed=$SEED --normal-negative
 ~/julia-1.1.1/bin/julia ../run_experiment.jl VAE 128 2 32 64 --kernelsize=5 --savepath=unsupervised/models --eta=0.0001 --nepochs=50 --resblock --verb --savepoint=10 --beta=1.0 --unnormalized --seed=$SEED --normal-negative
