@@ -38,6 +38,7 @@ df = DataFrame(
 	:λ=>Float64[],
 	:γ=>Float64[],
 	:σ=>Float64[],
+	:β=>Float64[],
 	:train_mse=>Float64[],
 	:test_mse=>Float64[],
 	:test1_mse=>Float64[],
@@ -46,12 +47,18 @@ df = DataFrame(
 	:auc_mse=>Float64[],
 	:auc_mse_pos=>Float64[],
 	:prec_10_mse=>Float64[],
+	:prec_10_mse_pos=>Float64[],
+	:prec_20_mse=>Float64[],
+	:prec_20_mse_pos=>Float64[],
+	:prec_50_mse=>Float64[],
+	:prec_50_mse_pos=>Float64[],
 	:file=>String[]
 	)
 for row in data
 	push!(df, [row[2][:model], row[2][:channels], row[3]["ldimsize"], row[2][:nepochs], row[3]["seed"], !(row[3]["unnormalized"]),
 		get(row[3], "normal-negative", false), get(row[3], "lambda", 0), get(row[3], "gamma", 0), get(row[3], "sigma", 0),
-		row[4], row[5], row[6], row[7], row[8], row[9], row[10], row[11], row[1]])
+		get(row[3], "beta", 0), row[4], row[5], row[6], row[7], row[8], row[9], row[10], row[11],
+		row[12], row[13], row[14], row[15], row[16], row[1]])
 end
 
 # write/read the results

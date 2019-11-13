@@ -5,13 +5,13 @@ using Statistics
 using PaperUtils
 
 # paths
-outpath = "/home/vit/Dropbox/vyzkum/alfven/iaea2019/paper/figs/"
+outpath = "/home/vit/Dropbox/vyzkum/alfven/iaea2019/paper/figs_tables/"
 
 # get the paths
 hostname = gethostname()
 if hostname == "gpu-node"
-	evaldatapath = "/compass/home/skvara/no-backup/" 
-	basepath = "/compass/home/skvara/alfven/experiments/oneclass"
+	evaldatapath = "/compass/home/skstda/no-backup/" 
+	basepath = "/compass/home/skstda/alfven/experiments/oneclass"
 else
 	evaldatapath = "/home/vit/vyzkum/alfven/cdb_data/"
 	basepath = "/home/vit/vyzkum/alfven/experiments/oneclass"
@@ -39,15 +39,15 @@ bigdf = vcat(dfs...)
 subcols = [:model,:channels,:ldim,:nepochs,:normalized,:neg,:λ,:γ,:σ,:auc_mse,:auc_mse_pos]
 subdf = bigdf[!,subcols]
 agcols = filter(x -> !(x in [:seed, :auc_mse, :auc_mse_pos]), subcols)
-agdf = aggregate(subdf, agcols, [mean, var])
+agdf = aggregate(subdf, agcols, [mean, std])
 
 maxrow(df, s) = df[argmax(df[!,s]),:]
 
 # now extract the results
 oc1df = filter(row -> row[:neg] == false, agdf)
-delete!(oc1df, [:auc_mse_mean, :auc_mse_var])
+delete!(oc1df, [:auc_mse_mean, :auc_mse_std])
 rename!(oc1df, :auc_mse_pos_mean => :auc)
-rename!(oc1df, :auc_mse_pos_var => :var)
+rename!(oc1df, :auc_mse_pos_std => :std)
 
 agoc1df = vcat(map(x -> maxrow(x, :auc), groupby(oc1df, :model))...)
 delete!(agoc1df, :model_1)
@@ -58,16 +58,16 @@ agoc1df = vcat(map(i -> agoc1df[i, :], map(x -> agoc1df[!,:model] .== x, sortvec
 insertcols!(agoc1df, 2, :reg => metricvec)
 
 # finally get the output df
-oagoc1df = agoc1df[!, [:reg, :auc, :var]]
+oagoc1df = agoc1df[!, [:reg, :auc, :std]]
 s1df = PaperUtils.df2tex(oagoc1df)
 f1 = joinpath(outpath, "oneclass_t1.tex")
 PaperUtils.string2file(f1, s1df)
 
 # the second type of training:
 oc2df = filter(row -> row[:neg] == true, agdf)
-delete!(oc2df, [:auc_mse_pos_mean, :auc_mse_pos_var])
+delete!(oc2df, [:auc_mse_pos_mean, :auc_mse_pos_std])
 rename!(oc2df, :auc_mse_mean => :auc)
-rename!(oc2df, :auc_mse_var => :var)
+rename!(oc2df, :auc_mse_std => :std)
 
 agoc2df = vcat(map(x -> maxrow(x, :auc), groupby(oc2df, :model))...)
 delete!(agoc2df, :model_1)
@@ -79,7 +79,7 @@ agoc2df = vcat(map(i -> agoc2df[i, :], map(x -> agoc2df[!,:model] .== x, sortvec
 insertcols!(agoc2df, 2, :reg => metricvec)
 
 # finally get the output df
-oagoc2df = agoc2df[!, [:reg, :auc, :var]]
+oagoc2df = agoc2df[!, [:reg, :auc, :std]]
 s2df = PaperUtils.df2tex(oagoc2df)
 f2 = joinpath(outpath, "oneclass_t2.tex")
 PaperUtils.string2file(f2, s2df)

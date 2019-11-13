@@ -75,7 +75,14 @@ function eval_model(mf, evaldatapath)
 
 	# other accuracy measures
 	prec_10_mse = prec_at_k(model, patches, labels, score_mse, 10)
+	prec_10_mse_pos = prec_at_k(model, patches, 1 .- labels, score_mse, 10)
+	prec_20_mse = prec_at_k(model, patches, labels, score_mse, 20)
+	prec_20_mse_pos = prec_at_k(model, patches, 1 .- labels, score_mse, 20)
+	prec_50_mse = prec_at_k(model, patches, labels, score_mse, 50)
+	prec_50_mse_pos = prec_at_k(model, patches, 1 .- labels, score_mse, 50)
 
-	return  mf, params, exp_args, train_mse, test_mse, test1_mse, test0_mse, test_var, auc_mse, auc_mse_pos, prec_10_mse
+
+	return  mf, params, exp_args, train_mse, test_mse, test1_mse, test0_mse, test_var, auc_mse, auc_mse_pos, 
+		prec_10_mse, prec_10_mse_pos, prec_20_mse, prec_20_mse_pos, prec_50_mse, prec_50_mse_pos
 end
 
