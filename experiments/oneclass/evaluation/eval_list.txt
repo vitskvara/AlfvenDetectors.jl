@@ -1,0 +1,7 @@
+eval_tuning
+ldim_runs
+nobatchnorm_runs
+opt_runs
+negative_runs
+noresblock_runs
+unsupervised
