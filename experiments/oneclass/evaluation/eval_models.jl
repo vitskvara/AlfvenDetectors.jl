@@ -11,24 +11,23 @@ else
 	evaldatapath = "/home/vit/vyzkum/alfven/cdb_data/"
 	basepath = "/home/vit/vyzkum/alfven/experiments/oneclass"
 end
-datapath = joinpath(basepath, "nobatchnorm_runs")
-modelpath = joinpath(datapath, "models")
-evalpath = joinpath(datapath, "eval")
-mkpath(evalpath)
 
-f1 = joinpath(basepath, "eval_tuning/eval/models_eval.csv")
-f2 = joinpath(basepath, "opt_runs/eval/models_eval.csv")
-f3 = joinpath(basepath, "negative_runs/eval/models_eval.csv")
-f4 = joinpath(basepath, "nobatchnorm_runs/eval/models_eval.csv")
-f5 = joinpath(basepath, "ldim_runs/eval/models_eval.csv")
-f6 = joinpath(basepath, "nobatchnorm_convsize_runs/eval/models_eval.csv")
+ps = [
+	"eval_tuning", 
+	"ldim_runs",
+	"nobatchnorm_convsize_runs",
+	"nobatchnorm_runs",
+	"opt_runs",
+	"negative_runs",
+	"noresblock_runs",
+	"unsupervised"
+	]
+fs = joinpath.(basepath, ps, "eval/models_eval.csv")
+# nejlepsi vysledek v #7 a #8 - dobre se uci jen ta nulova trida
 
-df1 = CSV.read(f1)
-df2 = CSV.read(f2)
-df3 = CSV.read(f3)
-df4 = CSV.read(f4)
-df5 = CSV.read(f5)
-df6 = CSV.read(f6)
+dfs = map(CSV.read, fs)
+df = dfs[8]
+
 
 figure()
 subplot(321)
@@ -69,9 +68,15 @@ tight_layout()
 figf = "/home/vit/vyzkum/alfven/experiments/oneclass/waae_runs/eval/models_eval.eps"
 savefig(figf)
 
+datapath = joinpath(basepath, ps[7])
+modelpath = joinpath(datapath, "models")
+evalpath = joinpath(datapath, "eval")
+mkpath(evalpath)
+
 # get a model
 models = readdir(modelpath)
-mf = joinpath(modelpath, models[14])
+imodel = 5
+mf = joinpath(modelpath, models[imodel])
 model = GenModels.construct_model(mf) |> gpu
 Flux.testmode!(model)
 model_data = load(mf)
@@ -93,7 +98,7 @@ else
 end
 
 labels = testing_data["labels"];
-patches = testing_data["patches"]  |> gpu;
+patches = testing_data["patches"]   |> gpu;
 positive_patches = testing_data["patches"][:,:,:,labels.==1];
 negative_patches = testing_data["patches"][:,:,:,labels.==0];
 
@@ -138,3 +143,13 @@ plot_4(model, patches, scores, labels, inds)
 
 figure()
 scatter(df6[!,:ldim], df6[!,:auc_mse])
+
+
+
+# try to compute seed averages
+df = dfs[7]
+subcols = [:model,:channels,:ldim,:nepochs,:normalized,:neg,:λ,:γ,:σ,:auc_mse]
+subdf = df[!,subcols]
+agcols = filter(x -> !(x in [:seed, :auc_mse]), subcols)
+agdf = aggregate(subdf, agcols, mean)
+
