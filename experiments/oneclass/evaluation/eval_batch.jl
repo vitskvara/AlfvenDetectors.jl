@@ -1,6 +1,9 @@
 include("eval.jl")
 
 path = ARGS[1]
+if length(ARGS) > 1
+	using CuArrays
+end
 
 # get the paths
 hostname = gethostname()

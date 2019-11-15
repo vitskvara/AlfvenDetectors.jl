@@ -35,9 +35,10 @@ dfs = map(CSV.read, fs)
 # now lets try to join the dfs together - lets see how that goes
 bigdf = vcat(dfs...)
 
-# now lets compute the averages
-metric = "auc_mse"
-metric_short = Symbol("auc")
+########### this part produces maximums for each criterion independently #####################
+# now lets compute the averages and find best model for a selected objective
+metric = "prec_50_mse"
+metric_short = Symbol("prec_50")
 m1 = Symbol(metric)
 m2 = Symbol(metric*"_pos")
 m1m = Symbol(metric*"_mean")
@@ -57,7 +58,7 @@ delete!(oc1df, [m1m, m1s])
 rename!(oc1df, m2m => metric_short)
 rename!(oc1df, m2s => :std)
 
-agoc1df = vcat(map(x -> maxrow(x, :auc), groupby(oc1df, :model))...)
+agoc1df = vcat(map(x -> maxrow(x, metric_short), groupby(oc1df, :model))...)
 delete!(agoc1df, :model_1)
 
 sortvec = "Conv" .* ["AE", "VAE", "WAE", "AAE", "WAAE"]
@@ -75,7 +76,7 @@ PaperUtils.string2file(f1, s1df)
 oc2df = filter(row -> row[:neg] == true, agdf)
 delete!(oc2df, [m2m, m2s])
 rename!(oc2df, m1m => metric_short)
-rename!(oc2df, m1m => :std)
+rename!(oc2df, m1s => :std)
 
 agoc2df = vcat(map(x -> maxrow(x, metric_short), groupby(oc2df, :model))...)
 delete!(agoc2df, :model_1)
@@ -89,5 +90,68 @@ insertcols!(agoc2df, 2, :reg => metricvec)
 # finally get the output df
 oagoc2df = agoc2df[!, [:reg, metric_short, :std]]
 s2df = PaperUtils.df2tex(oagoc2df)
-f2 = joinpath(outpath, "oneclass_"*String(m1*".tex")
+f2 = joinpath(outpath, "oneclass_"*String(m1)*".tex")
 PaperUtils.string2file(f2, s2df)
+
+########### this part produces maximums for a selected criterion and the averages for the rest as well #####################
+# now lets compute the averages and find best model for a selected objective
+metric = "auc_mse"
+metric_short = Symbol("auc")
+m1 = Symbol(metric)
+m2 = Symbol(metric*"_pos")
+m1m = Symbol(metric*"_mean")
+m1s = Symbol(metric*"_std")
+m2m = Symbol(metric*"_pos_mean")
+m2s = Symbol(metric*"_pos_std")
+metrics = [:auc_mse,:auc_mse_pos, :prec_10_mse, :prec_10_mse_pos, 
+	:prec_20_mse, :prec_20_mse_pos, :prec_50_mse, :prec_50_mse_pos]
+subcols = vcat([:model,:channels,:ldim,:nepochs,:normalized,:neg,:β,:λ,:γ,:σ], metrics)
+subdf = bigdf[!,subcols]
+agcols = metrics
+agdf = aggregate(subdf, agcols, [mean, std])
+
+maxrow(df, s) = df[argmax(df[!,s]),:]
+
+# now extract the results
+oc1df = filter(row -> row[:neg] == false, agdf)
+delete!(oc1df, [m1m, m1s])
+rename!(oc1df, m2m => metric_short)
+rename!(oc1df, m2s => :std)
+
+agoc1df = vcat(map(x -> maxrow(x, metric_short), groupby(oc1df, :model))...)
+delete!(agoc1df, :model_1)
+
+sortvec = "Conv" .* ["AE", "VAE", "WAE", "AAE", "WAAE"]
+metricvec = ["--", "KLD", "MMD", "JSD", "MMD + JSD"]
+agoc1df = vcat(map(i -> agoc1df[i, :], map(x -> agoc1df[!,:model] .== x, sortvec))...)
+insertcols!(agoc1df, 2, :reg => metricvec)
+
+# finally get the output df
+oagoc1df = agoc1df[!, [:reg, metric_short, :std]]
+s1df = PaperUtils.df2tex(oagoc1df)
+f1 = joinpath(outpath, "oneclass_"*String(m2)*"_all.tex")
+PaperUtils.string2file(f1, s1df)
+31
+# the second type of training:
+oc2df = filter(row -> row[:neg] == true, agdf)
+delete!(oc2df, [m2m, m2s])
+rename!(oc2df, m1m => metric_short)
+rename!(oc2df, m1s => :std)
+
+agoc2df = vcat(map(x -> maxrow(x, metric_short), groupby(oc2df, :model))...)
+delete!(agoc2df, :model_1)
+
+sortvec = "Conv" .* ["AE", "WAAE"]
+#metricvec = ["--", "KLD", "MMD", "JSD", "MMD + JSD"]
+metricvec = ["--", "MMD + JSD"]
+agoc2df = vcat(map(i -> agoc2df[i, :], map(x -> agoc2df[!,:model] .== x, sortvec))...)
+insertcols!(agoc2df, 2, :reg => metricvec)
+
+# finally get the output df
+oagoc2df = agoc2df[!, [:reg, metric_short, :std]]
+s2df = PaperUtils.df2tex(oagoc2df)
+f2 = joinpath(outpath, "oneclass_"*String(m1)*"_all.tex")
+PaperUtils.string2file(f2, s2df)
+
+
+

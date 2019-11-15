@@ -10,9 +10,9 @@ using LinearAlgebra
 using DataFrames
 using CSV
 using BSON
-if gethostname() == "gpu-node"
-	using CuArrays
-end
+#if gethostname() == "gpu-node"
+#	using CuArrays
+#end
 
 # mse
 mse(model,x) = Flux.mse(x, model(x)).data
