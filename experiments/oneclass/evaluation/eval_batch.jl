@@ -1,9 +1,7 @@
 include("eval.jl")
 
 path = ARGS[1]
-if length(ARGS) > 1
-	using CuArrays
-end
+usegpu = (length(ARGS) > 1)
 
 # get the paths
 hostname = gethostname()
@@ -26,7 +24,7 @@ models = readdir(modelpath)
 data = []
 for (i,mf) in enumerate(models)
 	println("processing $i")
-	_data = eval_model(joinpath(modelpath,mf), evaldatapath)
+	_data = eval_model(joinpath(modelpath,mf), evaldatapath, usgpue=usegpu)
 	push!(data, _data)
 end
 

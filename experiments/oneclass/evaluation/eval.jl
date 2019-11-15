@@ -24,8 +24,8 @@ score_mse(model, x) = map(i->mse(model, x[:,:,:,i:i]), 1:size(x,4))
 auc(model,x,y,sf) = EvalCurves.auc(EvalCurves.roccurve(sf(model,x), y)...)
 prec_at_k(model,x,y,sf,k) = EvalCurves.precision_at_k(sf(model,x), y, k)
 
-function eval_model(mf, evaldatapath)
-	model = GenModels.construct_model(mf) |> gpu
+function eval_model(mf, evaldatapath, usegpu=true)
+	model = usegpu ? gpu(GenModels.construct_model(mf)) : GenModels.construct_model(mf)
 	Flux.testmode!(model)
 	params = AlfvenDetectors.parse_params(mf)
 
@@ -47,19 +47,19 @@ function eval_model(mf, evaldatapath)
 	if !(normal_negative)
 		testing_data = load(joinpath(evaldatapath, "oneclass_data/testing/128$(norms)/seed-$(seed).jld2"));
 		training_data = load(joinpath(evaldatapath, "oneclass_data/training/128$(norms)/seed-$(seed).jld2"));
-		training_patches = training_data["patches"] |> gpu;
+		training_patches = usegpu ? gpu(training_data["patches"]) : training_data["patches"]
 	else
 		testing_data = load(joinpath(evaldatapath, "oneclass_data_negative/testing/128$(norms)/data.jld2"));
 		training_data = AlfvenDetectors.oneclass_negative_training_data(datapath, 20, seed, readfun, 
 			exp_args["patchsize"])
-		training_patches = training_data[1] |> gpu;
+		training_patches = usegpu ? gpu(training_data[1]) : training_data[1];
 	end
 
 	# labeled data
 	labels = testing_data["labels"];
-	patches = testing_data["patches"] |> gpu;
-	positive_patches = testing_data["patches"][:,:,:,labels.==1] |> gpu;
-	negative_patches = testing_data["patches"][:,:,:,labels.==0] |> gpu;
+	patches = usegpu ? gpu(testing_data["patches"]) : testing_data["patches"];
+	positive_patches = usegpu ? gpu(testing_data["patches"][:,:,:,labels.==1]) : testing_data["patches"][:,:,:,labels.==1];
+	negative_patches = usegpu ? gpu(testing_data["patches"][:,:,:,labels.==0]) : testing_data["patches"][:,:,:,labels.==0];
 	
 	# get the mses
 	M = 1
