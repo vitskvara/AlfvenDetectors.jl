@@ -24,7 +24,7 @@ models = readdir(modelpath)
 data = []
 for (i,mf) in enumerate(models)
 	println("processing $i")
-	_data = eval_model(joinpath(modelpath,mf), evaldatapath, usgpue=usegpu)
+	_data = eval_model(joinpath(modelpath,mf), evaldatapath, usegpu)
 	push!(data, _data)
 end
 
