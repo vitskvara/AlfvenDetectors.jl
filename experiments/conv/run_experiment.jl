@@ -149,8 +149,8 @@ s = ArgParseSettings()
 		default = 1
 		help = "number of pz components"
 	"--pz-type"
-		default = "cube"
-		help = "the type of predefined pz, one of [cube, flower]"
+		default = "vamp"
+		help = "the type of predefined pz, one of [cube, flower, vamp]"
 	"--lambda"
 		arg_type = Float32
 		default = 1.0f0
@@ -204,7 +204,10 @@ sigma = parsed_args["sigma"]
 pz_components = parsed_args["pz-components"]
 lambda = parsed_args["lambda"]
 gamma = parsed_args["gamma"]
-pz_type = "AlfvenDetectors."*parsed_args["pz-type"]*"GM"
+pz_type = parsed_args["pz-type"]
+if pz_type in ["flower", "cube"]
+	pz_type = "AlfvenDetectors."*parsed_args["pz-type"]*"GM"
+end
 if measurement_type == "mscamp"
 	readfun = AlfvenDetectors.readmscamp
 elseif measurement_type == "mscphase"
@@ -260,16 +263,21 @@ if test
 end
 xdim = size(data)
 
-
 # put all data into gpu only if you want to be fast and not care about memory clogging
 # otherwise that is done in the train function now per batch
 # data = data |> gpu
 
 # pz
-if pz_components == 1
-	pz = (usegpu ? GenModels.randn_gpu : randn)
+if pz_type == "vamp"
+	pz = VAMP(pz_components, xdim[1:3])
+	pz = (usegpu ? gpu(pz) : pz )
 else
-	pz = eval(Meta.parse(pz_type))(ldim, pz_components; seed=seed, gpu=usegpu)
+	if pz_components == 1
+		prior = (usegpu ? GenModels.randn_gpu : randn)
+	else
+		prior = eval(Meta.parse(pz_type))(ldim, pz_components; seed=seed, gpu=usegpu)
+	end
+	pz(n) = prior(Float32,ldim,n)
 end
 println("")
 
@@ -332,6 +340,10 @@ filename = AlfvenDetectors.create_filename(modelname, [], Dict(), Dict(),
 	filename_kwargs...)
 # create the model
 model = GenModels.construct_model(modelname, [x[2] for x in model_args]...; model_kwargs...)
+# this is here in case that VAMP is used
+if pz_type == "vamp"
+	model.pz(N::Int) = GenModels.encodeSampleVamp(model.pz, model.encoder, N)
+end
 model, history, t = AlfvenDetectors.fitsave_unsupervised(data, model, batchsize, 
 	outer_nepochs, inner_nepochs, model_args, model_kwargs, fit_kwargs, savepath; 
 	modelname = "GenModels."*modelname, optname=optimiser, eta=eta, 

@@ -22,7 +22,7 @@ output_var(model, x) = var(map(i->mean(model(x[:,:,:,i:i]).data), 1:size(x,4)))
 # get auc based on plain mse
 score_mse(model, x) = map(i->mse(model, x[:,:,:,i:i]), 1:size(x,4))
 auc(model,x,y,sf) = EvalCurves.auc(EvalCurves.roccurve(sf(model,x), y)...)
-prec_at_k(model,x,y,sf,k) = EvalCurves.precision_at_k(sf(model,x), y, k)
+prec_at_k(model,x,y,sf,k) = EvalCurves.precision_at_k(sf(model,x), y, max(k, sum(y)))
 
 function eval_model(mf, evaldatapath, usegpu=true)
 	model = usegpu ? gpu(GenModels.construct_model(mf)) : GenModels.construct_model(mf)
@@ -85,4 +85,3 @@ function eval_model(mf, evaldatapath, usegpu=true)
 	return  mf, params, exp_args, train_mse, test_mse, test1_mse, test0_mse, test_var, auc_mse, auc_mse_pos, 
 		prec_10_mse, prec_10_mse_pos, prec_20_mse, prec_20_mse_pos, prec_50_mse, prec_50_mse_pos
 end
-

@@ -4,7 +4,7 @@ using PyCall
 using HDF5
 
 # setup
-outpath = "/home/vit/Dropbox/vyzkum/alfven/iaea2019/paper/figs"
+outpath = "/home/vit/Dropbox/vyzkum/alfven/iaea2019/paper/figs_tables"
 datapath = "/home/vit/vyzkum/alfven/cdb_data/uprobe_data"
 shots = readdir(datapath)
 shotno = "10870"
@@ -15,6 +15,7 @@ rawf = joinpath(dirname(datapath), "raw_signals/$(shotno).h5")
 psd = AlfvenDetectors.readnormlogupsd(shotf,memorysafe=true);
 t = AlfvenDetectors.readtupsd(shotf,memorysafe=true);
 f = AlfvenDetectors.readfupsd(shotf,memorysafe=true);
+I = AlfvenDetectors.readip(shotf,memorysafe=true);
 signal = h5read(rawf, "f")
 tsignal = h5read(rawf, "t")/1000
 sinds = minimum(t) .<= tsignal .<= maximum(t)
@@ -35,8 +36,9 @@ fname = "uprobe_data.png"
 figure(figsize=(8,4))
 subplot(311)
 #title("U probe signal - DUMMY PLOT, REPLACE WITH REAL DATA")
-plot(tsignal, signal, lw=0.4)
+plot(tsignal[1:2000:end], signal[1:2000:end], lw=1)
 xlim([minimum(tsignal), maximum(tsignal)])
+ylim([-30,30])
 #xlabel("t [s]")
 ylabel("I [A]")
 # we dont have the raw data - find it
@@ -68,3 +70,12 @@ ylabel("f [MHz]")
 tight_layout(h_pad = 0.1)
 
 savefig(joinpath(outpath, fname),dpi=500)
+
+using Statistics
+function median_filter(x,wl)
+	y = similar(x, length(x)-wl+1)
+	for i in 1:length(y)
+		y[i] = median(x[i:i+wl-1])
+	end
+	y
+end

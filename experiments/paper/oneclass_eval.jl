@@ -25,7 +25,9 @@ ps = [
 	"opt_runs",
 	"negative_runs",
 	"noresblock_runs",
-	"unsupervised"
+	"unsupervised",
+	"supervised",
+	"unsupervised_additional"
 	]
 fs = joinpath.(basepath, ps, "eval/models_eval.csv")
 # nejlepsi vysledek v #7 a #8 - dobre se uci jen ta nulova trida
@@ -81,9 +83,8 @@ rename!(oc2df, m1s => :std)
 agoc2df = vcat(map(x -> maxrow(x, metric_short), groupby(oc2df, :model))...)
 delete!(agoc2df, :model_1)
 
-sortvec = "Conv" .* ["AE", "WAAE"]
-#metricvec = ["--", "KLD", "MMD", "JSD", "MMD + JSD"]
-metricvec = ["--", "MMD + JSD"]
+sortvec = "Conv" .* ["AE", "VAE", "WAE", "AAE", "WAAE"]
+metricvec = ["--", "KLD", "MMD", "JSD", "MMD + JSD"]
 agoc2df = vcat(map(i -> agoc2df[i, :], map(x -> agoc2df[!,:model] .== x, sortvec))...)
 insertcols!(agoc2df, 2, :reg => metricvec)
 

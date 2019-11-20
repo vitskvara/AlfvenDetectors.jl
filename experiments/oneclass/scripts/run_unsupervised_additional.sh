@@ -1,7 +1,7 @@
 #!/bin/bash
 # run with normalized data
 # run for 30 iterations
-for SEED in 1 .. 10
+for SEED in {2..9}
 do	
 	for LDIM in 8 128 256
 	do
