@@ -29,6 +29,11 @@ ps = [
 	"supervised",
 	"unsupervised_additional"
 	]
+ps = [
+	"unsupervised",
+	"supervised",
+	"unsupervised_additional"
+	]
 fs = joinpath.(basepath, ps, "eval/models_eval.csv")
 # nejlepsi vysledek v #7 a #8 - dobre se uci jen ta nulova trida
 

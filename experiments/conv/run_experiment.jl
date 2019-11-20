@@ -269,7 +269,8 @@ xdim = size(data)
 
 # pz
 if pz_type == "vamp"
-	pz = VAMP(pz_components, xdim[1:3])
+	#pz = VAMP(pz_components, xdim[1:3])
+	pz = GenModels.init_vamp_mean(pz_components, data)
 	pz = (usegpu ? gpu(pz) : pz )
 else
 	if pz_components == 1

@@ -20,14 +20,16 @@ ps = [
 	"opt_runs",
 	"negative_runs",
 	"noresblock_runs",
-	"unsupervised"
+	"unsupervised",
+	"supervised",
+	"unsupervised_additional"
 	]
 fs = joinpath.(basepath, ps, "eval/models_eval.csv")
 # nejlepsi vysledek v #7 a #8 - dobre se uci jen ta nulova trida
 
 dfs = map(CSV.read, fs)
-df = dfs[8]
 
+df = dfs[9]
 
 figure()
 subplot(321)
@@ -68,15 +70,25 @@ tight_layout()
 figf = "/home/vit/vyzkum/alfven/experiments/oneclass/waae_runs/eval/models_eval.eps"
 savefig(figf)
 
-datapath = joinpath(basepath, ps[7])
+# look at why we have auc 0.83 and prec@50 is 0.9
+idf = 9
+df = dfs[idf]
+df = filter(row -> row[:prec_50_mse_pos] > 0.9, df)
+i = argmin(df[!,:auc_mse_pos] - df[!,:prec_50_mse_pos])
+#i = 383
+row = df[i,:]
+mf = joinpath(basepath, ps[idf], "models", basename(row[:file]))
+
+datapath = joinpath(basepath, ps[idf])
 modelpath = joinpath(datapath, "models")
 evalpath = joinpath(datapath, "eval")
 mkpath(evalpath)
 
 # get a model
-models = readdir(modelpath)
+"models = readdir(modelpath)
 imodel = 5
 mf = joinpath(modelpath, models[imodel])
+"
 model = GenModels.construct_model(mf) |> gpu
 Flux.testmode!(model)
 model_data = load(mf)
@@ -97,7 +109,11 @@ else
 	training_patches = training_data[1] |> gpu;
 end
 
-labels = testing_data["labels"];
+if normal_negative
+	labels = testing_data["labels"];
+else
+	labels = 1 .- testing_data["labels"];
+end
 patches = testing_data["patches"]   |> gpu;
 positive_patches = testing_data["patches"][:,:,:,labels.==1];
 negative_patches = testing_data["patches"][:,:,:,labels.==0];
@@ -128,6 +144,9 @@ end
 scores = score_mse(model, patches)
 roc = EvalCurves.roccurve(scores, labels)
 auroc = EvalCurves.auc(roc...)
+prec_50 = EvalCurves.precision_at_k(scores, labels, 50)
+prec_50_b = EvalCurves.precision_at_k(score_mse(model,patches), labels, min(50, sum(labels)))
+prc = EvalCurves.prcurve(scores, labels)
 
 inds = [3, 4, 5, 6]
 plot_4(model, patches, scores, labels, inds)
