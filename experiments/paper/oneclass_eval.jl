@@ -30,7 +30,7 @@ ps = [
 	"unsupervised_additional"
 	]
 ps = [
-	"unsupervised",
+#	"unsupervised",
 	"supervised",
 	"unsupervised_additional"
 	]
@@ -98,6 +98,125 @@ oagoc2df = agoc2df[!, [:reg, metric_short, :std]]
 s2df = PaperUtils.df2tex(oagoc2df)
 f2 = joinpath(outpath, "oneclass_"*String(m1)*".tex")
 PaperUtils.string2file(f2, s2df)
+
+# look at the top models for supervised/unsupervised cases 
+# get top 3/5 WAAE hyperparams
+# then restrict the supervised/unsupervised experiments only to those and rerun more experiments to get enough 
+# data for evaluation
+### AUC ###
+sub1df = filter(row -> row[:model] == "ConvWAAE", oc1df)
+sub1df = sort(sub1df, :auc)
+sub1df[end-4:end,:]
+# top 5:
+"
+│ Row │ model    │ channels │ ldim  │ nepochs │ normalized │ neg   │ β       │ λ       │ γ       │ σ       │ auc      │ std        │
+│     │ String   │ String   │ Int64 │ Int64   │ Bool       │ Bool  │ Float64 │ Float64 │ Float64 │ Float64 │ Float64  │ Float64    │
+├─────┼──────────┼──────────┼───────┼─────────┼────────────┼───────┼─────────┼─────────┼─────────┼─────────┼──────────┼────────────┤
+│ 1   │ ConvWAAE │ [32, 64] │ 256   │ 10      │ true       │ false │ 1.0     │ 10.0    │ 10.0    │ 0.1     │ 0.617536 │ 0.13111    │
+│ 2   │ ConvWAAE │ [32, 64] │ 256   │ 10      │ true       │ false │ 1.0     │ 0.1     │ 0.1     │ 1.0     │ 0.646999 │ 0.120555   │
+│ 3   │ ConvWAAE │ [32, 64] │ 256   │ 10      │ true       │ false │ 1.0     │ 0.1     │ 0.1     │ 0.1     │ 0.66939  │ 0.00311109 │
+│ 4   │ ConvWAAE │ [32, 64] │ 128   │ 20      │ true       │ false │ 1.0     │ 1.0     │ 1.0     │ 0.1     │ 0.673083 │ 0.0634441  │
+│ 5   │ ConvWAAE │ [32, 64] │ 256   │ 20      │ true       │ false │ 1.0     │ 10.0    │ 10.0    │ 0.1     │ 0.715352 │ 0.0863328  │
+
+"
+sub2df = filter(row -> row[:model] == "ConvWAAE", oc2df)
+sub2df = sort(sub2df, :auc)
+sub2df[end-4:end,:]
+"
+│ Row │ model    │ channels     │ ldim  │ nepochs │ normalized │ neg  │ β       │ λ       │ γ       │ σ       │ auc      │ std        │
+│     │ String   │ String       │ Int64 │ Int64   │ Bool       │ Bool │ Float64 │ Float64 │ Float64 │ Float64 │ Float64  │ Float64    │
+├─────┼──────────┼──────────────┼───────┼─────────┼────────────┼──────┼─────────┼─────────┼─────────┼─────────┼──────────┼────────────┤
+│ 1   │ ConvWAAE │ [32, 32, 64] │ 8     │ 30      │ false      │ true │ 1.0     │ 10.0    │ 10.0    │ 1.0     │ 0.844389 │ 0.0155165  │
+│ 2   │ ConvWAAE │ [32, 64]     │ 8     │ 30      │ false      │ true │ 1.0     │ 0.1     │ 0.1     │ 1.0     │ 0.846473 │ 0.0169007  │
+│ 3   │ ConvWAAE │ [32, 64]     │ 128   │ 30      │ false      │ true │ 1.0     │ 1.0     │ 1.0     │ 0.01    │ 0.849362 │ NaN        │
+│ 4   │ ConvWAAE │ [32, 64]     │ 8     │ 30      │ false      │ true │ 1.0     │ 10.0    │ 10.0    │ 0.1     │ 0.849725 │ 0.00453216 │
+│ 5   │ ConvWAAE │ [32, 32, 64] │ 128   │ 30      │ false      │ true │ 1.0     │ 10.0    │ 10.0    │ 1.0     │ 0.858771 │ NaN        │
+"
+
+# do the same for WAE
+sub1df = filter(row -> row[:model] == "ConvWAE", oc1df)
+sub1df = sort(sub1df, :auc)
+sub1df[end-4:end,:]
+"
+│ Row │ model   │ channels     │ ldim  │ nepochs │ normalized │ neg   │ β       │ λ       │ γ       │ σ       │ auc      │ std       │
+│     │ String  │ String       │ Int64 │ Int64   │ Bool       │ Bool  │ Float64 │ Float64 │ Float64 │ Float64 │ Float64  │ Float64   │
+├─────┼─────────┼──────────────┼───────┼─────────┼────────────┼───────┼─────────┼─────────┼─────────┼─────────┼──────────┼───────────┤
+│ 1   │ ConvWAE │ [32, 32, 64] │ 256   │ 20      │ true       │ false │ 1.0     │ 1.0     │ 1.0     │ 1.0     │ 0.745443 │ NaN       │
+│ 2   │ ConvWAE │ [32, 32, 64] │ 256   │ 20      │ true       │ false │ 1.0     │ 10.0    │ 1.0     │ 0.1     │ 0.752828 │ NaN       │
+│ 3   │ ConvWAE │ [32, 64]     │ 256   │ 20      │ true       │ false │ 1.0     │ 1.0     │ 1.0     │ 1.0     │ 0.758485 │ NaN       │
+│ 4   │ ConvWAE │ [32, 64]     │ 256   │ 20      │ true       │ false │ 1.0     │ 10.0    │ 1.0     │ 0.1     │ 0.764613 │ NaN       │
+│ 5   │ ConvWAE │ [32, 64]     │ 256   │ 10      │ true       │ false │ 1.0     │ 0.1     │ 1.0     │ 0.01    │ 0.777184 │ 0.0286665 │
+"
+sub2df = filter(row -> row[:model] == "ConvWAE", oc2df)
+sub2df = sort(sub2df, :auc)
+sub2df[end-4:end,:]
+"
+│ Row │ model   │ channels     │ ldim  │ nepochs │ normalized │ neg  │ β       │ λ       │ γ       │ σ       │ auc      │ std     │
+│     │ String  │ String       │ Int64 │ Int64   │ Bool       │ Bool │ Float64 │ Float64 │ Float64 │ Float64 │ Float64  │ Float64 │
+├─────┼─────────┼──────────────┼───────┼─────────┼────────────┼──────┼─────────┼─────────┼─────────┼─────────┼──────────┼─────────┤
+│ 1   │ ConvWAE │ [32, 32, 64] │ 128   │ 20      │ false      │ true │ 1.0     │ 0.1     │ 1.0     │ 0.01    │ 0.85735  │ NaN     │
+│ 2   │ ConvWAE │ [32, 64]     │ 128   │ 20      │ false      │ true │ 1.0     │ 10.0    │ 1.0     │ 1.0     │ 0.866412 │ NaN     │
+│ 3   │ ConvWAE │ [32, 64]     │ 128   │ 30      │ false      │ true │ 1.0     │ 1.0     │ 1.0     │ 1.0     │ 0.866601 │ NaN     │
+│ 4   │ ConvWAE │ [32, 32, 64] │ 128   │ 30      │ false      │ true │ 1.0     │ 0.1     │ 1.0     │ 0.01    │ 0.868433 │ NaN     │
+│ 5   │ ConvWAE │ [32, 64]     │ 128   │ 30      │ false      │ true │ 1.0     │ 10.0    │ 1.0     │ 1.0     │ 0.872158 │ NaN     │
+"
+
+# do the same for prec_50
+sub1df = filter(row -> row[:model] == "ConvWAAE", oc1df)
+sub1df = sort(sub1df, :prec_50)
+sub1df[end-4:end,:]
+# top 5:
+"
+│ Row │ model    │ channels     │ ldim  │ nepochs │ normalized │ neg   │ β       │ λ       │ γ       │ σ       │ prec_50 │ std       │
+│     │ String   │ String       │ Int64 │ Int64   │ Bool       │ Bool  │ Float64 │ Float64 │ Float64 │ Float64 │ Float64 │ Float64   │
+├─────┼──────────┼──────────────┼───────┼─────────┼────────────┼───────┼─────────┼─────────┼─────────┼─────────┼─────────┼───────────┤
+│ 1   │ ConvWAAE │ [32, 32, 64] │ 256   │ 10      │ true       │ false │ 1.0     │ 1.0     │ 1.0     │ 0.1     │ 0.88    │ 0.0       │
+│ 2   │ ConvWAAE │ [32, 64]     │ 256   │ 10      │ true       │ false │ 1.0     │ 1.0     │ 1.0     │ 0.01    │ 0.88    │ 0.0282843 │
+│ 3   │ ConvWAAE │ [32, 64]     │ 256   │ 10      │ true       │ false │ 1.0     │ 0.1     │ 0.1     │ 0.1     │ 0.88    │ 0.0282843 │
+│ 4   │ ConvWAAE │ [32, 64]     │ 128   │ 20      │ true       │ false │ 1.0     │ 1.0     │ 1.0     │ 0.1     │ 0.91    │ 0.0424264 │
+│ 5   │ ConvWAAE │ [32, 64]     │ 256   │ 20      │ true       │ false │ 1.0     │ 10.0    │ 10.0    │ 0.1     │ 0.97    │ 0.0424264 │
+"
+sub2df = filter(row -> row[:model] == "ConvWAAE", oc2df)
+sub2df = sort(sub2df, :prec_50)
+sub2df[end-4:end,:]
+"
+│ Row │ model    │ channels     │ ldim  │ nepochs │ normalized │ neg  │ β       │ λ       │ γ       │ σ       │ prec_50 │ std       │
+│     │ String   │ String       │ Int64 │ Int64   │ Bool       │ Bool │ Float64 │ Float64 │ Float64 │ Float64 │ Float64 │ Float64   │
+├─────┼──────────┼──────────────┼───────┼─────────┼────────────┼──────┼─────────┼─────────┼─────────┼─────────┼─────────┼───────────┤
+│ 1   │ ConvWAAE │ [32, 64]     │ 128   │ 30      │ false      │ true │ 1.0     │ 1.0     │ 1.0     │ 0.01    │ 0.88    │ NaN       │
+│ 2   │ ConvWAAE │ [32, 32, 64] │ 8     │ 20      │ false      │ true │ 1.0     │ 10.0    │ 10.0    │ 1.0     │ 0.89    │ 0.0707107 │
+│ 3   │ ConvWAAE │ [32, 32, 64] │ 8     │ 30      │ false      │ true │ 1.0     │ 10.0    │ 10.0    │ 1.0     │ 0.89    │ 0.0141421 │
+│ 4   │ ConvWAAE │ [32, 32, 64] │ 128   │ 30      │ false      │ true │ 1.0     │ 10.0    │ 10.0    │ 1.0     │ 0.9     │ NaN       │
+│ 5   │ ConvWAAE │ [32, 32, 64] │ 128   │ 20      │ false      │ true │ 1.0     │ 1.0     │ 1.0     │ 1.0     │ 0.92    │ NaN       │
+"
+
+# do the same for WAE
+sub1df = filter(row -> row[:model] == "ConvWAE", oc1df)
+sub1df = sort(sub1df, :prec_50)
+sub1df[end-4:end,:]
+"
+│ Row │ model   │ channels │ ldim  │ nepochs │ normalized │ neg   │ β       │ λ       │ γ       │ σ       │ prec_50 │ std       │
+│     │ String  │ String   │ Int64 │ Int64   │ Bool       │ Bool  │ Float64 │ Float64 │ Float64 │ Float64 │ Float64 │ Float64   │
+├─────┼─────────┼──────────┼───────┼─────────┼────────────┼───────┼─────────┼─────────┼─────────┼─────────┼─────────┼───────────┤
+│ 1   │ ConvWAE │ [32, 64] │ 256   │ 20      │ true       │ false │ 1.0     │ 10.0    │ 1.0     │ 1.0     │ 0.96    │ NaN       │
+│ 2   │ ConvWAE │ [32, 64] │ 256   │ 10      │ true       │ false │ 1.0     │ 0.1     │ 1.0     │ 0.01    │ 0.97    │ 0.0141421 │
+│ 3   │ ConvWAE │ [32, 64] │ 256   │ 10      │ true       │ false │ 1.0     │ 1.0     │ 1.0     │ 1.0     │ 0.98    │ NaN       │
+│ 4   │ ConvWAE │ [32, 64] │ 256   │ 20      │ true       │ false │ 1.0     │ 1.0     │ 1.0     │ 1.0     │ 0.98    │ NaN       │
+│ 5   │ ConvWAE │ [32, 64] │ 256   │ 20      │ true       │ false │ 1.0     │ 10.0    │ 1.0     │ 0.1     │ 1.0     │ NaN       │ # wtf is this line
+"
+sub2df = filter(row -> row[:model] == "ConvWAE", oc2df)
+sub2df = sort(sub2df, :prec_50)
+sub2df[end-4:end,:]
+"
+│ Row │ model   │ channels     │ ldim  │ nepochs │ normalized │ neg  │ β       │ λ       │ γ       │ σ       │ prec_50 │ std     │
+│     │ String  │ String       │ Int64 │ Int64   │ Bool       │ Bool │ Float64 │ Float64 │ Float64 │ Float64 │ Float64 │ Float64 │
+├─────┼─────────┼──────────────┼───────┼─────────┼────────────┼──────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┤
+│ 1   │ ConvWAE │ [32, 32, 64] │ 128   │ 30      │ false      │ true │ 1.0     │ 0.1     │ 1.0     │ 0.01    │ 0.9     │ NaN     │
+│ 2   │ ConvWAE │ [32, 64]     │ 128   │ 30      │ false      │ true │ 1.0     │ 0.1     │ 1.0     │ 1.0     │ 0.9     │ NaN     │
+│ 3   │ ConvWAE │ [32, 32, 64] │ 128   │ 10      │ false      │ true │ 1.0     │ 1.0     │ 1.0     │ 0.1     │ 0.92    │ NaN     │
+│ 4   │ ConvWAE │ [32, 32, 64] │ 128   │ 20      │ false      │ true │ 1.0     │ 1.0     │ 1.0     │ 1.0     │ 0.92    │ NaN     │
+│ 5   │ ConvWAE │ [32, 32, 64] │ 128   │ 30      │ false      │ true │ 1.0     │ 1.0     │ 1.0     │ 0.1     │ 0.92    │ NaN     │
+"
 
 ########### this part produces maximums for a selected criterion and the averages for the rest as well #####################
 # now lets compute the averages and find best model for a selected objective
