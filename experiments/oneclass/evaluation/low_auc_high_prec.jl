@@ -36,6 +36,7 @@ i = argmin(df[!,:auc_mse_pos] - df[!,:prec_50_mse_pos])
 #i = 383
 row = df[i,:]
 mf = joinpath(basepath, ps[idf], "models", basename(row[:file]))
+mf = joinpath(basepath, "supervised/models/ConvWAE_channels-[32,64]_patchsize-128_nepochs-10_seed-1_2019-11-14T22:22:57.306.bson")
 
 datapath = joinpath(basepath, ps[idf])
 modelpath = joinpath(datapath, "models")
@@ -82,3 +83,11 @@ ids = sortperm(scores, rev=true)
 scores[ids]
 labels[ids]
 sum(labels[ids][1:50])/50
+
+roc = 
+EvalCurves.auc(EvalCurves.roccurve(-scores, labels)...)
+
+prec_50_s = EvalCurves.precision_at_k(-scores, slabels, min(50, sum(slabels)))
+prec_50_s = EvalCurves.precision_at_k(-scores, labels, min(50, sum(slabels)))
+
+ids = sortperm(scores)
