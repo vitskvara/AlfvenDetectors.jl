@@ -210,7 +210,7 @@ else
 	readfun = AlfvenDetectors.readlogupsd
 end
 usegpu = true
-pz = GenModels.randn_gpu
+pz(n) = GenModels.randn_gpu(Float32,ldim,n)
 
 # decide on the paths
 hostname = gethostname()
