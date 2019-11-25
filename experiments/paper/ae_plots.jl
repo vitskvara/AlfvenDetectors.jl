@@ -2,6 +2,8 @@ using PyPlot
 using AlfvenDetectors
 using PyCall
 using HDF5
+using JLD2
+using FileIO
 
 # setup
 outpath = "/home/vit/Dropbox/vyzkum/alfven/iaea2019/paper/figs_tables"
@@ -31,27 +33,60 @@ matplotlib.rc("font", family = "normal",
 PyCall.PyDict(matplotlib."rcParams")["text.usetex"] = true
 PyCall.PyDict(matplotlib."rcParams")["font.family"] = "serif"
 
+# limit the time and frequency axis
+ts = [0.98, 1.3]
+
+# load the algorithm output data
+#detector_f = "/home/vit/Dropbox/vyzkum/alfven/iaea2019/paper/figs_tables/detector_data_2019-11-17T19:50:08.jld2"
+detector_f = "/home/vit/Dropbox/vyzkum/alfven/iaea2019/paper/figs_tables/detector_data_2019-11-18T15:40:18.jld2"
+plot_data = load(detector_f)
+scores = plot_data["scores"]
+f0 = plot_data["f0"]
+plot_t = plot_data["plot_t"]
+mf = plot_data["mf"]
+
+# and filter it with a median filter
+using Statistics
+function median_filter(x,wl)
+	y = similar(x, length(x)-wl+1)
+	for i in 1:length(y)
+		y[i] = median(x[i:i+wl-1])
+	end
+	y
+end
+
+wl = 20
+wl2 = Int(wl/2)
+med_scores = median_filter(scores,wl)
+
 # plot the raw signal, the whole spectrogram and a patch
 fname = "uprobe_data.png"
-figure(figsize=(8,4))
-subplot(311)
-#title("U probe signal - DUMMY PLOT, REPLACE WITH REAL DATA")
-plot(tsignal[1:2000:end], signal[1:2000:end], lw=1)
-xlim([minimum(tsignal), maximum(tsignal)])
-ylim([-30,30])
+figure(figsize=(8,6))
+subplot(411)
+signal_inds = ts[1] .< tsignal .< ts[2] 
+plot(tsignal[signal_inds][1:2000:end], signal[signal_inds][1:2000:end], lw=1)
+xlim(ts)
+ylim([-30,35])
 #xlabel("t [s]")
 ylabel("I [A]")
-# we dont have the raw data - find it
 
 # the spectrogram
-subplot(312)
-pcolormesh(t,f/1e6,psd,cmap=cmap)
+subplot(412)
+tpsd_inds = ts[1] .< t .< ts[2] 
+pcolormesh(t[tpsd_inds],f/1e6,psd[:,tpsd_inds],cmap=cmap)
 #xlabel("t [s]")
 ylabel("f [MHz]")
 #title("U-probe PSD")
 
+# the detector signal
+subplot(413)
+plot(plot_t[wl2:end-wl2], med_scores, label="\$f_0 = 0.9\$ MHz")
+xlim(ts)
+ylabel("score")
+legend(frameon=false)
+
 # a patch
-subplot(313)
+subplot(414)
 x0 = 1.096
 y0 = 0.9
 patchsize = 128
@@ -71,11 +106,56 @@ tight_layout(h_pad = 0.1)
 
 savefig(joinpath(outpath, fname),dpi=500)
 
-using Statistics
-function median_filter(x,wl)
-	y = similar(x, length(x)-wl+1)
-	for i in 1:length(y)
-		y[i] = median(x[i:i+wl-1])
-	end
-	y
-end
+
+# plot the raw signal, the whole spectrogram and a patch
+fname = "uprobe_data_threshold.png"
+figure(figsize=(8,6))
+subplot(411)
+signal_inds = ts[1] .< tsignal .< ts[2] 
+plot(tsignal[signal_inds][1:2000:end], signal[signal_inds][1:2000:end], lw=1)
+xlim(ts)
+ylim([-30,35])
+#xlabel("t [s]")
+ylabel("I [A]")
+
+# the spectrogram
+subplot(412)
+tpsd_inds = ts[1] .< t .< ts[2] 
+pcolormesh(t[tpsd_inds],f/1e6,psd[:,tpsd_inds],cmap=cmap)
+#xlabel("t [s]")
+ylabel("f [MHz]")
+#title("U-probe PSD")
+
+# the detector signal
+subplot(413)
+plot(plot_t[wl2:end-wl2], med_scores, label="\$f_0 = 0.9\$ MHz")
+xlim(ts)
+ylabel("score")
+legend(frameon=false)
+#thresh = 194
+thresh = 281
+over_inds = med_scores .> thresh
+plot(plot_t[wl2:end-wl2][over_inds], med_scores[over_inds], c = "r")
+plot([0.99, 1.17], [thresh, thresh], "k--", lw = 1, alpha=1)
+
+# a patch
+subplot(414)
+x0 = 1.096
+y0 = 0.9
+patchsize = 128
+xsize=patchsize*4
+ysize=patchsize
+xinds=t.>=x0
+yinds=(f/1e6).>y0
+patchpsd=psd[yinds,xinds][1:ysize,1:xsize]
+patcht = t[xinds][1:xsize]
+patchf = f[yinds][1:ysize]/1e6
+
+pcolormesh(patcht,patchf,patchpsd,cmap=cmap)
+xlabel("t [s]")
+ylabel("f [MHz]")
+
+tight_layout(h_pad = 0.1)
+
+savefig(joinpath(outpath, fname),dpi=500)
+

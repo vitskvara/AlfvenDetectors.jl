@@ -91,3 +91,6 @@ prec_50_s = EvalCurves.precision_at_k(-scores, slabels, min(50, sum(slabels)))
 prec_50_s = EvalCurves.precision_at_k(-scores, labels, min(50, sum(slabels)))
 
 ids = sortperm(scores)
+slabels[ids]
+
+
