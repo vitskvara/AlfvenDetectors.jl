@@ -5,7 +5,7 @@ NCONV=3
 C1=16
 C2=16
 C3=32
-PZ=vamp
+PZ="vamp"
 
 for LDIM in 2 16 32 64
 do

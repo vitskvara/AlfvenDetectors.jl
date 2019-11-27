@@ -9,7 +9,7 @@ C3=$6
 GAMMA=$7
 LAMBDA=$8
 SIGMA=$9
-PZ=$10
+PZ=${10}
 
 cmd="/home/skvara/julia-1.1.1/bin/julia ../../run_experiment.jl WAAE $LDIM $NCONV $C1 $C2 $C3
     --scaling 2 2 1 --gpu --memory-efficient --memorysafe
