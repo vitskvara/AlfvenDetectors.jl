@@ -11,7 +11,7 @@ LAMBDA=$8
 SIGMA=$9
 PZ=$10
 
-cmd="julia ../../run_experiment.jl WAAE $LDIM $NCONV $C1 $C2 $C3
+cmd="/home/skvara/julia-1.1.1/bin/julia ../../run_experiment.jl WAAE $LDIM $NCONV $C1 $C2 $C3
     --scaling 2 2 1 --gpu --memory-efficient --memorysafe
 	--ndense=3 --hdim=256 --positive-patch-ratio=0.1 
 	--savepath=benchmarks_vamp/waae_${LDIM}_${C1}_${C1}_${C3}_lambda-${LAMBDA}_gamma-${GAMMA}_sigma-${SIGMA}/$SEED
