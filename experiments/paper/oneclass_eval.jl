@@ -44,8 +44,8 @@ bigdf = vcat(dfs...)
 
 ########### this part produces maximums for each criterion independently #####################
 # now lets compute the averages and find best model for a selected objective
-metric = "auc_mse"
-metric_short = Symbol("auc")
+metric = "prec_50_mse"
+metric_short = Symbol("prec_50")
 m1 = Symbol(metric)
 m2 = Symbol(metric*"_pos")
 m1m = Symbol(metric*"_mean")

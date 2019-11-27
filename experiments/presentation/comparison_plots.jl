@@ -67,8 +67,8 @@ for (s2string, s2model) in zip(s2strings, s2models)
 			end
 		end
 		subdf = filter(ff,seed_avg)
-		_, _, auc, sd, ss = print_find_maxauc(subdf)
-		push!(result_dfs, DataFrame(:S1_reg => s1reg, :S2_model => s2string, :auc => auc, :sd => sd))
+		saf, _, auc, sd, ss = print_find_maxauc(subdf)
+		push!(result_dfs, DataFrame(:S1_reg => s1reg, :S2_model => s2string, :auc => auc, :sd => sd, :S1_file => saf))
 		global presentation_s *= "$s1reg & $s2string & $ss \\\\ \n"
 		push!(subdfs, subdf)
 	end
@@ -76,7 +76,15 @@ end
 println(presentation_s)
 result_df = vcat(result_dfs...);
 showall(result_df)
+showall(result_df[!,[:S1_reg,:S2_model,:auc,:sd]])
 
+out_f = "/home/vit/Dropbox/vyzkum/alfven/iaea2019/paper/figs_tables/top_2s_models.csv"
+f = open(out_f,"w")
+for s in result_df[!,:S1_file] 
+    write(f,s)
+    write(f,"\n")
+end
+close(f)
 
 # also, average over ks
 byargs = filter(x->!(x in [:seed, :auc, :asf_arg]), names(df))
