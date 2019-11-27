@@ -30,7 +30,7 @@ function eval_model(mf, evaldatapath, usegpu=true)
 	model = usegpu ? gpu(GenModels.construct_model(mf)) : GenModels.construct_model(mf)
 	Flux.testmode!(model)
 	params = AlfvenDetectors.parse_params(mf)
-
+	
 	hostname = gethostname()
 	if occursin("soroban", hostname) || hostname == "gpu-node"
 		datapath = "/compass/home/skvara/no-backup/uprobe_data"

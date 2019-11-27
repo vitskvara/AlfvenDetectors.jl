@@ -19,9 +19,11 @@ modelpath = joinpath(datapath, "models")
 evalpath = joinpath(datapath, "eval")
 mkpath(evalpath)
 
+pz(n)=GenModels.randn_gpu(Float32,8,n)
 # now iterate over all models
 models = readdir(modelpath)
 data = []
+
 for (i,mf) in enumerate(models)
 	println("processing $i")
 	_data = eval_model(joinpath(modelpath,mf), evaldatapath, usegpu)
