@@ -363,24 +363,24 @@ function split_unique_patches(α::Real, shotnos, labels, tstarts, fstarts; seed 
 	# shuffle everything
 	Npatches = length(shotnos)
 	used_inds = sample(1:Npatches, Npatches, replace=false)
-	shotnos, labels, tstarts, fstarts =
+	_shotnos, _labels, _tstarts, _fstarts =
 		shotnos[used_inds], labels[used_inds], tstarts[used_inds], fstarts[used_inds]
 
 	# in this part, extract the unique shot numbers, then shuffle and split them with α
-	trshots1, tstshots1 = split_unique_shotnos(shotnos[labels.==1], α, seed=seed)
-	trshots0, tstshots0 = split_unique_shotnos(shotnos[labels.==0], α, seed=seed)
+	trshots1, tstshots1 = split_unique_shotnos(_shotnos[_labels.==1], α, seed=seed)
+	trshots0, tstshots0 = split_unique_shotnos(_shotnos[_labels.==0], α, seed=seed)
 	
 	# get indices of training positive and negative samples
-	traininds = map(x->any(occursin.(string.(trshots1), string(x))),shotnos) .| 
-		map(x->any(occursin.(string.(trshots0), string(x))),shotnos)
-	testinds = map(x->any(occursin.(string.(tstshots1), string(x))),shotnos) .|
-		map(x->any(occursin.(string.(tstshots0), string(x))),shotnos)
+	traininds = map(x->any(occursin.(string.(trshots1), string(x))),_shotnos) .| 
+		map(x->any(occursin.(string.(trshots0), string(x))),_shotnos)
+	testinds = map(x->any(occursin.(string.(tstshots1), string(x))),_shotnos) .|
+		map(x->any(occursin.(string.(tstshots0), string(x))),_shotnos)
 	
 	# restart the seed
 	Random.seed!()
 	if 0 < sum(traininds) < Npatches
-		return map(x->x[traininds], (shotnos, labels, tstarts, fstarts)), used_inds[traininds],
-			map(x->x[testinds], (shotnos, labels, tstarts, fstarts)), used_inds[testinds]
+		return map(x->x[traininds], (_shotnos, _labels, _tstarts, _fstarts)), used_inds[traininds],
+			map(x->x[testinds], (_shotnos, _labels, _tstarts, _fstarts)), used_inds[testinds]
 	else
 		@warn "split_patches_unique(...) not returning anything since one of the sets is empty, Nused=$(sum(traininds)), Npatches=$Npatches"
 		return fill(nothing, 4), nothing, fill(nothing, 4), nothing

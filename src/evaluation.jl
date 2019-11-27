@@ -223,18 +223,22 @@ function fit_fs_model(s1_model, s2_model, fx, fxy, asfs, asf_args, patch_data, s
             dfs_asf = []
             for asf in asfs
                 as = AlfvenDetectors.anomaly_score(fsmodel, (m,x)->asf(m,x,asf_arg...), test[1]);
-                auc = EvalCurves.auc(EvalCurves.roccurve(as, test[2])...)
-                println("AUC=$auc")
+                _labels = test[2]
+                auc = EvalCurves.auc(EvalCurves.roccurve(as, _labels)...)
+                prec_50 = EvalCurves.precision_at_k(as, _labels, min(50, sum(_labels)))
+                
+                println("AUC=$(round(auc, digits=3)), prec@50=$(round(prec_50, digits=3))")
+                
                 asf_name = string(split(string(asf),".")[end])
-                df_asf = DataFrame(as_function=asf_name, auc=auc)
+                df_asf = DataFrame(as_function=asf_name, auc=auc, prec_50=prec_50)
                 push!(dfs_asf, df_asf)
             end
             global df_asf_arg = vcat(dfs_asf...)
-            df_asf_arg[:asf_arg] = fill(asf_arg,size(df_asf_arg,1))
+            df_asf_arg[!,:asf_arg] = fill(asf_arg,size(df_asf_arg,1))
             push!(dfs_asf_arg, df_asf_arg)
         end
         df_seed = vcat(dfs_asf_arg...)
-        df_seed[:seed] = seed
+        df_seed[!,:seed] .= seed
         push!(dfs_seed, df_seed)
     end
     df_exp = vcat(dfs_seed...)
@@ -243,18 +247,18 @@ end
 
 function add_info(df_exp, exp_args, history, s2_model_name, s2_args, s2_kwargs, mf)
     Nrows = size(df_exp,1)
-    df_exp[:S1_model] = exp_args["modelname"]
-    df_exp[:S2_model] = s2_model_name
-    df_exp[:S2_model_args] = fill(s2_args, Nrows)
-    df_exp[:S2_model_kwargs] = s2_kwargs
-    df_exp[:S1_file] = joinpath(split(mf,"/")[end-2:end]...)
-    df_exp[:ldim] = exp_args["ldimsize"]
-    df_exp[:lambda] = exp_args["lambda"]
-    df_exp[:gamma] = exp_args["gamma"]
-    df_exp[:beta] = exp_args["beta"]
-    df_exp[:sigma] = exp_args["sigma"]
-    df_exp[:batchsize] = exp_args["batchsize"]
-    df_exp[:S1_iterations] = length(get(history, collect(keys(history))[1])[2])
+    df_exp[!,:S1_model] .= exp_args["modelname"]
+    df_exp[!,:S2_model] .= s2_model_name
+    df_exp[!,:S2_model_args] = fill(s2_args, Nrows)
+    df_exp[!,:S2_model_kwargs] = [s2_kwargs for n in 1:Nrows]
+    df_exp[!,:S1_file] .= joinpath(split(mf,"/")[end-2:end]...)
+    df_exp[!,:ldim] .= exp_args["ldimsize"]
+    df_exp[!,:lambda] .= exp_args["lambda"]
+    df_exp[!,:gamma] .= exp_args["gamma"]
+    df_exp[!,:beta] .= exp_args["beta"]
+    df_exp[!,:sigma] .= exp_args["sigma"]
+    df_exp[!,:batchsize] .= exp_args["batchsize"]
+    df_exp[!,:S1_iterations] .= length(get(history, collect(keys(history))[1])[2])
     # skip this, it can be always loaded from the model file
     #df_exp[:S1_model_args] = fill(model_args, Nrows)
     #df_exp[:S2_model_kwargs] = model_kwargs
