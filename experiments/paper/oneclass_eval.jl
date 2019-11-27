@@ -44,8 +44,8 @@ bigdf = vcat(dfs...)
 
 ########### this part produces maximums for each criterion independently #####################
 # now lets compute the averages and find best model for a selected objective
-metric = "prec_50_mse"
-metric_short = Symbol("prec_50")
+metric = "auc_mse"
+metric_short = Symbol("auc")
 m1 = Symbol(metric)
 m2 = Symbol(metric*"_pos")
 m1m = Symbol(metric*"_mean")
@@ -56,6 +56,8 @@ subcols = [:model,:channels,:ldim,:nepochs,:normalized,:neg,:β,:λ,:γ,:σ,m1,m
 subdf = bigdf[!,subcols]
 agcols = filter(x -> !(x in [:seed, m1, m2]), subcols)
 agdf = aggregate(subdf, agcols, [mean, std])
+# filter the NaNs in stds?
+agdf = filter(row -> !isnan(row[m1s]),agdf) 
 
 maxrow(df, s) = df[argmax(df[!,s]),:]
 
