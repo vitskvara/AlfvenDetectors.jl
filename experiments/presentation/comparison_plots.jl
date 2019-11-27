@@ -6,6 +6,7 @@ using Base.Iterators
 
 # load the data from the merged csv
 infile = "/home/vit/vyzkum/alfven/experiments/eval/conv/uprobe/benchmarks/all_experiments.csv"
+#infile = "/home/vit/vyzkum/alfven/experiments/eval/conv/uprobe/benchmarks_limited/all_experiments.csv"
 df = CSV.read(infile)
 
 # filter out the data from the 64D AE
