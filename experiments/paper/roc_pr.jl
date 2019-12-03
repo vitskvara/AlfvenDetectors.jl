@@ -31,27 +31,44 @@ fs = joinpath.(basepath, ps, "eval/models_eval.csv")
 mse(model,x) = Flux.mse(x, model(x)).data
 score_mse(model, x) = map(i->mse(model, x[:,:,:,i:i]), 1:size(x,4))
 
+common_data_f = "/home/vit/vyzkum/alfven/experiments/roc_prc_eval_data.jld2"
+common_data = load(common_data_f)
+common_data_f = "asdasdas"
+
 function get_roc_prc(mf)
 	model, exp_args, model_args, model_kwargs, history = AlfvenDetectors.load_model(mf)
 	Flux.testmode!(model)
 
 	# get the data
-	seed = exp_args["seed"]
-	norms = exp_args["unnormalized"] ? "" : "_normalized"
-	readfun = exp_args["unnormalized"] ? AlfvenDetectors.readnormlogupsd : AlfvenDetectors.readlogupsd
-	normal_negative = get(exp_args, "normal-negative", false)
-	if !(normal_negative)
-		testing_data = load(joinpath(evaldatapath, "oneclass_data/testing/128$(norms)/seed-$(seed).jld2"));
-	else
-		testing_data = load(joinpath(evaldatapath, "oneclass_data_negative/testing/128$(norms)/data.jld2"));
-	end
+	if !isfile(common_data_f)
+		seed = exp_args["seed"]
+		norms = exp_args["unnormalized"] ? "" : "_normalized"
+		readfun = exp_args["unnormalized"] ? AlfvenDetectors.readnormlogupsd : AlfvenDetectors.readlogupsd
+		normal_negative = get(exp_args, "normal-negative", false)
+		if !(normal_negative)
+			testing_data = load(joinpath(evaldatapath, "oneclass_data/testing/128$(norms)/seed-$(seed).jld2"));
+		else
+			testing_data = load(joinpath(evaldatapath, "oneclass_data_negative/testing/128$(norms)/data.jld2"));
+		end
 
-	patches = testing_data["patches"]
-	if normal_negative
-		labels = testing_data["labels"]
-	else
-		labels = 1 .- testing_data["labels"]
-	end 
+		patches = testing_data["patches"]
+		if normal_negative
+			labels = testing_data["labels"]
+		else
+			labels = 1 .- testing_data["labels"]
+		end 
+	else # get the data that is the same for all models
+		normalized = exp_args["unnormalized"]
+		normal_negative = get(exp_args, "normal-negative", false)
+		if normalized
+			patches = common_data["test"][1]
+			labels = common_data["test"][2]
+		else
+			patches = common_data["test_unnormalized"][1]
+			labels = common_data["test_unnormalized"][2]
+		end
+		normal_negative ? nothing : labels = 1 .- labels
+	end
 
 	scores = score_mse(model, patches)
 	roc = EvalCurves.roccurve(scores, labels)
@@ -60,7 +77,10 @@ function get_roc_prc(mf)
 	end
 	prc = EvalCurves.prcurve(scores, labels)
 
-	return roc, prc
+	auc = EvalCurves.auc(roc...)
+	prec_50 = EvalCurves.precision_at_k(scores, labels, min(50, sum(labels)))
+
+	return roc, prc, auc, prec_50
 end
 
 mfs = [
@@ -70,9 +90,11 @@ mfs = [
 
 results = map(get_roc_prc, mfs)
 out_data = DataFrame(
-	model_file = mfs,
+	model = mfs,
 	roc = [x[1] for x in results],
-	prc = [x[2] for x in results]
+	prc = [x[2] for x in results],
+	auc = [x[3] for x in results],
+	prec_50 = [x[4] for x in results]
 	)
 oneclass_f = joinpath(outpath, "roc_prc_oneclass.csv")
 CSV.write(oneclass_f, out_data)
@@ -105,12 +127,12 @@ for (i,j) in enumerate(inds)
 	pcolormesh(r[:,:,1,1])
 end
 
-inds = rand(44:191,4)
+inds = rand(1:215,6)
 figure()
 for (i,j) in enumerate(inds)
-	subplot(4,2,(i-1)*2+1)
-	pcolormesh(patches[:,:,1,j])
+	subplot(6,2,(i-1)*2+1)
+	pcolormesh(patches[:,:,1,j], cmap= "plasma")
 	r = model(patches[:,:,:,j:j]).data
-	subplot(4,2,i*2)
-	pcolormesh(r[:,:,1,1])
+	subplot(6,2,i*2)
+	pcolormesh(r[:,:,1,1], cmap= "plasma")
 end

@@ -50,10 +50,6 @@ saf, sai, saa, ssd, ss = print_find_max(seed_avg, :auc)
 
 # get the best aucs for different settings
 s1regs = ["--", "KLD", "MMD", "GAN", "MMD+GAN"]
-s2strings = ["KNN", "GMM", "SVAE"] 
-s2models = ["KNN", "GMMModel", "SVAEMem"]
-s2strings = ["KNN"] 
-s2models = ["KNN"]
 s2strings = ["KNN", "GMM"] 
 s2models = ["KNN", "GMMModel"]
 s1filters = ["AE", "VAE", "WAE", "AAE", "WAAE"]

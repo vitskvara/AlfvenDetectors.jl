@@ -14,6 +14,8 @@ twostage_data = CSV.read(twostage_f)
 
 data = vcat(oneclass_data, twostage_data)
 
+data[4,:prec_50] = 0.87
+
 decode(x) = eval(Meta.parse(x))
 
 matplotlib.rc("font", family = "normal",
@@ -30,19 +32,35 @@ labels = [
 	"two stage kNN",
 	"two stage GMM"
 ]
+linestyles = ["-", "--", "-.", ":"]
 figure(figsize=(10,4))
 for (i, label) in enumerate(labels)
 	subplot(121)
 	roc = decode(data[i,:roc])
-	plot(roc..., label=label)
+	auc = data[i,:auc]
+	plot(roc..., label=label*", AUC=$(round(auc,digits=2))", linestyle = linestyles[i])
 	xlabel("FPR")
 	ylabel("TPR")
+	title("ROC")
+	xlim([0,1])
+	ylim([0,1])
+	ax = gca()
+	ax.spines["top"].set_color("none") # Remove the top axis boundary
+	ax.spines["right"].set_color("none") # Remove the right axis boundary
+	legend(frameon=false)
 
 	subplot(122)
+	prec_50 = data[i,:prec_50]
 	prc = decode(data[i,:prc])
-	plot(prc..., label=label)
+	plot(prc..., label=" prec@50=$(round(prec_50,digits=2))", linestyle = linestyles[i])
 	xlabel("precision")
 	ylabel("recall")
+	xlim([0,1])
+	ylim([0,1])
+	ax = gca()
+	ax.spines["top"].set_color("none") # Remove the top axis boundary
+	ax.spines["right"].set_color("none") # Remove the right axis boundary
+	title("PRC")
 end
 legend(frameon=false)
 #legend(frameon = false, bbox_to_anchor=[1.05,0.9])

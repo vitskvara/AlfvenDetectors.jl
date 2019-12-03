@@ -108,7 +108,7 @@ savefig(joinpath(outpath, fname),dpi=500)
 
 
 # plot the raw signal, the whole spectrogram and a patch
-fname = "uprobe_data_threshold.png"
+fname = "uprobe_data_threshold_right_zoom.png"
 figure(figsize=(8,6))
 subplot(411)
 signal_inds = ts[1] .< tsignal .< ts[2] 
@@ -133,7 +133,7 @@ xlim(ts)
 ylabel("score")
 legend(frameon=false)
 #thresh = 194
-thresh = 281
+thresh = 265
 over_inds = med_scores .> thresh
 plot(plot_t[wl2:end-wl2][over_inds], med_scores[over_inds], c = "r")
 plot([0.99, 1.17], [thresh, thresh], "k--", lw = 1, alpha=1)
@@ -149,6 +149,13 @@ xinds=t.>=x0
 yinds=(f/1e6).>y0
 patchpsd=psd[yinds,xinds][1:ysize,1:xsize]
 patcht = t[xinds][1:xsize]
+patchf = f[yinds][1:ysize]/1e6
+
+# or get the t axis axxording to the red part of the third plot
+zoom_t = plot_t[wl2:end-wl2][over_inds]
+xinds = zoom_t[1] .<= t .<= zoom_t[end]
+patchpsd=psd[yinds,xinds][1:ysize,:]
+patcht = t[xinds]
 patchf = f[yinds][1:ysize]/1e6
 
 pcolormesh(patcht,patchf,patchpsd,cmap=cmap)
