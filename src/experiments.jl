@@ -271,7 +271,7 @@ function get_patch(datapath, shot, tstart, fstart, patchsize, readfun, coil=noth
 	else
 		data = get_signal(file, readfun, coil; kwargs...)
 	end
-	if readfun == AlfvenDetectors.readnormlogupsd
+	if readfun in (AlfvenDetectors.readnormlogupsd, AlfvenDetectors.readlogupsd)
 		t = get_signal(file, AlfvenDetectors.readtupsd; kwargs...)
 		f = AlfvenDetectors.readfupsd(file)
 	else
