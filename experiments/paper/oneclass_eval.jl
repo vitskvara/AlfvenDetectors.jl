@@ -279,6 +279,3 @@ oagoc2df = agoc2df[!, [:reg, metric_short, :std]]
 s2df = PaperUtils.df2tex(oagoc2df)
 f2 = joinpath(outpath, "oneclass_"*String(m1)*"_all.tex")
 PaperUtils.string2file(f2, s2df)
-
-
-
