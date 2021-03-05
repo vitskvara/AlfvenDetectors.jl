@@ -1,6 +1,6 @@
 # AlfvenDetectors.jl
 
-Alfven eigenmode detectors in Julia. Uses the [GenModels.jl](https://github.com/vitskvara/GenModels.jl) library. This is the environment the library was written in and which you should try to emulate if you need to rerun some of the code.
+Alfven eigenmode detectors in Julia. Uses the [GenModels.jl](https://github.com/vitskvara/GenModels.jl) and [EvalCurves.jl](https://github.com/vitskvara/EvalCurves.jl) libraries. This is the environment the library was written in and which you should try to emulate if you need to rerun some of the code.
 
 ```
 (v1.1) pkg> st
